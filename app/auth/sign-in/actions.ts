@@ -17,8 +17,13 @@ export async function signInWithEmail(
 
   const { error } = await auth.signIn.email({ email, password });
 
-  // An unknown address and a wrong password get the same answer.
   if (error) {
+    // Logged server-side (Vercel's logs, or the dev terminal) so a refusal that
+    // is not a wrong password, such as an untrusted origin, names its cause.
+    // Never the password.
+    const e = error as { status?: number; code?: string; message?: string };
+    console.error('[sign-in] refused', { email, status: e.status, code: e.code, message: e.message });
+    // An unknown address and a wrong password get the same answer.
     return { error: 'That email and password did not match an account.' };
   }
 
