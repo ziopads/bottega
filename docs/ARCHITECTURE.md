@@ -1,6 +1,6 @@
 # Bottega — architecture
 
-**Version:** 0.2
+**Version:** 0.3
 **Date:** 2026-10-10
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
@@ -10,6 +10,13 @@ story IDs below (S-3, W-6 and so on) refer to it.
 
 ## Changelog
 
+- **0.3** (2026-10-10) — Separate accounts with item-by-item sharing
+  (REQUIREMENTS 0.4, AC-1 to AC-12, K-6, K-7, L-7 to L-11). New §11 sets out
+  accounts, ownership, shares, the platform library, study groups, the access
+  log and how access is enforced: row-level security in
+  Postgres under a restricted role, with checks in the application above it.
+  §1, §3, §4 (people and projects), §6 and §9 follow. The allowlists in the
+  environment are retired.
 - **0.2** (2026-10-10) — Phase 0 as built: accounts are created by a sign-up
   request, not in the Console (§3); audio, the current mix and the routes
   recorded as built (§4); environment variables as built, with `ADMIN_EMAILS`
@@ -30,7 +37,7 @@ story IDs below (S-3, W-6 and so on) refer to it.
     embed ───────── Voyage ─────────────────────────────────────▶  chunks.embedding
     analyse .als + audio ── measurements ───────────────────────▶  analyses
                                       pages, server actions ◀───▶  every table
-  Browser ── sign-in ───────────────▶ Neon Auth + allowlist
+  Browser ── sign-in ───────────────▶ Neon Auth (identity) + accounts (access, §11)
           ── signed PUT/GET ────────────────────────────────────▶  Cloudflare R2 (audio, gear files, PDFs)
   Claude (Anthropic's cloud) ── OAuth ▶ /api/mcp ◀──────────────▶  read; proposals only
 ```
@@ -57,10 +64,11 @@ database.
 Copied as a starting point, then owned by Bottega; nothing is shared at run
 time.
 
-- **Sign-in.** Neon Auth (managed Better Auth) for identity; an
-  `ALLOWED_EMAILS` allowlist checked on every page and every server action for
-  authorization. Neon Auth allows open sign-up, so the allowlist, not
-  registration, decides access. Accounts are created by a sign-up request to
+- **Sign-in.** Neon Auth (managed Better Auth) for identity only. Access is
+  Bottega's own (§11): Neon Auth allows open sign-up, so a new sign-up lands
+  as a pending account and sees nothing until approved. (Phase 0 used an
+  `ALLOWED_EMAILS` list copied from Scriptorium; §11 replaces it.) Identities
+  can still be created directly by a sign-up request to
   `/api/auth/sign-up/email` (the Console's "Create user" sets no password; see
   `HANDOFF.md` §3). A signed-in person changes their own password at
   `/account`; there is no reset by email. `lib/auth/`, `proxy.ts`.
@@ -82,12 +90,14 @@ Left behind: page offsets, folio labels, Chicago citations, dossiers.
 One numbered migration per change in `db/`. Tables are grouped by layer and
 marked with the phase that creates them.
 
-### People (Phase 0)
+### People (Phase 0; changed in Phase 1)
 
-- `artists` — roster: code (VIG, KR, KJI, ASU), name.
-- `members` — email (lower case, primary key), display name, artist (nullable).
-  Who a signed-in person is within the studio. The allowlist decides access;
-  this table decides attribution.
+- `artists` — code (VIG, KR, KJI, ASU), name. From Phase 1 each artist has an
+  owning account (`account_id`); a project may be credited only to an artist
+  of its owner's account.
+- `members` — email, display name, artist. Phase 0's attribution table.
+  Retired by migration 002, which moves each artist to its account.
+- `accounts`, `shares`, `access_log` — Phase 1, §11.
 
 ### Projects (Phase 0)
 
@@ -96,8 +106,8 @@ work (workflow, notes, files, parts) can point at a single `projects.id` with
 a real foreign key.
 
 - `projects` — id, kind (`music`, `installation`, `multimedia`,
-  `collection`), title, rating 0–5, created by and when. Stage columns arrive
-  in Phase 2.
+  `collection`), title, rating 0–5, created by and when, and from Phase 1 the
+  owning account (`owner_id`). Stage columns arrive in Phase 2.
 - `project_titles` — history of titles, carried over from Vivarium's
   `studio_project_names`.
 - `music_projects` — project id (primary key), artist, canonical ID (unique per
@@ -188,8 +198,10 @@ The names `tracks` and `trackId` for mixes are carried over from Vivarium.
 
 ### Corpus (Phase 1)
 
-- `documents` — title, kind (manual, book), gear (nullable), R2 key, page
-  count, load state.
+- `documents` — title, kind (manual, book, other), maker and model for
+  manuals, `library` (platform-wide) or `owner_id` (private; exactly one of
+  the two), R2 key, page count, load state. Linked to gear through
+  `gear_documents` (§11).
 - `pages` — document, page number, text.
 - `chunks` — document, first and last page, text, folded text for search, a
   generated full-text column, embedding, embedding model and dimension,
@@ -197,7 +209,8 @@ The names `tracks` and `trackId` for mixes are carried over from Vivarium.
 
 ### Study (Phase 2)
 
-- `topics`, `sources` (a document, or a video URL), `study_notes` (author,
+- `study_groups`, members and requests (§11). Within a group: `topics`,
+  `sources` (a document, or a video URL), `study_notes` (author,
   topic, kind note or question, an anchor to a page and quotation or to a video
   timestamp), `note_answers`, `skills`, `skill_progress`, `instruments`
   (member, MPC model, firmware).
@@ -231,8 +244,10 @@ corpus. Audio and files never enter the database.
 
 ## 6. The connector
 
-Tools arrive by phase. All read tools are scoped to what the signed-in person
-may see; all write tools propose.
+Tools arrive by phase. A connector token carries the person it was issued to
+(`oauth_tokens.user_id`, where Scriptorium keys by email), and every tool runs
+under that person exactly as a page would (§11): same database role, same
+policies. All write tools propose.
 
 | Phase | Tools |
 |---|---|
@@ -277,10 +292,10 @@ docs/           REQUIREMENTS, ARCHITECTURE, HANDOFF
 
 | Variable | Used by |
 |---|---|
-| `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | app, pipeline |
+| `DATABASE_URL` | the app. From Phase 1, the restricted role `bottega_app`, subject to row-level security (§11) |
+| `DATABASE_URL_UNPOOLED` | `pipeline/` and `migrate.py`: the owner role, which bypasses row-level security |
 | `NEON_AUTH_BASE_URL`, `NEON_AUTH_COOKIE_SECRET` | sign-in; required at build time |
-| `ALLOWED_EMAILS` | every page and route; OAuth consent from Phase 1. Empty admits nobody |
-| `ADMIN_EMAILS` | deleting mixes, other people's notes and references; `/admin` pages. Empty means no admins |
+| `ALLOWED_EMAILS`, `ADMIN_EMAILS` | Phase 0 only. Removed once §11 is deployed; accounts and the platform administrator live in the database |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | the R2 client |
 | `R2_AUDIO_BUCKET` | mixes and references: signed uploads and links |
 | `VOYAGE_API_KEY` | `embed.py`, search |
@@ -300,3 +315,187 @@ Checked on 9 October 2026:
 Recalled from Scriptorium's records of September, to be checked before relying
 on them: Voyage's free allowance (200 million tokens on the current model
 generation), and `voyage-4` supporting 1024-dimension output.
+
+## 11. Accounts and access (Phase 1)
+
+Implements REQUIREMENTS §2, AC-1 to AC-12. Migration 002.
+
+### Who someone is
+
+Neon Auth proves identity and supplies a stable user id. Everything else is
+Bottega's:
+
+- `accounts` — `user_id` (Neon Auth's id, primary key), email (lower case,
+  refreshed at each sign-in), display name, `status` (`pending`, `active`,
+  `disabled`), `is_platform_admin`, created, approved at and by.
+- On every request the guard reads the session. A user id with no `accounts`
+  row is inserted as pending by a database function, which also writes the
+  first log entry. This needs nothing from Neon Auth's own tables, so it holds
+  whichever way they are laid out.
+- A pending or disabled person is sent to `/auth/pending` and reaches nothing
+  else.
+
+### What belongs to whom
+
+- Top-level items carry `owner_id` referencing `accounts`: `projects` (all
+  kinds), and from their migrations `gear` and private `documents`.
+- Platform-wide rows have no owner: `genres`, the capability vocabulary,
+  library `documents` (`owner_id` null, `library = true`), and study groups
+  (custodian, not owner; below).
+- Everything else inherits through its parent: `music_projects`,
+  `collections`, `audio`, `notes`, `project_titles` through the project;
+  `gear_files`, `gear_capabilities` through the gear; `pages`, `chunks`
+  through the document.
+- People who act on others' items are recorded by account: `audio.uploaded_by_id`,
+  `notes.author_id`, `projects.created_by_id`. The Phase 0 email columns stay
+  as history.
+- Migration 002 gives every existing project, and the artists VIG and ASU, to
+  James's account. KR and KJI pass to Chris's and Gordon's accounts when
+  those exist.
+
+### Shares
+
+- `shares` — one row per item, person and level: a nullable foreign key per
+  kind of item (`project_id` now; `gear_id` and `document_id` with their
+  tables), exactly one set; `grantee_id`; `level` (`view`, `contribute`,
+  `edit`); granted by and when. Unique per item and grantee.
+- Only the item's owner can insert, change or delete a share.
+- AC-6, collections: a share on a collection gives view on each part **owned
+  by the same account**. A collection cannot pass on access to a track that
+  belongs to someone else; that track's owner shares it themselves.
+
+### Effective level
+
+One SQL function per kind of item answers "what may the current person do
+with this?": `project_level(project_id)` returns `owner`, `edit`,
+`contribute`, `view`, or null. It considers ownership, a direct share, and
+shares on collections above the project (walking `project_parts` upward,
+same-owner parts only). It returns `view` for the platform administrator only
+when the request is marked as an administrator's read-only view (below), and
+never more. `gear_level` and `document_level` follow the same shape.
+
+The current person comes from `current_setting('app.user_id', true)`. When it
+is unset the functions return null, so a query run without a person sees
+nothing.
+
+### Enforcement: the database
+
+- The app connects as `bottega_app`, a role that owns nothing and does not
+  bypass row-level security. Tables belong to the owner role, which the
+  pipeline and the migration runner use.
+- Every table holding account data has row-level security enabled, with
+  policies written against the level functions:
+
+  | Table | Read | Insert | Update | Delete |
+  |---|---|---|---|---|
+  | `projects` and kind tables | level not null | `owner_id` is me, account active | `edit` or `owner` | `owner` |
+  | `audio` | level of its project | `contribute` or above | `contribute` or above | `owner` |
+  | `notes` | level of its project | `contribute` or above, `author_id` is me | author only | `owner` |
+  | `project_parts` | parent readable | `edit` on parent, child owned by parent's owner | as insert | `owner` of parent |
+  | `artists` | own, or credited on a readable project | own | own | own |
+  | `shares` | owner of the item, or the grantee | owner of the item | owner | owner |
+  | `accounts` | self; platform administrator | through functions only | through functions only | never |
+  | `access_log` | entries concerning me or my items; administrator all | through triggers and functions only | never | never |
+
+- `genres` and the capability vocabulary are one list each for the platform,
+  readable and extendable by every active account.
+
+### The library (Phase 1)
+
+- Library documents, their pages and chunks are readable by every active
+  account; only the owner role (the pipeline, run by the platform
+  administrator) writes them.
+- `gear_documents` — gear, document. An account links a library manual to its
+  own gear (insert and delete allowed when the gear is theirs). This link is
+  what puts a manual in that account's default search (K-7).
+- `library_suggestions` — account, title, maker, link, note, status. Any
+  active account suggests; the platform administrator decides.
+- Private documents follow the ownership and sharing rules above, with
+  `document_level()`.
+
+### Study groups (Phase 2)
+
+- `study_groups` — name, description, custodian (an account), status (`open`,
+  `closed`), created.
+- `study_group_members` — group, account, joined, and how (`created`,
+  `invited`, `requested`). `study_group_requests` — group, account, kind
+  (`invitation` or `request`), status, decided by and when.
+- Policies: every active account reads group names and descriptions; members
+  read everything in a group and insert their own writing while it is open;
+  authors update their own writing; the custodian manages invitations,
+  requests, removal and handover; no policy allows delete, so groups and their
+  contents are deleted only through the owner role, by the platform
+  administrator.
+- Triggers on `study_group_members` and on custodian changes write the access
+  log.
+
+### Enforcement: the application
+
+`lib/access.ts` sits above the policies, so a refusal is a clear answer
+rather than an empty result:
+
+- `requireAccount()` — the signed-in, active account, or a redirect to
+  `/auth/pending` or `/auth/sign-in`. Replaces `getAllowedUser()`.
+- `requireLevel(kind, id, minimum)` — 404 when the item is not visible at all
+  (so its existence is not disclosed), 403 when visible below the level needed.
+- Every page, route handler and Server Action calls one of them before
+  touching data. `scripts/check-access.mjs` (run as `npm run check`, beside
+  `tsc`) fails on any `page.tsx`, `route.ts` or `actions.ts` under `app/`
+  that does not, apart from the sign-in, OAuth and `.well-known` paths.
+
+### How a request carries its person
+
+`lib/db.ts` gains `forUser(userId, { adminView })`, which returns the query
+function the data layer uses. Each call is sent as one non-interactive
+transaction: `select set_config('app.user_id', $1, true)` (and
+`app.admin_view` when set), then the statement or statements. The setting is
+local to that transaction, so nothing leaks between requests over the pooled
+connection, and there is no extra round trip. All of `lib/studio.ts`'s SQL
+already passes through one helper (`q`), so the change is made there once.
+The connector builds the same query function from its token's user.
+
+### The platform administrator
+
+- Approves, disables and re-enables accounts at `/admin/accounts`, and reads
+  the whole log there.
+- Opens another account read-only from `/admin/accounts/[id]`. Only those
+  requests set `app.admin_view`; the database honours it only if `accounts`
+  marks the current person as platform administrator, and only for reads.
+  Each such page view writes a log entry naming the account and path.
+- Their own home shows their own account, like everyone else's.
+
+### The access log
+
+- `access_log` — id, at, actor (account, or `bootstrap` / `pipeline` for
+  changes made outside the app), action, subject account, item (kind and id),
+  `before` and `after` as JSON, reason.
+- Written by triggers on `accounts` and `shares`, so a change cannot be made
+  without its entry, whichever code path makes it. Password changes,
+  connector tokens issued and revoked, and administrator views are written by
+  functions the app calls at those moments.
+- A trigger refuses every update and delete on the table, and the app role is
+  granted insert through those functions only.
+
+### Bootstrapping and cutover
+
+The first administrator cannot be approved through a page that needs an
+administrator, and the switch to the restricted role must not lock anyone
+out. In order:
+
+1. In the Neon Console, create the role `bottega_app` (it gets its own
+   password there; nothing secret enters the repository).
+2. Run migration 002: tables, columns, functions, policies, grants to
+   `bottega_app`. Production still connects as the owner, which bypasses the
+   policies, so nothing changes yet.
+3. Deploy the code that uses `accounts` and `forUser`, still on the owner
+   connection.
+4. Sign in once, which creates James's account as pending, then run
+   `pipeline/bootstrap.py`: it activates James's account, makes it platform
+   administrator, and assigns existing projects and artists, all logged with
+   actor `bootstrap`.
+5. Point Vercel's `DATABASE_URL` at `bottega_app` and redeploy. From here the
+   policies apply.
+6. Remove `ALLOWED_EMAILS` and `ADMIN_EMAILS` from Vercel.
+
+Audio keys in R2 stay as they are. Files are reached only through signed links
+minted after authorization, so a key's prefix carries no access meaning.
