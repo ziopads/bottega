@@ -19,7 +19,10 @@ export const metadata: Metadata = {
 // the fallback as a build error.
 export const dynamic = 'force-dynamic';
 
-const NAV = [{ href: '/', label: 'Home' }];
+const NAV = [
+  { href: '/', label: 'Sessions' },
+  { href: '/collections', label: 'Collections' },
+];
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Display only. The guard that matters runs in each page and action.

@@ -16,7 +16,7 @@ export default function SignInPage({
   const next = Array.isArray(nextParam) ? nextParam[0] : nextParam;
 
   return (
-    <form action={formAction} className="w-full max-w-sm space-y-5 py-12">
+    <form action={formAction} className="plain-form w-full max-w-sm space-y-5 py-12">
       <div>
         <h1 className="text-2xl">Sign in</h1>
         <p className="mt-1 text-sm text-muted">Bottega</p>

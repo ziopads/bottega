@@ -39,18 +39,16 @@ a {
   color: inherit;
 }
 
-/* Form controls, styled once. Tailwind's base resets every control to no
-   border on a transparent background, so a type missing from this list is
-   invisible (Scriptorium's password field was, until it was added). */
-input[type='text'],
-input[type='password'],
-input[type='email'],
-input[type='search'],
-input[type='url'],
-input[type='date'],
-input[type='number'],
-select,
-textarea {
+/* Form controls on the sign-in page. Scoped to .plain-form because the studio
+   components ported from Vivarium style their own inputs, and a global rule
+   (width: 100%, a border) would override them inside table cells. Tailwind's
+   base resets every control to no border on a transparent background, so a
+   type missing from this list is invisible. */
+.plain-form input[type='text'],
+.plain-form input[type='password'],
+.plain-form input[type='email'],
+.plain-form select,
+.plain-form textarea {
   width: 100%;
   background: var(--card);
   border: 1px solid var(--line);

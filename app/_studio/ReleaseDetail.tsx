@@ -1,0 +1,267 @@
+'use client';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useMemo, useState } from 'react';
+import type { ReleaseKind, StudioArtist, StudioProject, StudioRelease } from '@/lib/studioTypes';
+import { RELEASE_KIND_LABEL, RELEASE_KINDS, formatDuration } from '@/lib/studioTypes';
+import { api, InlineEdit } from './controls';
+import PlayerBar from './PlayerBar';
+import { usePlayer } from './usePlayer';
+
+// One release: its details, its running order (each entry plays that
+// session's newest mix, and the player runs straight through in order), and
+// a search for adding sessions.
+
+export default function ReleaseDetail({
+  initialRelease,
+  initialTracks,
+  artists,
+  allSessions,
+}: {
+  initialRelease: StudioRelease;
+  initialTracks: StudioProject[];
+  artists: StudioArtist[];
+  allSessions: StudioProject[];
+}) {
+  const router = useRouter();
+  const [release, setRelease] = useState(initialRelease);
+  const [tracks, setTracks] = useState(initialTracks);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [armed, setArmed] = useState(false);
+
+  const player = usePlayer(tracks, tracks);
+
+  const total = tracks.reduce((s, p) => s + (p.latest?.durationS ?? 0), 0);
+
+  const onRelease = new Set(tracks.map((t) => t.id));
+  const matches = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return [];
+    return allSessions
+      .filter((p) => !onRelease.has(p.id))
+      .filter((p) => `${p.canonicalId} ${p.workingName} ${p.artist.code} ${p.genre}`.toLowerCase().includes(q))
+      .slice(0, 12);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, allSessions, tracks]);
+
+  async function save(fields: Record<string, unknown>): Promise<boolean> {
+    setError('');
+    const r = await api<{ release: StudioRelease }>(`/api/collections/${release.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(fields),
+    });
+    if (!r.ok) {
+      setError(r.body.error || 'Could not save the change.');
+      return false;
+    }
+    setRelease(r.data.release);
+    return true;
+  }
+
+  async function order(method: 'POST' | 'PUT' | 'DELETE', body: Record<string, unknown>) {
+    setError('');
+    const r = await api<{ projects: StudioProject[] }>(`/api/collections/${release.id}/tracks`, {
+      method,
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      setError(r.body.error || 'Could not update the running order.');
+      return;
+    }
+    setTracks(r.data.projects);
+  }
+
+  function move(i: number, dir: -1 | 1) {
+    const j = i + dir;
+    if (j < 0 || j >= tracks.length) return;
+    const next = [...tracks];
+    [next[i], next[j]] = [next[j], next[i]];
+    setTracks(next); // optimistic
+    order('PUT', { projectIds: next.map((p) => p.id) });
+  }
+
+  async function remove() {
+    const r = await api(`/api/collections/${release.id}`, { method: 'DELETE' });
+    if (!r.ok) {
+      setError(r.body.error || 'Could not delete the release.');
+      return;
+    }
+    router.push('/collections');
+  }
+
+  const sel = 'rounded-md border border-line bg-card px-2 py-1 text-sm outline-none focus:border-rust';
+
+  return (
+    <div className={`mt-4 ${player.current ? 'pb-28' : ''}`}>
+      <audio {...player.audioProps} />
+
+      <InlineEdit
+        value={release.title}
+        placeholder="Untitled release"
+        label="Title"
+        textClass="font-serif text-2xl sm:text-3xl"
+        onSave={(v) => save({ title: v })}
+      />
+
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+        <select value={release.kind} onChange={(e) => save({ kind: e.target.value as ReleaseKind })} className={sel} aria-label="Kind">
+          {RELEASE_KINDS.map((k) => (
+            <option key={k} value={k}>
+              {RELEASE_KIND_LABEL[k]}
+            </option>
+          ))}
+        </select>
+        <select
+          value={release.artist?.id ?? ''}
+          onChange={(e) => save({ artistId: e.target.value || null })}
+          className={sel}
+          aria-label="Artist"
+        >
+          <option value="">Various / undecided</option>
+          {artists.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.code} — {a.name}
+            </option>
+          ))}
+        </select>
+        <span className="flex items-center gap-1">
+          <span className="text-muted">Year</span>
+          <span className="w-16">
+            <InlineEdit
+              value={release.year === null ? '' : String(release.year)}
+              placeholder="—"
+              label="Year"
+              inputMode="decimal"
+              onSave={(v) => save({ year: v || null })}
+            />
+          </span>
+        </span>
+        <span className="text-muted">
+          {tracks.length} {tracks.length === 1 ? 'track' : 'tracks'}
+          {total > 0 && ` · ${formatDuration(total)}`}
+        </span>
+        {tracks.some((t) => t.latest) && (
+          <button onClick={() => player.toggle(tracks.find((t) => t.latest))} className="rounded-md bg-rust px-3 py-1 text-white">
+            ▶ Play all
+          </button>
+        )}
+      </div>
+
+      {error && <p className="mt-3 text-sm text-rust">{error}</p>}
+
+      <ol className="mt-6 divide-y divide-line rounded-lg border border-line bg-card">
+        {tracks.length === 0 && <li className="px-4 py-6 text-sm text-muted">No tracks yet. Add sessions below.</li>}
+        {tracks.map((p, i) => {
+          const isCurrent = p.id === player.currentId;
+          return (
+            <li key={p.id} className={`flex items-center gap-3 px-4 py-2 text-sm ${isCurrent ? 'bg-ink/5' : ''}`}>
+              <span className="w-6 text-right tabular-nums text-muted">{i + 1}</span>
+              {p.latest ? (
+                <button
+                  onClick={() => player.toggle(p)}
+                  aria-label={isCurrent && player.playing ? 'Pause' : 'Play'}
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs ${
+                    isCurrent ? 'border-ink bg-ink text-parchment' : 'border-line hover:border-ink'
+                  }`}
+                >
+                  {isCurrent && player.playing ? '❚❚' : '▶'}
+                </button>
+              ) : (
+                <span className="h-7 w-7 shrink-0" title="No reference track yet" />
+              )}
+              <span className="w-10 shrink-0 text-xs font-medium text-muted">{p.artist.code}</span>
+              <Link href={`/projects/${p.id}`} className="w-28 shrink-0 font-mono hover:underline">
+                {p.canonicalId}
+              </Link>
+              <span className="min-w-0 flex-1 truncate">{p.workingName || <span className="text-muted">untitled</span>}</span>
+              <span className="text-xs tabular-nums text-muted">
+                {p.latest ? `v${p.latest.version} · ${formatDuration(p.latest.durationS)}` : 'no audio'}
+              </span>
+              <span className="flex shrink-0 gap-1 text-muted">
+                <button onClick={() => move(i, -1)} disabled={i === 0} className="px-1 hover:text-ink disabled:opacity-30" aria-label="Move up">
+                  ↑
+                </button>
+                <button
+                  onClick={() => move(i, 1)}
+                  disabled={i === tracks.length - 1}
+                  className="px-1 hover:text-ink disabled:opacity-30"
+                  aria-label="Move down"
+                >
+                  ↓
+                </button>
+                <button onClick={() => order('DELETE', { projectId: p.id })} className="px-1 hover:text-rust" aria-label="Remove from release">
+                  ×
+                </button>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className="mt-4">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Add a session: search by ID, name, artist or genre…"
+          className="w-full rounded-md border border-line bg-card px-3 py-2 text-sm outline-none focus:border-rust sm:w-96"
+        />
+        {matches.length > 0 && (
+          <ul className="mt-2 divide-y divide-line rounded-lg border border-line bg-card text-sm sm:w-96">
+            {matches.map((p) => (
+              <li key={p.id}>
+                <button
+                  onClick={() => {
+                    order('POST', { projectIds: [p.id] });
+                    setSearch('');
+                  }}
+                  className="flex w-full items-baseline gap-2 px-3 py-2 text-left hover:bg-ink/5"
+                >
+                  <span className="text-xs text-muted">{p.artist.code}</span>
+                  <span className="font-mono">{p.canonicalId}</span>
+                  <span className="truncate">{p.workingName}</span>
+                  <span className="ml-auto text-xs text-muted">+ add</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="mt-10 text-xs">
+        {armed ? (
+          <span className="flex gap-3">
+            <button onClick={remove} className="text-rust underline">
+              Confirm: delete this release
+            </button>
+            <button onClick={() => setArmed(false)} className="text-muted hover:text-ink">
+              cancel
+            </button>
+            <span className="text-muted">The sessions and their audio stay.</span>
+          </span>
+        ) : (
+          <button onClick={() => setArmed(true)} className="text-muted hover:text-rust">
+            Delete release
+          </button>
+        )}
+      </div>
+
+      {player.current && (
+        <PlayerBar
+          project={player.current}
+          playing={player.playing}
+          time={player.time}
+          duration={player.duration}
+          autoAdvance={player.autoAdvance}
+          onToggle={() => player.toggle()}
+          onPrev={() => player.step(-1)}
+          onNext={() => player.step(1)}
+          onSeek={player.seek}
+          onAutoAdvance={player.setAutoAdvance}
+        />
+      )}
+    </div>
+  );
+}
