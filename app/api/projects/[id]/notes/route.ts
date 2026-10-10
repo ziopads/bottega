@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { addNote, getProject, getStudioViewer, listNotes } from '@/lib/studio';
+import { apiAccount, projectRefusal } from '@/lib/access';
+import { addNote, listNotes } from '@/lib/studio';
 import { parseNoteBody } from '@/lib/studioTypes';
 
 export const dynamic = 'force-dynamic';
@@ -12,20 +13,24 @@ function parseId(raw: string): number | null {
 // GET /api/projects/:id/notes — newest first.
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const params = await ctx.params;
-  const viewer = await getStudioViewer();
-  if (!viewer) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  const account = await apiAccount();
+  if (account instanceof NextResponse) return account;
+  const { db } = account;
   const id = parseId(params.id);
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
-  return NextResponse.json({ notes: await listNotes(id) });
+  const refusal = await projectRefusal(db, id, 'view');
+  if (refusal) return refusal;
+  return NextResponse.json({ notes: await listNotes(db, id) });
 }
 
 // POST /api/projects/:id/notes   { body, trackId? }
-// Any studio member. trackId ties the note to one version of the mix; omit or
+// Needs contribute access or above. trackId ties the note to one version of the mix; omit or
 // null for a note about the project as a whole.
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const params = await ctx.params;
-  const viewer = await getStudioViewer();
-  if (!viewer) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  const account = await apiAccount();
+  if (account instanceof NextResponse) return account;
+  const { db } = account;
   const id = parseId(params.id);
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
 
@@ -43,8 +48,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     if (!trackId) return NextResponse.json({ error: 'Invalid track' }, { status: 400 });
   }
 
-  if (!(await getProject(id))) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-  const result = await addNote({ projectId: id, trackId, body: text.value, by: viewer.email });
+  const refusal = await projectRefusal(db, id, 'contribute');
+  if (refusal) return refusal;
+  const result = await addNote(db, { projectId: id, trackId, body: text.value, by: account.email });
   if (!result.ok) return NextResponse.json({ error: 'That version is not part of this project.' }, { status: 400 });
   return NextResponse.json({ note: result.note }, { status: 201 });
 }

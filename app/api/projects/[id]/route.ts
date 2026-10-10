@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getProject, getStudioViewer, updateProject } from '@/lib/studio';
+import { apiAccount, projectRefusal } from '@/lib/access';
+import { getProject, updateProject } from '@/lib/studio';
 import { parseBpm, parseGenre, parseRating, parseWorkingName } from '@/lib/studioTypes';
 
 export const dynamic = 'force-dynamic';
@@ -12,22 +13,26 @@ function parseId(raw: string): number | null {
 // GET /api/projects/:id
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const params = await ctx.params;
-  const viewer = await getStudioViewer();
-  if (!viewer) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  const account = await apiAccount();
+  if (account instanceof NextResponse) return account;
+  const { db } = account;
   const id = parseId(params.id);
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
-  const project = await getProject(id);
+  const project = await getProject(db, id);
   if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   return NextResponse.json({ project });
 }
 
 // PATCH /api/projects/:id   { workingName?, rating?, genre?, bpm?, artistId?, currentMixId? }
-// Any studio member. The canonical ID is permanent, so a body that tries to set
-// it is refused outright rather than having that key quietly ignored.
+// Needs edit access or ownership; moving the session to another artist needs
+// ownership (an owner credits their own artists only). The canonical ID is
+// permanent, so a body that tries to set it is refused outright rather than
+// having that key quietly ignored.
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const params = await ctx.params;
-  const viewer = await getStudioViewer();
-  if (!viewer) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  const account = await apiAccount();
+  if (account instanceof NextResponse) return account;
+  const { db } = account;
   const id = parseId(params.id);
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
 
@@ -79,6 +84,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     patch.artistId = artistId;
   }
 
+  const refusal = await projectRefusal(db, id, patch.artistId !== undefined ? 'owner' : 'edit');
+  if (refusal) return refusal;
+
   // currentMixId: a mix of this project to make current, or null for "the newest".
   if ('currentMixId' in body) {
     if (body.currentMixId === null) patch.currentMixId = null;
@@ -89,10 +97,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     }
   }
 
-  const result = await updateProject(id, patch, viewer.email);
+  const result = await updateProject(db, id, patch, account.email);
   if (!result.ok) {
     if (result.reason === 'not-found') return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-    if (result.reason === 'no-artist') return NextResponse.json({ error: 'That artist is not on the roster.' }, { status: 400 });
+    if (result.reason === 'no-artist') return NextResponse.json({ error: 'Choose one of your own artists.' }, { status: 400 });
     if (result.reason === 'bad-mix') return NextResponse.json({ error: 'That mix is not part of this session.' }, { status: 400 });
     if (result.reason === 'no-genre') return NextResponse.json({ error: 'That genre is not on the list. Add it first.' }, { status: 400 });
     return NextResponse.json(

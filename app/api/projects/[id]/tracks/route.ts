@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { addTrack, getProject, getStudioViewer, listTracks } from '@/lib/studio';
+import { apiAccount, projectRefusal } from '@/lib/access';
+import { addTrack, listTracks } from '@/lib/studio';
 import { audioConfigured, audioObjectSize, isKeyForProject } from '@/lib/studioAudio';
 
 export const dynamic = 'force-dynamic';
@@ -12,21 +13,26 @@ function parseId(raw: string): number | null {
 // GET /api/projects/:id/tracks — newest version first.
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const params = await ctx.params;
-  const viewer = await getStudioViewer();
-  if (!viewer) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  const account = await apiAccount();
+  if (account instanceof NextResponse) return account;
+  const { db } = account;
   const id = parseId(params.id);
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
-  return NextResponse.json({ tracks: await listTracks(id) });
+  const refusal = await projectRefusal(db, id, 'view');
+  if (refusal) return refusal;
+  return NextResponse.json({ tracks: await listTracks(db, id) });
 }
 
 // POST /api/projects/:id/tracks   { key, filename, durationS? }
 // Step 2 of 2: record an upload that has reached R2 as the next version.
+// Needs contribute access or above.
 // The key must be one this project was issued, and the object must exist;
 // its size is read from R2 rather than trusted from the browser.
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const params = await ctx.params;
-  const viewer = await getStudioViewer();
-  if (!viewer) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  const account = await apiAccount();
+  if (account instanceof NextResponse) return account;
+  const { db } = account;
   if (!audioConfigured()) {
     return NextResponse.json({ error: 'Audio storage is not configured yet (R2_AUDIO_BUCKET).' }, { status: 503 });
   }
@@ -46,13 +52,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   if (!isKeyForProject(key, id)) return NextResponse.json({ error: 'Invalid upload key' }, { status: 400 });
   if (!filename) return NextResponse.json({ error: 'Missing filename' }, { status: 400 });
-  if (!(await getProject(id))) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+  const refusal = await projectRefusal(db, id, 'contribute');
+  if (refusal) return refusal;
 
   const bytes = await audioObjectSize(key);
   if (bytes === null) {
     return NextResponse.json({ error: 'The upload did not reach storage. Please try again.' }, { status: 409 });
   }
 
-  const track = await addTrack({ projectId: id, key, originalFilename: filename, bytes, durationS, by: viewer.email });
+  const track = await addTrack(db, { projectId: id, key, originalFilename: filename, bytes, durationS, by: account.email });
   return NextResponse.json({ track }, { status: 201 });
 }

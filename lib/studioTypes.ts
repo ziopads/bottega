@@ -3,7 +3,40 @@
 // Ported from Vivarium. No imports, so client components can use these without
 // pulling the database client (lib/studio.ts) into the browser bundle.
 
-export type StudioArtist = { id: number; code: string; name: string };
+export type StudioArtist = {
+  id: number;
+  code: string;
+  name: string;
+  /** Belongs to the viewer's own account: the only artists they can credit. */
+  mine?: boolean;
+};
+
+/** What the viewer may do with a project (db/002 project_level; REQUIREMENTS AC-5). */
+export type AccessLevel = 'owner' | 'edit' | 'contribute' | 'view';
+
+const LEVEL_RANK: Record<AccessLevel, number> = { view: 1, contribute: 2, edit: 3, owner: 4 };
+
+export function levelAtLeast(level: AccessLevel | null | undefined, minimum: AccessLevel): boolean {
+  return !!level && LEVEL_RANK[level] >= LEVEL_RANK[minimum];
+}
+
+export const SHARE_LEVELS = ['view', 'contribute', 'edit'] as const;
+export type ShareLevel = (typeof SHARE_LEVELS)[number];
+export const SHARE_LEVEL_LABEL: Record<ShareLevel, string> = {
+  view: 'View: listen, download, read notes',
+  contribute: 'Contribute: also upload and add notes',
+  edit: 'Edit: also change title, rating, genre, BPM, current mix',
+};
+
+/** One person an owner has shared a project with. */
+export type StudioShare = {
+  id: number;
+  projectId: number;
+  granteeId: string;
+  granteeName: string;
+  level: ShareLevel;
+  grantedAt: string;
+};
 
 export type StudioProject = {
   id: number;
@@ -19,6 +52,12 @@ export type StudioProject = {
   bpm: number | null;
   createdBy: string;
   createdAt: string;
+  /** The owning account (REQUIREMENTS AC-3). */
+  ownerId: string;
+  /** The owner's display name, shown on items shared with the viewer. */
+  ownerName: string;
+  /** What the viewer may do with it. */
+  level: AccessLevel;
   /**
    * The mix chosen by hand as current, or null when the newest mix is current.
    * Set on every project response.
@@ -56,6 +95,9 @@ export type StudioRelease = {
   notes: string;
   createdAt: string;
   trackCount: number;
+  ownerId: string;
+  ownerName: string;
+  level: AccessLevel;
 };
 
 export function parseReleaseTitle(raw: unknown): { value: string } | { error: string } {
@@ -86,8 +128,10 @@ export type StudioReference = {
   originalFilename: string;
   bytes: number | null;
   durationS: number | null;
-  uploadedBy: string;
-  uploadedByCode: string | null;
+  /** The uploader's account, or null for uploads recorded before accounts existed. */
+  uploadedById: string | null;
+  /** The uploader's display name. */
+  uploadedByName: string;
   uploadedAt: string;
 };
 
@@ -115,14 +159,15 @@ export type StudioTrack = {
   originalFilename: string;
   bytes: number | null;
   durationS: number | null;
-  uploadedBy: string;
-  /** The uploader's artist code (VIG, KJI …), or null when they have no studio_members row. */
-  uploadedByCode: string | null;
+  /** The uploader's account, or null for uploads recorded before accounts existed. */
+  uploadedById: string | null;
+  /** The uploader's display name. */
+  uploadedByName: string;
   uploadedAt: string;
 };
 
 /** One entry in a project's working-name history. */
-export type StudioName = { name: string; setBy: string; setByCode: string | null; setAt: string };
+export type StudioName = { name: string; setByName: string; setAt: string };
 
 /**
  * The filename a download saves as: "VIG 2026 0926 — Querencia — v3.mp3".
@@ -154,9 +199,10 @@ export type StudioNote = {
   trackId: number | null;
   /** The version number of trackId, for display ("v3"). */
   trackVersion: number | null;
-  author: string;
-  /** The author's artist code (VIG, KJI …), or null when they have no studio_members row. */
-  authorCode: string | null;
+  /** The author's account, or null for notes written before accounts existed. */
+  authorId: string | null;
+  /** The author's display name. */
+  authorName: string;
   body: string;
   createdAt: string;
   editedAt: string | null;

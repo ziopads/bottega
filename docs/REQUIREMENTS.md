@@ -376,9 +376,10 @@ Recorded so that early decisions do not close them off; none is designed yet.
 9. ~~**The study group's space.**~~ Closed 10 October 2026: a forum-like space
    of its own with a custodian, joined by invitation or request, deleted only
    by the platform administrator (L-7 to L-11).
-10. **What the library holds.** Manufacturers' manuals are published for
+10. ~~**What the library holds.**~~ Closed 10 October 2026, as proposed below.
+    Manufacturers' manuals are published for
     owners and are normally fine to keep in a shared library. Commercial books
     (an MPC guide bought by one person, for example) are another matter:
     putting one account's copy in front of every account is redistribution.
-    Proposed: books go in as private documents, shared with named people or
+    Decided: books go in as private documents, shared with named people or
     with a study group's members, and the library holds manuals only.

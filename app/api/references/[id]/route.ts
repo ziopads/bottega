@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
-import { deleteReferenceRow, getReferenceWithKey, getStudioViewer, isAdmin, updateReferenceCredit } from '@/lib/studio';
+import { apiAccount, projectRefusal } from '@/lib/access';
+import { deleteReferenceRow, getReferenceWithKey, updateReferenceCredit } from '@/lib/studio';
 import { deleteAudio } from '@/lib/studioAudio';
 import { parseCredit } from '@/lib/studioTypes';
 
@@ -11,10 +12,11 @@ function parseId(raw: string): number | null {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-// PATCH /api/references/:id   { credit } — any studio member may correct a credit.
+// PATCH /api/references/:id   { credit } — contribute access or above may correct a credit.
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const viewer = await getStudioViewer();
-  if (!viewer) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  const account = await apiAccount();
+  if (account instanceof NextResponse) return account;
+  const { db } = account;
   const id = parseId((await ctx.params).id);
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
   let body: Record<string, unknown>;
@@ -25,24 +27,27 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   }
   const credit = parseCredit(body.credit);
   if ('error' in credit) return NextResponse.json({ error: credit.error }, { status: 400 });
-  const reference = await updateReferenceCredit(id, credit.value);
+  const found = await getReferenceWithKey(db, id);
+  if (!found) return NextResponse.json({ error: 'Reference not found' }, { status: 404 });
+  const refusal = await projectRefusal(db, found.reference.projectId, 'contribute');
+  if (refusal) return refusal;
+  const reference = await updateReferenceCredit(db, id, credit.value);
   if (!reference) return NextResponse.json({ error: 'Reference not found' }, { status: 404 });
   return NextResponse.json({ reference });
 }
 
-// DELETE /api/references/:id — whoever uploaded it, or an admin. Unlike mixes,
-// references are not the archive of record, so the uploader may remove one.
+// DELETE /api/references/:id — the project's owner only (REQUIREMENTS AC-7).
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const viewer = await getStudioViewer();
-  if (!viewer) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  const account = await apiAccount();
+  if (account instanceof NextResponse) return account;
+  const { db } = account;
   const id = parseId((await ctx.params).id);
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
-  const found = await getReferenceWithKey(id);
+  const found = await getReferenceWithKey(db, id);
   if (!found) return NextResponse.json({ error: 'Reference not found' }, { status: 404 });
-  if (found.reference.uploadedBy !== viewer.email && !isAdmin(viewer.email)) {
-    return NextResponse.json({ error: 'Only whoever uploaded it, or an admin, can remove a reference.' }, { status: 403 });
-  }
-  await deleteReferenceRow(id);
+  const refusal = await projectRefusal(db, found.reference.projectId, 'owner');
+  if (refusal) return refusal;
+  await deleteReferenceRow(db, id);
   // Row first, then the object: a failed object delete leaves a harmless orphan.
   try {
     await deleteAudio(found.key);

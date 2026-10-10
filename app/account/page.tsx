@@ -1,10 +1,10 @@
-import { requireAllowedUser } from '@/lib/auth/guard';
+import { requireAccount } from '@/lib/access';
 import ChangePasswordForm from './ChangePasswordForm';
 
 export const metadata = { title: 'Account · Bottega' };
 
 export default async function AccountPage() {
-  const user = await requireAllowedUser();
+  const user = await requireAccount();
 
   return (
     <div className="max-w-2xl space-y-6 py-4">

@@ -1,22 +1,23 @@
 import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 
 import ProjectDetail from '@/app/_studio/ProjectDetail';
+import { requireAccount } from '@/lib/access';
 import {
   getProject,
-  getStudioViewer,
-  isAdmin,
   listArtists,
   listGenres,
   listNames,
   listNotes,
   listReferences,
+  listShares,
   listTracks,
   releasesForProject,
 } from '@/lib/studio';
 import { audioConfigured } from '@/lib/studioAudio';
 
-// One music project. Ported from Vivarium's /studio/[id].
+// One music project, as the signed-in person may see it: a project they can
+// neither own nor see is not found (its existence is not disclosed).
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -27,28 +28,30 @@ function parseId(raw: string): number | null {
 
 export async function generateMetadata({ params }: Params) {
   const id = parseId((await params).id);
-  const project = id ? await getProject(id).catch(() => null) : null;
+  const { db } = await requireAccount();
+  const project = id ? await getProject(db, id).catch(() => null) : null;
   if (!project) return { title: 'Bottega' };
   return { title: `${project.artist.code} ${project.canonicalId}${project.workingName ? ` — ${project.workingName}` : ''}` };
 }
 
 export default async function ProjectPage({ params }: Params) {
-  const viewer = await getStudioViewer();
-  if (!viewer) redirect('/auth/denied');
+  const { db, userId } = await requireAccount();
 
   const id = parseId((await params).id);
   if (!id) notFound();
-  const project = await getProject(id);
+  const project = await getProject(db, id);
   if (!project) notFound();
+  const isOwner = project.level === 'owner';
 
-  const [tracks, names, artists, genres, notes, releases, references] = await Promise.all([
-    listTracks(id),
-    listNames(id),
-    listArtists(),
-    listGenres(),
-    listNotes(id),
-    releasesForProject(id),
-    listReferences(id),
+  const [tracks, names, artists, genres, notes, releases, references, shares] = await Promise.all([
+    listTracks(db, id),
+    listNames(db, id),
+    listArtists(db),
+    listGenres(db),
+    listNotes(db, id),
+    releasesForProject(db, id),
+    listReferences(db, id),
+    isOwner ? listShares(db, id) : Promise.resolve([]),
   ]);
 
   return (
@@ -60,13 +63,13 @@ export default async function ProjectPage({ params }: Params) {
         initialProject={project}
         initialTracks={tracks}
         names={names}
-        artists={artists}
+        artists={artists.filter((a) => a.mine)}
         initialGenres={genres}
         initialNotes={notes}
         initialReferences={references}
         releases={releases}
-        viewerEmail={viewer.email}
-        canDelete={isAdmin(viewer.email)}
+        viewerId={userId}
+        initialShares={shares}
         uploadsEnabled={audioConfigured()}
       />
     </div>

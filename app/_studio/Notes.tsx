@@ -31,16 +31,21 @@ export default function Notes({
   tracks,
   notes,
   setNotes,
-  viewerEmail,
-  isAdmin,
+  viewerId,
+  canContribute,
+  canDelete,
   focus,
 }: {
   projectId: number;
   tracks: StudioTrack[];
   notes: StudioNote[];
   setNotes: React.Dispatch<React.SetStateAction<StudioNote[]>>;
-  viewerEmail: string;
-  isAdmin: boolean;
+  /** The signed-in account: authors edit their own notes. */
+  viewerId: string;
+  /** Contribute access or above: may add notes. */
+  canContribute: boolean;
+  /** The project's owner: deletes any note (REQUIREMENTS AC-7). */
+  canDelete: boolean;
   /** Bumped by a track's "Notes" link: filter to that version and aim the composer at it. */
   focus: { trackId: number; n: number } | null;
 }) {
@@ -77,14 +82,14 @@ export default function Notes({
 
   const people = useMemo(() => {
     const seen = new Map<string, string>();
-    for (const n of notes) seen.set(n.author, n.authorCode ?? n.author);
-    return Array.from(seen, ([email, label]) => ({ email, label })).sort((a, b) => a.label.localeCompare(b.label));
+    for (const n of notes) seen.set(n.authorId ?? '', n.authorName);
+    return Array.from(seen, ([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label));
   }, [notes]);
 
   const shown = useMemo(
     () =>
       notes.filter((n) => {
-        if (person && n.author !== person) return false;
+        if (person && (n.authorId ?? '') !== person) return false;
         if (version === 'project' && n.trackId !== null) return false;
         if (typeof version === 'number' && n.trackId !== version) return false;
         const day = localDay(n.createdAt);
@@ -144,6 +149,7 @@ export default function Notes({
     <section ref={section} className="mt-10 scroll-mt-6">
       <h2 className="mb-3 text-xs uppercase tracking-wide text-muted">Notes</h2>
 
+      {canContribute && (
       <form onSubmit={submit} className="rounded-lg border border-line bg-card p-3">
         <textarea
           ref={box}
@@ -176,6 +182,7 @@ export default function Notes({
           </button>
         </div>
       </form>
+      )}
 
       {notes.length > 0 && (
         <div className="mb-3 mt-5 flex flex-wrap items-center gap-4 text-sm">
@@ -188,7 +195,7 @@ export default function Notes({
             >
               <option value="">Everyone</option>
               {people.map((p) => (
-                <option key={p.email} value={p.email}>
+                <option key={p.id} value={p.id}>
                   {p.label}
                 </option>
               ))}
@@ -258,8 +265,8 @@ export default function Notes({
               key={n.id}
               note={n}
               tracks={tracks}
-              canEdit={n.author === viewerEmail}
-              canDelete={n.author === viewerEmail || isAdmin}
+              canEdit={n.authorId !== null && n.authorId === viewerId}
+              canDelete={canDelete}
               onSaved={replace}
               onDelete={() => remove(n)}
               onError={setError}
@@ -313,7 +320,7 @@ function NoteItem({
   return (
     <li className="rounded-lg border border-line bg-card px-4 py-3">
       <div className="flex flex-wrap items-baseline gap-x-3 text-xs text-muted">
-        <span className="font-medium tracking-[0.04em] text-ink">{n.authorCode ?? n.author}</span>
+        <span className="font-medium tracking-[0.04em] text-ink">{n.authorName}</span>
         <span>{formatWhen(n.createdAt)}</span>
         {n.trackVersion !== null ? (
           <span className="rounded border border-line px-1.5 py-px">v{n.trackVersion}</span>

@@ -9,15 +9,24 @@ import type {
   StudioProject,
   StudioReference,
   StudioRelease,
+  StudioShare,
   StudioTrack,
 } from '@/lib/studioTypes';
-import { formatBytes, formatDuration } from '@/lib/studioTypes';
+import { formatBytes, formatDuration, levelAtLeast } from '@/lib/studioTypes';
 import { api, GenreSelect, InlineEdit, Stars } from './controls';
 import Notes from './Notes';
+import Sharing from './Sharing';
 
 // One project: its details, its mixes (the current one large, the rest smaller
 // below, newest first), the upload that adds the next version, its references
-// (other artists' tracks to compare against), and its notes.
+// (other artists' tracks to compare against), its notes, and, for its owner,
+// who it is shared with.
+//
+// What the controls offer follows the viewer's level (REQUIREMENTS AC-5): view
+// shows and plays; contribute adds uploads and notes; edit adds the fields and
+// the current mix; only the owner deletes, credits an artist and shares. The
+// routes and the database enforce the same rules; this only keeps the page
+// from offering what would be refused.
 //
 // Upload is two requests around a direct browser → R2 PUT (see
 // lib/studioAudio.ts for why the file never passes through the app):
@@ -81,8 +90,8 @@ export default function ProjectDetail({
   initialNotes,
   initialReferences,
   releases,
-  viewerEmail,
-  canDelete,
+  viewerId,
+  initialShares,
   uploadsEnabled,
 }: {
   initialProject: StudioProject;
@@ -93,11 +102,15 @@ export default function ProjectDetail({
   initialNotes: StudioNote[];
   initialReferences: StudioReference[];
   releases: StudioRelease[];
-  viewerEmail: string;
-  canDelete: boolean;
+  viewerId: string;
+  initialShares: StudioShare[];
   uploadsEnabled: boolean;
 }) {
   const [project, setProject] = useState(initialProject);
+  const isOwner = project.level === 'owner';
+  const canEdit = levelAtLeast(project.level, 'edit');
+  const canContribute = levelAtLeast(project.level, 'contribute');
+  const canDelete = isOwner;
   const [tracks, setTracks] = useState(initialTracks);
   const [nameHistory, setNameHistory] = useState(names);
   const [genres, setGenres] = useState(initialGenres);
@@ -128,7 +141,7 @@ export default function ProjectDetail({
     }
     if ('workingName' in fields && r.data.project.workingName !== project.workingName && r.data.project.workingName) {
       setNameHistory((h) => [
-        { name: r.data.project.workingName, setBy: '', setByCode: 'you', setAt: new Date().toISOString() },
+        { name: r.data.project.workingName, setByName: 'you', setAt: new Date().toISOString() },
         ...h,
       ]);
     }
@@ -239,56 +252,89 @@ export default function ProjectDetail({
         <span className="font-mono text-lg" title="Canonical ID — matches the Ableton folder; permanent">
           {project.canonicalId}
         </span>
-        <label className="text-sm text-muted">
-          <span className="sr-only">Artist</span>
-          <select
-            value={project.artist.id}
-            onChange={(e) => patch({ artistId: Number(e.target.value) })}
-            title="Artist"
-            className="rounded-md border border-line bg-card px-2 py-1 text-xs font-medium tracking-[0.04em] outline-none focus:border-rust"
-          >
-            {artists.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.code} — {a.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Stars rating={project.rating} onRate={(n) => patch({ rating: n })} />
+        {isOwner && artists.length > 0 ? (
+          <label className="text-sm text-muted">
+            <span className="sr-only">Artist</span>
+            <select
+              value={project.artist.id}
+              onChange={(e) => patch({ artistId: Number(e.target.value) })}
+              title="Artist"
+              className="rounded-md border border-line bg-card px-2 py-1 text-xs font-medium tracking-[0.04em] outline-none focus:border-rust"
+            >
+              {artists.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.code} — {a.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <span className="text-xs font-medium tracking-[0.04em] text-muted" title={project.artist.name}>
+            {project.artist.code}
+          </span>
+        )}
+        {canEdit ? (
+          <Stars rating={project.rating} onRate={(n) => patch({ rating: n })} />
+        ) : (
+          <span className="text-sm text-muted" title="Rating">
+            {project.rating ? '★'.repeat(project.rating) : 'unrated'}
+          </span>
+        )}
       </div>
 
+      {!isOwner && (
+        <p className="mt-1 text-xs text-muted">
+          Shared by {project.ownerName} · you can{' '}
+          {project.level === 'edit' ? 'edit' : project.level === 'contribute' ? 'contribute' : 'listen'}
+        </p>
+      )}
+
       <div className="mt-2">
-        <InlineEdit
-          value={project.workingName}
-          placeholder="untitled"
-          label="Working name"
-          textClass="font-serif text-2xl sm:text-3xl"
-          onSave={(v) => patch({ workingName: v })}
-        />
+        {canEdit ? (
+          <InlineEdit
+            value={project.workingName}
+            placeholder="untitled"
+            label="Working name"
+            textClass="font-serif text-2xl sm:text-3xl"
+            onSave={(v) => patch({ workingName: v })}
+          />
+        ) : (
+          <h1 className="font-serif text-2xl sm:text-3xl">{project.workingName || 'untitled'}</h1>
+        )}
       </div>
 
       <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2 text-sm">
         <div className="flex items-baseline gap-2">
           <dt className="text-muted">Genre</dt>
           <dd>
-            <GenreSelect
-              value={project.genre}
-              genres={genres}
-              onAddGenre={addGenre}
-              onChange={(g) => patch({ genre: g })}
-            />
+            {canEdit ? (
+              <GenreSelect
+                value={project.genre}
+                genres={genres}
+                onAddGenre={addGenre}
+                onChange={(g) => patch({ genre: g })}
+              />
+            ) : (
+              project.genre || '—'
+            )}
           </dd>
         </div>
         <div className="flex items-baseline gap-2">
           <dt className="text-muted">BPM</dt>
           <dd className="w-20 tabular-nums">
-            <InlineEdit
-              value={project.bpm === null ? '' : String(project.bpm)}
-              placeholder="—"
-              label="BPM"
-              inputMode="decimal"
-              onSave={(v) => patch({ bpm: v })}
-            />
+            {canEdit ? (
+              <InlineEdit
+                value={project.bpm === null ? '' : String(project.bpm)}
+                placeholder="—"
+                label="BPM"
+                inputMode="decimal"
+                onSave={(v) => patch({ bpm: v })}
+              />
+            ) : project.bpm === null ? (
+              '—'
+            ) : (
+              project.bpm
+            )}
           </dd>
         </div>
         <div className="flex items-baseline gap-2">
@@ -319,7 +365,7 @@ export default function ProjectDetail({
           <ul className="mt-2 space-y-1 pl-4">
             {pastNames.map((n, i) => (
               <li key={i} className="text-muted">
-                <span className="text-ink">{n.name}</span> · {n.setByCode ?? n.setBy} · {formatDate(n.setAt)}
+                <span className="text-ink">{n.name}</span> · {n.setByName} · {formatDate(n.setAt)}
               </li>
             ))}
           </ul>
@@ -337,7 +383,7 @@ export default function ProjectDetail({
             <TrackMeta track={latest} emphasis />
             <p className="mt-1 text-xs text-muted">
               Current mix{chosenByHand ? ', chosen by hand' : ', the newest'}
-              {chosenByHand && (
+              {chosenByHand && canEdit && (
                 <>
                   {' · '}
                   <button onClick={() => makeCurrent(null)} className="underline hover:text-ink">
@@ -387,7 +433,7 @@ export default function ProjectDetail({
                   noteCount={noteCounts.get(t.id) ?? 0}
                   onNotes={() => openNotes(t)}
                   onDelete={() => remove(t)}
-                  onMakeCurrent={() => makeCurrent(t)}
+                  onMakeCurrent={canEdit ? () => makeCurrent(t) : undefined}
                 />
               </li>
             ))}
@@ -395,7 +441,7 @@ export default function ProjectDetail({
         )}
 
         {/* ── Upload ───────────────────────────────────────────────────── */}
-        {uploadsEnabled ? (
+        {!canContribute ? null : uploadsEnabled ? (
           <div
             onDragOver={(e) => {
               e.preventDefault();
@@ -458,8 +504,8 @@ export default function ProjectDetail({
         projectId={project.id}
         references={references}
         setReferences={setReferences}
-        viewerEmail={viewerEmail}
-        isAdmin={canDelete}
+        canContribute={canContribute}
+        canDelete={canDelete}
         uploadsEnabled={uploadsEnabled}
         register={register}
         onPlay={onPlay}
@@ -471,17 +517,20 @@ export default function ProjectDetail({
         tracks={tracks}
         notes={notes}
         setNotes={setNotes}
-        viewerEmail={viewerEmail}
-        isAdmin={canDelete}
+        viewerId={viewerId}
+        canContribute={canContribute}
+        canDelete={canDelete}
         focus={noteFocus}
       />
+
+      {isOwner && <Sharing projectId={project.id} initialShares={initialShares} />}
     </div>
   );
 }
 
 function TrackMeta({ track: t, emphasis = false }: { track: StudioTrack; emphasis?: boolean }) {
   const details = [
-    t.uploadedByCode ?? t.uploadedBy,
+    t.uploadedByName,
     formatDate(t.uploadedAt),
     formatDuration(t.durationS),
     formatBytes(t.bytes),
@@ -552,14 +601,14 @@ function TrackActions({
 /**
  * Other artists' tracks kept beside the session for comparison. Uploaded the
  * same way as a mix (signed PUT straight to R2), then recorded with a credit.
- * Whoever uploaded one, or an admin, may remove it.
+ * Contributors add them and correct credits; only the owner removes one.
  */
 function References({
   projectId,
   references,
   setReferences,
-  viewerEmail,
-  isAdmin,
+  canContribute,
+  canDelete,
   uploadsEnabled,
   register,
   onPlay,
@@ -568,8 +617,8 @@ function References({
   projectId: number;
   references: StudioReference[];
   setReferences: React.Dispatch<React.SetStateAction<StudioReference[]>>;
-  viewerEmail: string;
-  isAdmin: boolean;
+  canContribute: boolean;
+  canDelete: boolean;
   uploadsEnabled: boolean;
   register: (el: HTMLAudioElement | null) => void;
   onPlay: (e: React.SyntheticEvent<HTMLAudioElement>) => void;
@@ -642,15 +691,19 @@ function References({
           <li key={r.id} className="rounded-md border border-line/70 px-3 py-2">
             <div className="flex flex-wrap items-baseline gap-x-3">
               <span className="min-w-0 flex-1 text-sm font-medium">
-                <InlineEdit
-                  value={r.credit}
-                  placeholder={r.originalFilename}
-                  label="Credit"
-                  onSave={(v) => saveCredit(r, v)}
-                />
+                {canContribute ? (
+                  <InlineEdit
+                    value={r.credit}
+                    placeholder={r.originalFilename}
+                    label="Credit"
+                    onSave={(v) => saveCredit(r, v)}
+                  />
+                ) : (
+                  r.credit || r.originalFilename
+                )}
               </span>
               <span className="text-xs text-muted">
-                {[r.uploadedByCode ?? r.uploadedBy, formatDate(r.uploadedAt), formatDuration(r.durationS), formatBytes(r.bytes)]
+                {[r.uploadedByName, formatDate(r.uploadedAt), formatDuration(r.durationS), formatBytes(r.bytes)]
                   .filter(Boolean)
                   .join(' · ')}
               </span>
@@ -666,14 +719,14 @@ function References({
             />
             <ReferenceActions
               reference={r}
-              canDelete={r.uploadedBy === viewerEmail || isAdmin}
+              canDelete={canDelete}
               onDelete={() => remove(r)}
             />
           </li>
         ))}
       </ul>
 
-      {uploadsEnabled && (
+      {uploadsEnabled && canContribute && (
         <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
           <input
             type="text"

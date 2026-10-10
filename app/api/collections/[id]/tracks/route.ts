@@ -1,28 +1,38 @@
 import { NextResponse } from 'next/server';
-import { addToRelease, getRelease, getStudioViewer, releaseProjects, removeFromRelease, reorderRelease } from '@/lib/studio';
+import { apiAccount, projectRefusal, type Level } from '@/lib/access';
+import type { Scoped } from '@/lib/db';
+import { addToRelease, releaseProjects, removeFromRelease, reorderRelease } from '@/lib/studio';
 
 export const dynamic = 'force-dynamic';
 
-// The running order of a release.
-//   POST   { projectIds }  append sessions (ones already on it are skipped)
-//   PUT    { projectIds }  set the order, first to last
-//   DELETE { projectId }   take one off and close the gap
-// Each answers with the new running order.
+// The running order of a collection.
+//   POST   { projectIds }  append sessions (ones already on it are skipped); edit access
+//   PUT    { projectIds }  set the order, first to last; edit access
+//   DELETE { projectId }   take one off and close the gap; the owner only (AC-7)
+// Each answers with the new running order. A session can be added only if the
+// person can see it; the database refuses the rest.
 
-async function setup(req: Request, rawId: string) {
-  const viewer = await getStudioViewer();
-  if (!viewer) return { error: NextResponse.json({ error: 'Not authorized' }, { status: 403 }) };
+async function setup(
+  req: Request,
+  rawId: string,
+  minimum: Level,
+): Promise<{ error: NextResponse } | { id: number; body: Record<string, unknown>; db: Scoped }> {
+  const account = await apiAccount();
+  if (account instanceof NextResponse) return { error: account };
+  const { db } = account;
   const id = Number(rawId);
-  if (!Number.isInteger(id) || id <= 0 || !(await getRelease(id))) {
+  if (!Number.isInteger(id) || id <= 0) {
     return { error: NextResponse.json({ error: 'Collection not found' }, { status: 404 }) };
   }
+  const refusal = await projectRefusal(db, id, minimum);
+  if (refusal) return { error: refusal };
   let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
     return { error: NextResponse.json({ error: 'Invalid body' }, { status: 400 }) };
   }
-  return { id, body };
+  return { id, body, db };
 }
 
 function ids(v: unknown): number[] {
@@ -31,26 +41,26 @@ function ids(v: unknown): number[] {
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const params = await ctx.params;
-  const s = await setup(req, params.id);
+  const s = await setup(req, params.id, 'edit');
   if ('error' in s) return s.error;
-  await addToRelease(s.id, ids(s.body.projectIds));
-  return NextResponse.json({ projects: await releaseProjects(s.id) });
+  await addToRelease(s.db, s.id, ids(s.body.projectIds));
+  return NextResponse.json({ projects: await releaseProjects(s.db, s.id) });
 }
 
 export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const params = await ctx.params;
-  const s = await setup(req, params.id);
+  const s = await setup(req, params.id, 'edit');
   if ('error' in s) return s.error;
-  await reorderRelease(s.id, ids(s.body.projectIds));
-  return NextResponse.json({ projects: await releaseProjects(s.id) });
+  await reorderRelease(s.db, s.id, ids(s.body.projectIds));
+  return NextResponse.json({ projects: await releaseProjects(s.db, s.id) });
 }
 
 export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const params = await ctx.params;
-  const s = await setup(req, params.id);
+  const s = await setup(req, params.id, 'owner');
   if ('error' in s) return s.error;
   const projectId = Number(s.body.projectId);
   if (!Number.isInteger(projectId)) return NextResponse.json({ error: 'Invalid session' }, { status: 400 });
-  await removeFromRelease(s.id, projectId);
-  return NextResponse.json({ projects: await releaseProjects(s.id) });
+  await removeFromRelease(s.db, s.id, projectId);
+  return NextResponse.json({ projects: await releaseProjects(s.db, s.id) });
 }

@@ -6,16 +6,20 @@ import type { ReleaseKind, StudioArtist, StudioRelease } from '@/lib/studioTypes
 import { RELEASE_KIND_LABEL, RELEASE_KINDS } from '@/lib/studioTypes';
 import { api } from './controls';
 
-// All releases, with a form to start a new one. Sessions are added to a
-// release from its page, or in bulk from the sessions list.
+// The viewer's collections, with a form to start a new one, then the
+// collections others have shared with them (REQUIREMENTS AC-8). Sessions are
+// added to a collection from its page, or in bulk from the sessions list.
 
 export default function ReleaseList({
   initialReleases,
   artists,
+  viewerId,
 }: {
   initialReleases: StudioRelease[];
   artists: StudioArtist[];
+  viewerId: string;
 }) {
+  const myArtists = artists.filter((a) => a.mine);
   const [releases, setReleases] = useState(initialReleases);
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<ReleaseKind>('lp');
@@ -65,7 +69,7 @@ export default function ReleaseList({
           <span className="text-muted">Artist</span>
           <select value={artistId} onChange={(e) => setArtistId(e.target.value)} className={field}>
             <option value="">Various / undecided</option>
-            {artists.map((a) => (
+            {myArtists.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.code} — {a.name}
               </option>
@@ -86,7 +90,7 @@ export default function ReleaseList({
         <p className="mt-6 text-sm text-muted">No collections yet.</p>
       ) : (
         <ul className="mt-6 divide-y divide-line rounded-lg border border-line bg-card">
-          {releases.map((r) => (
+          {[...releases.filter((r) => r.ownerId === viewerId), ...releases.filter((r) => r.ownerId !== viewerId)].map((r) => (
             <li key={r.id}>
               <Link href={`/collections/${r.id}`} className="flex items-baseline gap-3 px-4 py-3 hover:bg-ink/5">
                 <span className="font-serif text-lg">{r.title}</span>
@@ -94,6 +98,7 @@ export default function ReleaseList({
                   {[RELEASE_KIND_LABEL[r.kind], r.artist?.code, r.year].filter(Boolean).join(' · ')}
                 </span>
                 <span className="ml-auto text-xs text-muted">
+                  {r.ownerId !== viewerId && `shared by ${r.ownerName} · `}
                   {r.trackCount} {r.trackCount === 1 ? 'track' : 'tracks'}
                 </span>
               </Link>

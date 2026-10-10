@@ -96,7 +96,8 @@ marked with the phase that creates them.
   owning account (`account_id`); a project may be credited only to an artist
   of its owner's account.
 - `members` — email, display name, artist. Phase 0's attribution table.
-  Retired by migration 002, which moves each artist to its account.
+  Migration 002 restricts it to each person's own row; it is dropped once
+  `lib/studio.ts` reads names from `accounts` instead.
 - `accounts`, `shares`, `access_log` — Phase 1, §11.
 
 ### Projects (Phase 0)
@@ -148,29 +149,35 @@ a real foreign key.
 
 ### Routes (Phase 0, as built)
 
-Pages: `/` (sessions), `/projects/[id]`, `/collections`, `/collections/[id]`,
-`/admin/lengths` (admins), `/account`, `/auth/sign-in`, `/auth/denied`.
+Pages: `/` (own sessions, then "Shared with me"), `/projects/[id]`,
+`/collections`, `/collections/[id]`, `/admin/lengths` (fills lengths in the
+viewer's own projects), `/admin/accounts` and `/admin/accounts/[id]` (platform
+administrator), `/account`, `/auth/sign-in`, `/auth/pending`.
 
-Route handlers under `app/api/`, each checking the allowlist itself:
+Route handlers under `app/api/`. Each calls `apiAccount()` and, for one
+project, `projectRefusal()` with the level it needs (§11); the level is given
+in brackets:
 
 | Path | Methods | Does |
 |---|---|---|
-| `projects` | GET, POST | list music projects; create one |
-| `projects/bulk` | POST | bulk edit from the session list |
-| `projects/[id]` | GET, PATCH | read; change title, rating, genre, BPM, artist, current mix |
-| `projects/[id]/tracks/upload` | POST | sign an R2 upload for a mix (step 1 of 2) |
-| `projects/[id]/tracks` | GET, POST | list mixes; record an uploaded mix (step 2) |
-| `projects/[id]/references` | GET, POST | list references; record an uploaded reference |
-| `projects/[id]/notes` | GET, POST | list notes; add one |
-| `tracks/[trackId]` | DELETE | delete a mix (admins) |
-| `tracks/[trackId]/audio` | GET | redirect to a short-lived signed link; `?download=1` names the file |
-| `references/[id]` | PATCH, DELETE | change a reference's credit; delete (uploader or admin) |
-| `audio/[id]/duration` | POST | store a length read in the browser |
-| `notes/[noteId]` | PATCH, DELETE | edit; delete (author or admin) |
-| `genres` | GET, POST | the genre list; add one |
-| `collections` | GET, POST | list; create |
-| `collections/[id]` | GET, PATCH, DELETE | read, edit, delete a collection |
-| `collections/[id]/tracks` | POST, PUT, DELETE | add, reorder, remove parts |
+| `projects` | GET, POST | list what the viewer can see; create one in their own account |
+| `projects/bulk` | POST | bulk edit from the session list [edit on each; owner to change artist] |
+| `projects/[id]` | GET, PATCH | read [view]; change title, rating, genre, BPM, current mix [edit], artist [owner] |
+| `projects/[id]/tracks/upload` | POST | sign an R2 upload for a mix or reference, step 1 of 2 [contribute] |
+| `projects/[id]/tracks` | GET, POST | list mixes [view]; record an uploaded mix, step 2 [contribute] |
+| `projects/[id]/references` | GET, POST | list references [view]; record an uploaded reference [contribute] |
+| `projects/[id]/notes` | GET, POST | list notes [view]; add one [contribute] |
+| `projects/[id]/shares` | GET, POST | who it is shared with; share by email [owner] |
+| `shares/[id]` | PATCH, DELETE | change a share's level; revoke [owner] |
+| `tracks/[trackId]` | DELETE | delete a mix [owner] |
+| `tracks/[trackId]/audio` | GET | redirect to a short-lived signed link; `?download=1` names the file [view] |
+| `references/[id]` | PATCH, DELETE | change a reference's credit [contribute]; delete [owner] |
+| `audio/[id]/duration` | POST | store a length read in the browser [the database fills it at contribute] |
+| `notes/[noteId]` | PATCH, DELETE | edit [author]; delete [owner] |
+| `genres` | GET, POST | the platform's genre list; add one [any active account] |
+| `collections` | GET, POST | list what the viewer can see; create one in their own account |
+| `collections/[id]` | GET, PATCH, DELETE | read [view], edit [edit; owner for artist], delete [owner] |
+| `collections/[id]/tracks` | POST, PUT, DELETE | add and reorder parts [edit]; remove one [owner] |
 | `auth/[...path]` | GET, POST | Neon Auth's proxy |
 
 The names `tracks` and `trackId` for mixes are carried over from Vivarium.
@@ -391,7 +398,7 @@ nothing.
   | `projects` and kind tables | level not null | `owner_id` is me, account active | `edit` or `owner` | `owner` |
   | `audio` | level of its project | `contribute` or above | `contribute` or above | `owner` |
   | `notes` | level of its project | `contribute` or above, `author_id` is me | author only | `owner` |
-  | `project_parts` | parent readable | `edit` on parent, child owned by parent's owner | as insert | `owner` of parent |
+  | `project_parts` | parent readable | `edit` on parent, and the child readable | `edit` on parent | `owner` of parent |
   | `artists` | own, or credited on a readable project | own | own | own |
   | `shares` | owner of the item, or the grantee | owner of the item | owner | owner |
   | `accounts` | self; platform administrator | through functions only | through functions only | never |

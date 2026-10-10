@@ -3,29 +3,37 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
-import type { ReleaseKind, StudioArtist, StudioProject, StudioRelease } from '@/lib/studioTypes';
-import { RELEASE_KIND_LABEL, RELEASE_KINDS, formatDuration } from '@/lib/studioTypes';
+import type { ReleaseKind, StudioArtist, StudioProject, StudioRelease, StudioShare } from '@/lib/studioTypes';
+import { RELEASE_KIND_LABEL, RELEASE_KINDS, formatDuration, levelAtLeast } from '@/lib/studioTypes';
 import { api, InlineEdit } from './controls';
 import PlayerBar from './PlayerBar';
+import Sharing from './Sharing';
 import { usePlayer } from './usePlayer';
 
 // One release: its details, its running order (each entry plays that
 // session's newest mix, and the player runs straight through in order), and
-// a search for adding sessions.
+// a search for adding sessions. Editing needs edit access; taking a track off,
+// deleting, crediting an artist and sharing need ownership (REQUIREMENTS AC-5,
+// AC-7). Sharing a collection lets the people it is shared with hear the
+// owner's own tracks on it (AC-6).
 
 export default function ReleaseDetail({
   initialRelease,
   initialTracks,
   artists,
   allSessions,
+  initialShares,
 }: {
   initialRelease: StudioRelease;
   initialTracks: StudioProject[];
   artists: StudioArtist[];
   allSessions: StudioProject[];
+  initialShares: StudioShare[];
 }) {
   const router = useRouter();
   const [release, setRelease] = useState(initialRelease);
+  const canEdit = levelAtLeast(release.level, 'edit');
+  const isOwner = release.level === 'owner';
   const [tracks, setTracks] = useState(initialTracks);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -97,16 +105,27 @@ export default function ReleaseDetail({
     <div className={`mt-4 ${player.current ? 'pb-28' : ''}`}>
       <audio {...player.audioProps} />
 
-      <InlineEdit
-        value={release.title}
-        placeholder="Untitled collection"
-        label="Title"
-        textClass="font-serif text-2xl sm:text-3xl"
-        onSave={(v) => save({ title: v })}
-      />
+      {canEdit ? (
+        <InlineEdit
+          value={release.title}
+          placeholder="Untitled collection"
+          label="Title"
+          textClass="font-serif text-2xl sm:text-3xl"
+          onSave={(v) => save({ title: v })}
+        />
+      ) : (
+        <h1 className="font-serif text-2xl sm:text-3xl">{release.title || 'Untitled collection'}</h1>
+      )}
+      {!isOwner && <p className="mt-1 text-xs text-muted">Shared by {release.ownerName}</p>}
 
       <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-        <select value={release.kind} onChange={(e) => save({ kind: e.target.value as ReleaseKind })} className={sel} aria-label="Kind">
+        <select
+          value={release.kind}
+          onChange={(e) => save({ kind: e.target.value as ReleaseKind })}
+          disabled={!canEdit}
+          className={sel}
+          aria-label="Kind"
+        >
           {RELEASE_KINDS.map((k) => (
             <option key={k} value={k}>
               {RELEASE_KIND_LABEL[k]}
@@ -116,10 +135,16 @@ export default function ReleaseDetail({
         <select
           value={release.artist?.id ?? ''}
           onChange={(e) => save({ artistId: e.target.value || null })}
+          disabled={!isOwner}
           className={sel}
           aria-label="Artist"
         >
           <option value="">Various / undecided</option>
+          {release.artist && !artists.some((a) => a.id === release.artist?.id) && (
+            <option value={release.artist.id}>
+              {release.artist.code} — {release.artist.name}
+            </option>
+          )}
           {artists.map((a) => (
             <option key={a.id} value={a.id}>
               {a.code} — {a.name}
@@ -129,13 +154,17 @@ export default function ReleaseDetail({
         <span className="flex items-center gap-1">
           <span className="text-muted">Year</span>
           <span className="w-16">
-            <InlineEdit
-              value={release.year === null ? '' : String(release.year)}
-              placeholder="—"
-              label="Year"
-              inputMode="decimal"
-              onSave={(v) => save({ year: v || null })}
-            />
+            {canEdit ? (
+              <InlineEdit
+                value={release.year === null ? '' : String(release.year)}
+                placeholder="—"
+                label="Year"
+                inputMode="decimal"
+                onSave={(v) => save({ year: v || null })}
+              />
+            ) : (
+              release.year ?? '—'
+            )}
           </span>
         </span>
         <span className="text-muted">
@@ -152,7 +181,7 @@ export default function ReleaseDetail({
       {error && <p className="mt-3 text-sm text-rust">{error}</p>}
 
       <ol className="mt-6 divide-y divide-line rounded-lg border border-line bg-card">
-        {tracks.length === 0 && <li className="px-4 py-6 text-sm text-muted">No tracks yet. Add sessions below.</li>}
+        {tracks.length === 0 && <li className="px-4 py-6 text-sm text-muted">No tracks yet.</li>}
         {tracks.map((p, i) => {
           const isCurrent = p.id === player.currentId;
           return (
@@ -179,6 +208,7 @@ export default function ReleaseDetail({
               <span className="text-xs tabular-nums text-muted">
                 {p.latest ? `v${p.latest.version} · ${formatDuration(p.latest.durationS)}` : 'no audio'}
               </span>
+              {canEdit && (
               <span className="flex shrink-0 gap-1 text-muted">
                 <button onClick={() => move(i, -1)} disabled={i === 0} className="px-1 hover:text-ink disabled:opacity-30" aria-label="Move up">
                   ↑
@@ -191,15 +221,23 @@ export default function ReleaseDetail({
                 >
                   ↓
                 </button>
-                <button onClick={() => order('DELETE', { projectId: p.id })} className="px-1 hover:text-rust" aria-label="Remove from collection">
-                  ×
-                </button>
+                {isOwner && (
+                  <button
+                    onClick={() => order('DELETE', { projectId: p.id })}
+                    className="px-1 hover:text-rust"
+                    aria-label="Remove from collection"
+                  >
+                    ×
+                  </button>
+                )}
               </span>
+              )}
             </li>
           );
         })}
       </ol>
 
+      {canEdit && (
       <div className="mt-4">
         <input
           type="search"
@@ -229,7 +267,11 @@ export default function ReleaseDetail({
           </ul>
         )}
       </div>
+      )}
 
+      {isOwner && <Sharing projectId={release.id} initialShares={initialShares} />}
+
+      {isOwner && (
       <div className="mt-10 text-xs">
         {armed ? (
           <span className="flex gap-3">
@@ -247,6 +289,7 @@ export default function ReleaseDetail({
           </button>
         )}
       </div>
+      )}
 
       {player.current && (
         <PlayerBar

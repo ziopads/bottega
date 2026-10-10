@@ -4,7 +4,7 @@ import { Geist_Mono, Instrument_Sans } from 'next/font/google';
 import './globals.css';
 
 import { signOut } from '@/app/auth/sign-in/actions';
-import { getAllowedUser } from '@/lib/auth/guard';
+import { getAccount } from '@/lib/access';
 
 const instrument = Instrument_Sans({ variable: '--font-instrument', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
@@ -25,8 +25,11 @@ const NAV = [
 ];
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Display only. The guard that matters runs in each page and action.
-  const user = await getAllowedUser();
+  // Display only. The guard that matters runs in each page and action, and in
+  // the database. Pending and disabled accounts get no navigation.
+  const account = await getAccount();
+  const user = account?.status === 'active' ? account : null;
+  const nav = user?.isPlatformAdmin ? [...NAV, { href: '/admin/accounts', label: 'Accounts' }] : NAV;
 
   return (
     <html lang="en" className={`${instrument.variable} ${geistMono.variable} h-full antialiased`}>
@@ -38,7 +41,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </Link>
             {user ? (
               <nav className="flex gap-4 text-sm">
-                {NAV.map((item) => (
+                {nav.map((item) => (
                   <Link key={item.href} href={item.href} className="text-muted hover:text-rust">
                     {item.label}
                   </Link>
@@ -48,7 +51,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {user ? (
               <form action={signOut} className="ml-auto flex items-baseline gap-3 text-sm">
                 <Link href="/account" className="text-muted hover:text-rust">
-                  {user.name ?? user.email}
+                  {user.name || user.email}
                 </Link>
                 <button type="submit" className="text-muted hover:text-rust">
                   Sign out

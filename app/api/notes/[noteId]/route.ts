@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { deleteNote, getNote, getStudioViewer, isAdmin, updateNote } from '@/lib/studio';
+import { apiAccount, projectRefusal } from '@/lib/access';
+import { deleteNote, getNote, updateNote } from '@/lib/studio';
 import { parseNoteBody } from '@/lib/studioTypes';
 
 export const dynamic = 'force-dynamic';
@@ -13,13 +14,14 @@ function parseId(raw: string): number | null {
 // The author only: a note is someone's own words, so nobody else rewrites it.
 export async function PATCH(req: Request, ctx: { params: Promise<{ noteId: string }> }) {
   const params = await ctx.params;
-  const viewer = await getStudioViewer();
-  if (!viewer) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  const account = await apiAccount();
+  if (account instanceof NextResponse) return account;
+  const { db } = account;
   const id = parseId(params.noteId);
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
-  const note = await getNote(id);
+  const note = await getNote(db, id);
   if (!note) return NextResponse.json({ error: 'Note not found' }, { status: 404 });
-  if (note.author !== viewer.email) return NextResponse.json({ error: 'Only the author can edit a note.' }, { status: 403 });
+  if (note.authorId !== account.userId) return NextResponse.json({ error: 'Only the author can edit a note.' }, { status: 403 });
 
   let body: Record<string, unknown>;
   try {
@@ -41,7 +43,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ noteId: strin
       patch.trackId = t;
     }
   }
-  const result = await updateNote(id, patch);
+  const result = await updateNote(db, id, patch);
   if (!result.ok) {
     return result.reason === 'not-found'
       ? NextResponse.json({ error: 'Note not found' }, { status: 404 })
@@ -50,18 +52,19 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ noteId: strin
   return NextResponse.json({ note: result.note });
 }
 
-// DELETE /api/notes/:noteId — the author, or an admin.
+// DELETE /api/notes/:noteId — the project's owner only (REQUIREMENTS AC-7),
+// including notes collaborators wrote.
 export async function DELETE(_req: Request, ctx: { params: Promise<{ noteId: string }> }) {
   const params = await ctx.params;
-  const studio = await getStudioViewer();
-  if (!studio) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  const account = await apiAccount();
+  if (account instanceof NextResponse) return account;
+  const { db } = account;
   const id = parseId(params.noteId);
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
-  const note = await getNote(id);
+  const note = await getNote(db, id);
   if (!note) return NextResponse.json({ error: 'Note not found' }, { status: 404 });
-  if (note.author !== studio.email && !isAdmin(studio?.email)) {
-    return NextResponse.json({ error: 'Only the author or an admin can delete a note.' }, { status: 403 });
-  }
-  await deleteNote(id);
+  const refusal = await projectRefusal(db, note.projectId, 'owner');
+  if (refusal) return refusal;
+  await deleteNote(db, id);
   return NextResponse.json({ ok: true });
 }
