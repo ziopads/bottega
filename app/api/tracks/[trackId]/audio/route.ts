@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getProject, getStudioViewer, getTrackWithKey } from '@/lib/studio';
+import { getAudioWithKey, getProject, getStudioViewer } from '@/lib/studio';
 import { audioConfigured, signAudioGet } from '@/lib/studioAudio';
-import { downloadName } from '@/lib/studioTypes';
+import { downloadName, referenceDownloadName } from '@/lib/studioTypes';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,13 +19,17 @@ export async function GET(req: Request, ctx: { params: Promise<{ trackId: string
 
   const id = Number(params.trackId);
   if (!Number.isInteger(id) || id <= 0) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
-  const found = await getTrackWithKey(id);
+  // Mixes and references alike: both live in the private audio bucket.
+  const found = await getAudioWithKey(id);
   if (!found) return NextResponse.json({ error: 'Track not found' }, { status: 404 });
 
   let name: string | undefined;
   if (new URL(req.url).searchParams.get('download')) {
-    const project = await getProject(found.track.projectId);
-    name = project ? downloadName(project, found.track.version) : found.track.originalFilename;
+    if (found.role === 'reference') name = referenceDownloadName(found);
+    else {
+      const project = await getProject(found.projectId);
+      name = project && found.version ? downloadName(project, found.version) : found.originalFilename;
+    }
   }
 
   const res = NextResponse.redirect(await signAudioGet(found.key, name), 302);

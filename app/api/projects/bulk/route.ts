@@ -60,7 +60,7 @@ export async function POST(req: Request) {
   if (body.releaseId !== undefined && body.releaseId !== null && body.releaseId !== '') {
     const releaseId = Number(body.releaseId);
     if (!Number.isInteger(releaseId) || !(await getRelease(releaseId))) {
-      return NextResponse.json({ error: 'Release not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Collection not found' }, { status: 404 });
     }
     await addToRelease(releaseId, ids);
   }

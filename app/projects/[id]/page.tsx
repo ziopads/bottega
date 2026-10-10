@@ -10,6 +10,7 @@ import {
   listGenres,
   listNames,
   listNotes,
+  listReferences,
   listTracks,
   releasesForProject,
 } from '@/lib/studio';
@@ -40,13 +41,14 @@ export default async function ProjectPage({ params }: Params) {
   const project = await getProject(id);
   if (!project) notFound();
 
-  const [tracks, names, artists, genres, notes, releases] = await Promise.all([
+  const [tracks, names, artists, genres, notes, releases, references] = await Promise.all([
     listTracks(id),
     listNames(id),
     listArtists(),
     listGenres(),
     listNotes(id),
     releasesForProject(id),
+    listReferences(id),
   ]);
 
   return (
@@ -61,6 +63,7 @@ export default async function ProjectPage({ params }: Params) {
         artists={artists}
         initialGenres={genres}
         initialNotes={notes}
+        initialReferences={references}
         releases={releases}
         viewerEmail={viewer.email}
         canDelete={isAdmin(viewer.email)}

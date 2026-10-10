@@ -17,7 +17,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const id = parseId(params.id);
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
   const release = await getRelease(id);
-  if (!release) return NextResponse.json({ error: 'Release not found' }, { status: 404 });
+  if (!release) return NextResponse.json({ error: 'Collection not found' }, { status: 404 });
   return NextResponse.json({ release, projects: await releaseProjects(id) });
 }
 
@@ -61,7 +61,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     patch.notes = body.notes.slice(0, 10_000);
   }
   const release = await updateRelease(id, patch);
-  if (!release) return NextResponse.json({ error: 'Release not found' }, { status: 404 });
+  if (!release) return NextResponse.json({ error: 'Collection not found' }, { status: 404 });
   return NextResponse.json({ release });
 }
 

@@ -2,13 +2,22 @@
 
 import { useRef, useState } from 'react';
 import Link from 'next/link';
-import type { StudioArtist, StudioName, StudioNote, StudioProject, StudioRelease, StudioTrack } from '@/lib/studioTypes';
+import type {
+  StudioArtist,
+  StudioName,
+  StudioNote,
+  StudioProject,
+  StudioReference,
+  StudioRelease,
+  StudioTrack,
+} from '@/lib/studioTypes';
 import { formatBytes, formatDuration } from '@/lib/studioTypes';
 import { api, GenreSelect, InlineEdit, Stars } from './controls';
 import Notes from './Notes';
 
-// One project: its details, its reference MP3s (newest first, older versions
-// smaller below), the upload that adds the next version, and its notes.
+// One project: its details, its mixes (the current one large, the rest smaller
+// below, newest first), the upload that adds the next version, its references
+// (other artists' tracks to compare against), and its notes.
 //
 // Upload is two requests around a direct browser → R2 PUT (see
 // lib/studioAudio.ts for why the file never passes through the app):
@@ -18,7 +27,7 @@ import Notes from './Notes';
 
 type Upload = { name: string; progress: number; error?: string };
 
-function audioUrl(t: StudioTrack, download = false) {
+function audioUrl(t: { id: number }, download = false) {
   return `/api/tracks/${t.id}/audio${download ? '?download=1' : ''}`;
 }
 
@@ -70,6 +79,7 @@ export default function ProjectDetail({
   artists,
   initialGenres,
   initialNotes,
+  initialReferences,
   releases,
   viewerEmail,
   canDelete,
@@ -81,6 +91,7 @@ export default function ProjectDetail({
   artists: StudioArtist[];
   initialGenres: string[];
   initialNotes: StudioNote[];
+  initialReferences: StudioReference[];
   releases: StudioRelease[];
   viewerEmail: string;
   canDelete: boolean;
@@ -91,6 +102,7 @@ export default function ProjectDetail({
   const [nameHistory, setNameHistory] = useState(names);
   const [genres, setGenres] = useState(initialGenres);
   const [notes, setNotes] = useState(initialNotes);
+  const [references, setReferences] = useState(initialReferences);
   const [noteFocus, setNoteFocus] = useState<{ trackId: number; n: number } | null>(null);
 
   const noteCounts = new Map<number, number>();
@@ -136,6 +148,29 @@ export default function ProjectDetail({
     }
     setGenres(r.data.genres);
     return r.data.name;
+  }
+
+  // A file with no length on record (older uploads) reports one as soon as a
+  // player has read its metadata, so lengths fill in as sessions are visited.
+  async function fillLength(id: number, el: HTMLAudioElement) {
+    const d = el.duration;
+    if (!Number.isFinite(d) || d <= 0) return;
+    const r = await api<{ filled: boolean }>(`/api/audio/${id}/duration`, {
+      method: 'POST',
+      body: JSON.stringify({ durationS: d }),
+    });
+    if (!r.ok) return;
+    setTracks((list) => list.map((x) => (x.id === id && x.durationS === null ? { ...x, durationS: d } : x)));
+    setReferences((list) => list.map((x) => (x.id === id && x.durationS === null ? { ...x, durationS: d } : x)));
+  }
+  function lengthProbe(t: { id: number; durationS: number | null }) {
+    return t.durationS === null
+      ? (e: React.SyntheticEvent<HTMLAudioElement>) => fillLength(t.id, e.currentTarget)
+      : undefined;
+  }
+
+  async function makeCurrent(t: StudioTrack | null) {
+    await patch({ currentMixId: t ? t.id : null });
   }
 
   // One track plays at a time: starting one pauses the rest.
@@ -191,7 +226,10 @@ export default function ProjectDetail({
     setTracks((list) => list.filter((x) => x.id !== t.id));
   }
 
-  const [latest, ...earlier] = tracks;
+  // The current mix: chosen by hand, else the newest. The rest follow, newest first.
+  const latest = tracks.find((t) => t.id === project.currentMixId) ?? tracks[0];
+  const earlier = tracks.filter((t) => t !== latest);
+  const chosenByHand = !!latest && project.currentMixId === latest.id && latest !== tracks[0];
   const pastNames = nameHistory.filter((n) => n.name !== project.workingName);
 
   return (
@@ -292,14 +330,26 @@ export default function ProjectDetail({
 
       {/* ── Reference tracks ───────────────────────────────────────────── */}
       <section className="mt-8">
-        <h2 className="mb-3 text-xs uppercase tracking-wide text-muted">Reference tracks</h2>
+        <h2 className="mb-3 text-xs uppercase tracking-wide text-muted">Mixes</h2>
 
         {latest ? (
           <div className="rounded-lg border border-line bg-card p-4">
             <TrackMeta track={latest} emphasis />
+            <p className="mt-1 text-xs text-muted">
+              Current mix{chosenByHand ? ', chosen by hand' : ', the newest'}
+              {chosenByHand && (
+                <>
+                  {' · '}
+                  <button onClick={() => makeCurrent(null)} className="underline hover:text-ink">
+                    use the newest instead
+                  </button>
+                </>
+              )}
+            </p>
             <audio
               ref={register}
               onPlay={onPlay}
+              onLoadedMetadata={lengthProbe(latest)}
               controls
               preload="metadata"
               src={audioUrl(latest)}
@@ -314,7 +364,7 @@ export default function ProjectDetail({
             />
           </div>
         ) : (
-          <p className="rounded-lg border border-line bg-card px-4 py-6 text-sm text-muted">No reference tracks yet.</p>
+          <p className="rounded-lg border border-line bg-card px-4 py-6 text-sm text-muted">No mixes yet.</p>
         )}
 
         {earlier.length > 0 && (
@@ -322,13 +372,22 @@ export default function ProjectDetail({
             {earlier.map((t) => (
               <li key={t.id} className="rounded-md border border-line/70 px-3 py-2 opacity-80 hover:opacity-100">
                 <TrackMeta track={t} />
-                <audio ref={register} onPlay={onPlay} controls preload="none" src={audioUrl(t)} className="mt-2 h-8 w-full" />
+                <audio
+                  ref={register}
+                  onPlay={onPlay}
+                  onLoadedMetadata={lengthProbe(t)}
+                  controls
+                  preload="none"
+                  src={audioUrl(t)}
+                  className="mt-2 h-8 w-full"
+                />
                 <TrackActions
                   track={t}
                   canDelete={canDelete}
                   noteCount={noteCounts.get(t.id) ?? 0}
                   onNotes={() => openNotes(t)}
                   onDelete={() => remove(t)}
+                  onMakeCurrent={() => makeCurrent(t)}
                 />
               </li>
             ))}
@@ -395,6 +454,18 @@ export default function ProjectDetail({
         )}
       </section>
 
+      <References
+        projectId={project.id}
+        references={references}
+        setReferences={setReferences}
+        viewerEmail={viewerEmail}
+        isAdmin={canDelete}
+        uploadsEnabled={uploadsEnabled}
+        register={register}
+        onPlay={onPlay}
+        lengthProbe={lengthProbe}
+      />
+
       <Notes
         projectId={project.id}
         tracks={tracks}
@@ -432,12 +503,15 @@ function TrackActions({
   noteCount,
   onNotes,
   onDelete,
+  onMakeCurrent,
 }: {
   track: StudioTrack;
   canDelete: boolean;
   noteCount: number;
   onNotes: () => void;
   onDelete: () => void;
+  /** Absent on the current mix. */
+  onMakeCurrent?: () => void;
 }) {
   // Two clicks to delete: the first arms the button, the second deletes.
   const [armed, setArmed] = useState(false);
@@ -449,6 +523,11 @@ function TrackActions({
       <button onClick={onNotes} className="text-muted underline hover:text-ink">
         {noteCount ? `Notes (${noteCount})` : 'Add a note'}
       </button>
+      {onMakeCurrent && (
+        <button onClick={onMakeCurrent} className="text-muted underline hover:text-ink">
+          Make current
+        </button>
+      )}
       {canDelete &&
         (armed ? (
           <span className="flex gap-2">
@@ -462,6 +541,201 @@ function TrackActions({
         ) : (
           <button onClick={() => setArmed(true)} className="text-muted hover:text-rust">
             Delete
+          </button>
+        ))}
+    </div>
+  );
+}
+
+// ── References ────────────────────────────────────────────────────────────────
+
+/**
+ * Other artists' tracks kept beside the session for comparison. Uploaded the
+ * same way as a mix (signed PUT straight to R2), then recorded with a credit.
+ * Whoever uploaded one, or an admin, may remove it.
+ */
+function References({
+  projectId,
+  references,
+  setReferences,
+  viewerEmail,
+  isAdmin,
+  uploadsEnabled,
+  register,
+  onPlay,
+  lengthProbe,
+}: {
+  projectId: number;
+  references: StudioReference[];
+  setReferences: React.Dispatch<React.SetStateAction<StudioReference[]>>;
+  viewerEmail: string;
+  isAdmin: boolean;
+  uploadsEnabled: boolean;
+  register: (el: HTMLAudioElement | null) => void;
+  onPlay: (e: React.SyntheticEvent<HTMLAudioElement>) => void;
+  lengthProbe: (t: { id: number; durationS: number | null }) => ((e: React.SyntheticEvent<HTMLAudioElement>) => void) | undefined;
+}) {
+  const [credit, setCredit] = useState('');
+  const [busy, setBusy] = useState<{ name: string; progress: number } | null>(null);
+  const [error, setError] = useState('');
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  async function upload(file: File) {
+    setError('');
+    if (!/\.mp3$/i.test(file.name)) {
+      setError('Only MP3s can be uploaded.');
+      return;
+    }
+    setBusy({ name: file.name, progress: 0 });
+    try {
+      const signed = await api<{ url: string; key: string }>(`/api/projects/${projectId}/tracks/upload`, {
+        method: 'POST',
+        body: JSON.stringify({ filename: file.name, bytes: file.size }),
+      });
+      if (!signed.ok) throw new Error(signed.body.error || 'Could not start the upload.');
+      const durationS = await readDuration(file);
+      await putWithProgress(signed.data.url, file, (f) => setBusy({ name: file.name, progress: f }));
+      const saved = await api<{ reference: StudioReference }>(`/api/projects/${projectId}/references`, {
+        method: 'POST',
+        body: JSON.stringify({ key: signed.data.key, filename: file.name, durationS, credit }),
+      });
+      if (!saved.ok) throw new Error(saved.body.error || 'Uploaded, but could not record the reference.');
+      setReferences((list) => [...list, saved.data.reference]);
+      setCredit('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function saveCredit(r: StudioReference, value: string): Promise<boolean> {
+    setError('');
+    const res = await api<{ reference: StudioReference }>(`/api/references/${r.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ credit: value }),
+    });
+    if (!res.ok) {
+      setError(res.body.error || 'Could not save the credit.');
+      return false;
+    }
+    setReferences((list) => list.map((x) => (x.id === r.id ? res.data.reference : x)));
+    return true;
+  }
+
+  async function remove(r: StudioReference) {
+    setError('');
+    const res = await api(`/api/references/${r.id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      setError(res.body.error || 'Could not remove the reference.');
+      return;
+    }
+    setReferences((list) => list.filter((x) => x.id !== r.id));
+  }
+
+  return (
+    <section className="mt-10">
+      <h2 className="mb-3 text-xs uppercase tracking-wide text-muted">References</h2>
+      {references.length === 0 && <p className="text-sm text-muted">No references yet.</p>}
+      <ul className="space-y-3">
+        {references.map((r) => (
+          <li key={r.id} className="rounded-md border border-line/70 px-3 py-2">
+            <div className="flex flex-wrap items-baseline gap-x-3">
+              <span className="min-w-0 flex-1 text-sm font-medium">
+                <InlineEdit
+                  value={r.credit}
+                  placeholder={r.originalFilename}
+                  label="Credit"
+                  onSave={(v) => saveCredit(r, v)}
+                />
+              </span>
+              <span className="text-xs text-muted">
+                {[r.uploadedByCode ?? r.uploadedBy, formatDate(r.uploadedAt), formatDuration(r.durationS), formatBytes(r.bytes)]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </span>
+            </div>
+            <audio
+              ref={register}
+              onPlay={onPlay}
+              onLoadedMetadata={lengthProbe(r)}
+              controls
+              preload="none"
+              src={audioUrl(r)}
+              className="mt-2 h-8 w-full"
+            />
+            <ReferenceActions
+              reference={r}
+              canDelete={r.uploadedBy === viewerEmail || isAdmin}
+              onDelete={() => remove(r)}
+            />
+          </li>
+        ))}
+      </ul>
+
+      {uploadsEnabled && (
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+          <input
+            type="text"
+            value={credit}
+            onChange={(e) => setCredit(e.target.value)}
+            placeholder="Artist — Title"
+            aria-label="Credit for the next reference"
+            className="w-64 rounded-md border border-line bg-card px-2 py-1 outline-none focus:border-rust"
+          />
+          <button
+            onClick={() => fileInput.current?.click()}
+            disabled={!!busy}
+            className="rounded-md border border-line px-3 py-1 hover:border-ink disabled:opacity-50"
+          >
+            {busy ? `Uploading ${Math.round(busy.progress * 100)}%…` : 'Add a reference MP3'}
+          </button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".mp3,audio/mpeg"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) upload(f);
+              e.target.value = '';
+            }}
+          />
+        </div>
+      )}
+      {error && <p className="mt-2 text-sm text-rust">{error}</p>}
+    </section>
+  );
+}
+
+function ReferenceActions({
+  reference,
+  canDelete,
+  onDelete,
+}: {
+  reference: StudioReference;
+  canDelete: boolean;
+  onDelete: () => void;
+}) {
+  const [armed, setArmed] = useState(false);
+  return (
+    <div className="mt-2 flex gap-4 text-xs">
+      <a href={audioUrl(reference, true)} className="text-muted underline hover:text-ink">
+        Download
+      </a>
+      {canDelete &&
+        (armed ? (
+          <span className="flex gap-2">
+            <button onClick={onDelete} className="text-rust underline">
+              Confirm remove
+            </button>
+            <button onClick={() => setArmed(false)} className="text-muted hover:text-ink">
+              cancel
+            </button>
+          </span>
+        ) : (
+          <button onClick={() => setArmed(true)} className="text-muted hover:text-rust">
+            Remove
           </button>
         ))}
     </div>

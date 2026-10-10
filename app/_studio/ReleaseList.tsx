@@ -34,7 +34,7 @@ export default function ReleaseList({
     });
     setBusy(false);
     if (!r.ok) {
-      setError(r.body.error || 'Could not create the release.');
+      setError(r.body.error || 'Could not create the collection.');
       return;
     }
     setReleases((list) => [r.data.release, ...list]);
@@ -77,13 +77,13 @@ export default function ReleaseList({
           <input value={year} onChange={(e) => setYear(e.target.value)} inputMode="numeric" className={`${field} w-20`} />
         </label>
         <button disabled={busy || !title.trim()} className="rounded-md bg-rust px-4 py-1.5 text-white disabled:opacity-50">
-          {busy ? 'Creating…' : 'New release'}
+          {busy ? 'Creating…' : 'New collection'}
         </button>
       </form>
       {error && <p className="mt-3 text-sm text-rust">{error}</p>}
 
       {releases.length === 0 ? (
-        <p className="mt-6 text-sm text-muted">No releases yet.</p>
+        <p className="mt-6 text-sm text-muted">No collections yet.</p>
       ) : (
         <ul className="mt-6 divide-y divide-line rounded-lg border border-line bg-card">
           {releases.map((r) => (

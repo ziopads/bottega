@@ -85,7 +85,7 @@ export default function ReleaseDetail({
   async function remove() {
     const r = await api(`/api/collections/${release.id}`, { method: 'DELETE' });
     if (!r.ok) {
-      setError(r.body.error || 'Could not delete the release.');
+      setError(r.body.error || 'Could not delete the collection.');
       return;
     }
     router.push('/collections');
@@ -99,7 +99,7 @@ export default function ReleaseDetail({
 
       <InlineEdit
         value={release.title}
-        placeholder="Untitled release"
+        placeholder="Untitled collection"
         label="Title"
         textClass="font-serif text-2xl sm:text-3xl"
         onSave={(v) => save({ title: v })}
@@ -191,7 +191,7 @@ export default function ReleaseDetail({
                 >
                   ↓
                 </button>
-                <button onClick={() => order('DELETE', { projectId: p.id })} className="px-1 hover:text-rust" aria-label="Remove from release">
+                <button onClick={() => order('DELETE', { projectId: p.id })} className="px-1 hover:text-rust" aria-label="Remove from collection">
                   ×
                 </button>
               </span>
@@ -234,7 +234,7 @@ export default function ReleaseDetail({
         {armed ? (
           <span className="flex gap-3">
             <button onClick={remove} className="text-rust underline">
-              Confirm: delete this release
+              Confirm: delete this collection
             </button>
             <button onClick={() => setArmed(false)} className="text-muted hover:text-ink">
               cancel
@@ -243,7 +243,7 @@ export default function ReleaseDetail({
           </span>
         ) : (
           <button onClick={() => setArmed(true)} className="text-muted hover:text-rust">
-            Delete release
+            Delete collection
           </button>
         )}
       </div>

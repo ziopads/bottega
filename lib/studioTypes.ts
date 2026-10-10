@@ -20,7 +20,12 @@ export type StudioProject = {
   createdBy: string;
   createdAt: string;
   /**
-   * The newest reference track, for the list's player. Filled in by
+   * The mix chosen by hand as current, or null when the newest mix is current.
+   * Set on every project response.
+   */
+  currentMixId?: number | null;
+  /**
+   * The current mix (chosen by hand, else the newest), for the list's player. Filled in by
    * listProjects only; responses about a single project leave it undefined,
    * and the list keeps whatever it already had.
    */
@@ -54,7 +59,7 @@ export type StudioRelease = {
 };
 
 export function parseReleaseTitle(raw: unknown): { value: string } | { error: string } {
-  if (typeof raw !== 'string' || !raw.trim()) return { error: 'Give the release a title.' };
+  if (typeof raw !== 'string' || !raw.trim()) return { error: 'Give the collection a title.' };
   const value = raw.trim().replace(/\s+/g, ' ');
   if (value.length > 200) return { error: 'Keep the title under 200 characters.' };
   return { value };
@@ -69,7 +74,40 @@ export type LatestTrack = {
   count: number;
 };
 
-/** One reference MP3. The audio itself is only reachable through the app's signed links. */
+/**
+ * A track by another artist, kept beside a session's own mixes for comparison
+ * (a ghost track). Unnumbered; credited with artist and title.
+ */
+export type StudioReference = {
+  id: number;
+  projectId: number;
+  /** "Artist — Title", as typed at upload; '' when not given. */
+  credit: string;
+  originalFilename: string;
+  bytes: number | null;
+  durationS: number | null;
+  uploadedBy: string;
+  uploadedByCode: string | null;
+  uploadedAt: string;
+};
+
+export const CREDIT_MAX = 200;
+
+export function parseCredit(raw: unknown): { value: string } | { error: string } {
+  if (raw === undefined || raw === null) return { value: '' };
+  if (typeof raw !== 'string') return { error: 'The credit must be text.' };
+  const value = raw.trim().replace(/\s+/g, ' ');
+  if (value.length > CREDIT_MAX) return { error: `Keep the credit under ${CREDIT_MAX} characters.` };
+  return { value };
+}
+
+/** The filename a reference downloads as: its credit, else the uploaded name. */
+export function referenceDownloadName(r: Pick<StudioReference, 'credit' | 'originalFilename'>): string {
+  if (!r.credit) return r.originalFilename;
+  return `${r.credit}.mp3`.replace(/[\\/:*?"<>|\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ');
+}
+
+/** One mix: a numbered bounce of the session. The audio itself is only reachable through the app's signed links. */
 export type StudioTrack = {
   id: number;
   projectId: number;

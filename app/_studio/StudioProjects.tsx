@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
 import type { StudioArtist, StudioProject, StudioRelease } from '@/lib/studioTypes';
-import { RATING_MAX } from '@/lib/studioTypes';
+import { RATING_MAX, formatDuration } from '@/lib/studioTypes';
 import { api, GenreSelect, InlineEdit, Stars } from './controls';
 import NewProject from './NewProject';
 import PlayerBar from './PlayerBar';
@@ -16,7 +16,7 @@ import { usePlayer } from './usePlayer';
 // State is local and updated from each API response, so a change shows at once
 // without re-fetching the whole list.
 
-type SortKey = 'rating' | 'artist' | 'id' | 'name' | 'genre' | 'bpm' | 'versions' | 'date' | 'upload';
+type SortKey = 'rating' | 'artist' | 'id' | 'name' | 'genre' | 'bpm' | 'versions' | 'length' | 'date' | 'upload';
 type Sort = { key: SortKey; dir: 1 | -1 };
 
 /** The direction a column sorts in on its first click. */
@@ -28,6 +28,7 @@ const FIRST_DIR: Record<SortKey, 1 | -1> = {
   genre: 1,
   bpm: 1,
   versions: -1,
+  length: -1,
   date: -1,
   upload: -1,
 };
@@ -49,6 +50,8 @@ function compare(a: StudioProject, b: StudioProject, key: SortKey): number {
       return (a.bpm ?? 0) - (b.bpm ?? 0);
     case 'versions':
       return (a.latest?.count ?? 0) - (b.latest?.count ?? 0);
+    case 'length':
+      return (a.latest?.durationS ?? 0) - (b.latest?.durationS ?? 0);
     case 'date':
       return a.createdAt.localeCompare(b.createdAt);
     case 'upload':
@@ -61,7 +64,8 @@ function isEmpty(p: StudioProject, key: SortKey): boolean {
     (key === 'name' && !p.workingName) ||
     (key === 'genre' && !p.genre) ||
     (key === 'bpm' && p.bpm === null) ||
-    (key === 'upload' && !p.latest)
+    (key === 'upload' && !p.latest) ||
+    (key === 'length' && (p.latest?.durationS ?? null) === null)
   );
 }
 
@@ -252,7 +256,7 @@ export default function StudioProjects({
       body: JSON.stringify({ title, kind: 'lp' }),
     });
     if (!r.ok) {
-      setError(r.body.error || 'Could not create the release.');
+      setError(r.body.error || 'Could not create the collection.');
       return null;
     }
     setReleases((list) => [...list, r.data.release]);
@@ -293,7 +297,7 @@ export default function StudioProjects({
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search ID, name, artist, release…"
+          placeholder="Search ID, name, artist, collection…"
           className="w-full rounded-md border border-line bg-card px-3 py-1.5 outline-none focus:border-rust sm:w-64"
         />
         <FilterSelect
@@ -321,13 +325,13 @@ export default function StudioProjects({
           options={[['', 'All'], ...genres.map((g) => [g, g] as [string, string])]}
         />
         <FilterSelect
-          label="Release"
+          label="Collection"
           value={String(releaseFilter)}
           onChange={(v) => setReleaseFilter(v === '' || v === 'none' ? v : Number(v))}
           options={[
             ['', 'All'],
             ...releases.map((r) => [String(r.id), r.title] as [string, string]),
-            ['none', 'Not on a release'],
+            ['none', 'Not in a collection'],
           ]}
         />
         <label className="flex items-center gap-2">
@@ -394,7 +398,8 @@ export default function StudioProjects({
                 <SortHead k="genre">Genre</SortHead>
                 <SortHead k="bpm" className="text-right">BPM</SortHead>
                 <SortHead k="versions">Ver.</SortHead>
-                <th className={th}>Releases</th>
+                <SortHead k="length" className="text-right">Length</SortHead>
+                <th className={th}>Collections</th>
                 <SortHead k="date">Session</SortHead>
                 <SortHead k="upload">Uploaded</SortHead>
               </tr>
@@ -579,7 +584,7 @@ function BulkBar({
       </label>
 
       <label className="flex items-center gap-2">
-        <span className="text-muted">Add to release</span>
+        <span className="text-muted">Add to collection</span>
         {newTitle === null ? (
           <select
             value=""
@@ -587,7 +592,7 @@ function BulkBar({
             onChange={(e) => {
               const v = e.target.value;
               if (v === NEW_RELEASE) setNewTitle('');
-              else if (v) apply({ releaseId: Number(v) }, 'Release');
+              else if (v) apply({ releaseId: Number(v) }, 'Collection');
             }}
             className={sel}
           >
@@ -597,13 +602,13 @@ function BulkBar({
                 {r.title}
               </option>
             ))}
-            <option value={NEW_RELEASE}>+ New release…</option>
+            <option value={NEW_RELEASE}>+ New collection…</option>
           </select>
         ) : (
           <input
             autoFocus
             value={newTitle}
-            placeholder="Release title"
+            placeholder="Collection title"
             onChange={(e) => setNewTitle(e.target.value)}
             onKeyDown={async (e) => {
               if (e.key === 'Escape') setNewTitle(null);
@@ -719,6 +724,9 @@ function ProjectRow({
         />
       </td>
       <td className={`${td} text-xs tabular-nums text-muted`}>{p.latest ? `v${p.latest.version}` : ''}</td>
+      <td className={`${td} text-right text-xs tabular-nums text-muted`}>
+        {p.latest ? formatDuration(p.latest.durationS) : ''}
+      </td>
       <td className={`${td} max-w-[10rem] truncate text-xs text-muted`} title={releaseTitles.join(', ')}>
         {releaseTitles.join(', ')}
       </td>

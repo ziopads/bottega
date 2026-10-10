@@ -31,7 +31,7 @@ export default function PlayerBar({
   onPrev: () => void;
   onNext: () => void;
   onSeek: (t: number) => void;
-  /** Omit to hide the stars (the release page plays, it doesn't rate). */
+  /** Omit to hide the stars (the collection page plays, it doesn't rate). */
   onRate?: (n: number) => void;
   onAutoAdvance: (on: boolean) => void;
 }) {

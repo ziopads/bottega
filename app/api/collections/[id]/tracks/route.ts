@@ -14,7 +14,7 @@ async function setup(req: Request, rawId: string) {
   if (!viewer) return { error: NextResponse.json({ error: 'Not authorized' }, { status: 403 }) };
   const id = Number(rawId);
   if (!Number.isInteger(id) || id <= 0 || !(await getRelease(id))) {
-    return { error: NextResponse.json({ error: 'Release not found' }, { status: 404 }) };
+    return { error: NextResponse.json({ error: 'Collection not found' }, { status: 404 }) };
   }
   let body: Record<string, unknown>;
   try {

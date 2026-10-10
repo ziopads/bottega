@@ -7,6 +7,7 @@ import type {
   StudioName,
   StudioNote,
   StudioProject,
+  StudioReference,
   StudioRelease,
   StudioTrack,
 } from '@/lib/studioTypes';
@@ -107,6 +108,7 @@ function toProject(r: Row): StudioProject {
     bpm: numOrNull(r.bpm),
     createdBy: String(r.created_by),
     createdAt: iso(r.created_at),
+    currentMixId: numOrNull(r.current_mix_id),
   };
 }
 
@@ -212,7 +214,15 @@ export async function createProject(input: {
   return { ok: true, project };
 }
 
-type ProjectPatch = { workingName?: string; rating?: number; genre?: string; bpm?: number | null; artistId?: number };
+type ProjectPatch = {
+  workingName?: string;
+  rating?: number;
+  genre?: string;
+  bpm?: number | null;
+  artistId?: number;
+  /** null: the newest mix is current. */
+  currentMixId?: number | null;
+};
 
 /**
  * The statements for one patch: projects carries title and rating,
@@ -237,6 +247,7 @@ function patchQueries(ids: number[], patch: ProjectPatch) {
   if (patch.genre !== undefined) mSet.push(`genre = $${mParams.push(patch.genre || null)}`);
   if (patch.bpm !== undefined) mSet.push(`bpm = $${mParams.push(patch.bpm)}`);
   if (patch.artistId !== undefined) mSet.push(`artist_id = $${mParams.push(patch.artistId)}`);
+  if (patch.currentMixId !== undefined) mSet.push(`current_mix_id = $${mParams.push(patch.currentMixId)}`);
   if (mSet.length) {
     queries.push(
       s.query(`update music_projects set ${mSet.join(', ')} where project_id = any($${mParams.push(ids)})`, mParams),
@@ -245,8 +256,10 @@ function patchQueries(ids: number[], patch: ProjectPatch) {
   return queries;
 }
 
-function patchFailure(err: unknown): 'taken' | 'no-artist' | 'no-genre' | null {
+function patchFailure(err: unknown): 'taken' | 'no-artist' | 'no-genre' | 'bad-mix' | null {
   const e = pgError(err);
+  // Raised by the music_projects_current_mix_check trigger (db/001).
+  if (/is not a mix of project/.test(e.message)) return 'bad-mix';
   if (e.code === UNIQUE_VIOLATION) return 'taken';
   if (e.code === FOREIGN_KEY_VIOLATION) return /genre/.test(`${e.constraint} ${e.message}`) ? 'no-genre' : 'no-artist';
   return null;
@@ -267,7 +280,7 @@ export async function bulkUpdateProjects(
     await sql().transaction(queries);
   } catch (err) {
     const reason = patchFailure(err);
-    if (reason) return { ok: false, reason };
+    if (reason && reason !== 'bad-mix') return { ok: false, reason };
     throw err;
   }
   const rows = await q(`${PROJECT_SELECT} where p.id = any($1)`, [ids]);
@@ -276,9 +289,12 @@ export async function bulkUpdateProjects(
 
 export type UpdateResult =
   | { ok: true; project: StudioProject }
-  | { ok: false; reason: 'not-found' | 'taken' | 'no-artist' | 'no-genre' };
+  | { ok: false; reason: 'not-found' | 'taken' | 'no-artist' | 'no-genre' | 'bad-mix' };
 
-/** Rename, rate, set genre or BPM, or move to another artist. Never the canonical ID. */
+/**
+ * Rename, rate, set genre or BPM, move to another artist, or choose the current
+ * mix. Never the canonical ID.
+ */
 export async function updateProject(id: number, patch: ProjectPatch, by: string): Promise<UpdateResult> {
   const current = await getProject(id);
   if (!current) return { ok: false, reason: 'not-found' };
@@ -289,6 +305,7 @@ export async function updateProject(id: number, patch: ProjectPatch, by: string)
   if (patch.genre !== undefined && patch.genre !== current.genre) changed.genre = patch.genre;
   if (patch.bpm !== undefined && patch.bpm !== current.bpm) changed.bpm = patch.bpm;
   if (patch.artistId !== undefined && patch.artistId !== current.artist.id) changed.artistId = patch.artistId;
+  if (patch.currentMixId !== undefined && patch.currentMixId !== current.currentMixId) changed.currentMixId = patch.currentMixId;
   const queries = patchQueries([id], changed);
   if (!queries.length) return { ok: true, project: current };
 
@@ -391,6 +408,117 @@ export async function addTrack(input: {
 
 export async function deleteTrackRow(id: number): Promise<void> {
   await q(`delete from audio where id = $1 and role = 'mix'`, [id]);
+}
+
+/** Any audio row (mix or reference) with its storage key, for the playback route. */
+export async function getAudioWithKey(
+  id: number,
+): Promise<{ role: 'mix' | 'reference'; projectId: number; version: number | null; credit: string; originalFilename: string; key: string } | null> {
+  const rows = await q('select role, project_id, version, credit, original_filename, r2_key from audio where id = $1', [id]);
+  if (!rows.length) return null;
+  const r = rows[0];
+  return {
+    role: r.role === 'reference' ? 'reference' : 'mix',
+    projectId: num(r.project_id),
+    version: numOrNull(r.version),
+    credit: String(r.credit ?? ''),
+    originalFilename: String(r.original_filename),
+    key: String(r.r2_key),
+  };
+}
+
+// ── Lengths ──────────────────────────────────────────────────────────────────
+
+/**
+ * Record a file's length, read by a browser from the audio's own metadata,
+ * the same way uploads measure it. Only fills a missing length: a length that
+ * is already stored is never overwritten from here.
+ */
+export async function fillDuration(id: number, durationS: number): Promise<boolean> {
+  const rows = await q('update audio set duration_s = $2 where id = $1 and duration_s is null returning id', [id, durationS]);
+  return rows.length > 0;
+}
+
+/** Every audio row still missing its length, for the backfill page. */
+export async function missingDurations(): Promise<{ id: number; label: string }[]> {
+  const rows = await q(
+    `select a.id, a.role, a.version, a.credit, m.canonical_id, ar.code
+     from audio a
+     left join music_projects m on m.project_id = a.project_id
+     left join artists ar on ar.id = m.artist_id
+     where a.duration_s is null
+     order by a.id`,
+  );
+  return rows.map((r) => ({
+    id: num(r.id),
+    label:
+      r.role === 'mix'
+        ? `${r.code ?? ''} ${r.canonical_id ?? ''} v${r.version}`.trim()
+        : `reference: ${String(r.credit || 'uncredited')}`,
+  }));
+}
+
+// ── References (other artists' tracks) ───────────────────────────────────────
+
+function toReference(r: Row, codes: Map<string, string>): StudioReference {
+  return {
+    id: num(r.id),
+    projectId: num(r.project_id),
+    credit: String(r.credit ?? ''),
+    originalFilename: String(r.original_filename),
+    bytes: numOrNull(r.bytes),
+    durationS: numOrNull(r.duration_s),
+    uploadedBy: String(r.uploaded_by),
+    uploadedByCode: codes.get(String(r.uploaded_by)) ?? null,
+    uploadedAt: iso(r.uploaded_at),
+  };
+}
+
+/** Oldest first: references are a set to compare against, not a history. */
+export async function listReferences(projectId: number): Promise<StudioReference[]> {
+  const [rows, codes] = await Promise.all([
+    q(`select id, project_id, credit, original_filename, bytes, duration_s, uploaded_by, uploaded_at
+       from audio where project_id = $1 and role = 'reference' order by uploaded_at, id`, [projectId]),
+    memberCodes(),
+  ]);
+  return rows.map((r) => toReference(r, codes));
+}
+
+export async function addReference(input: {
+  projectId: number;
+  key: string;
+  originalFilename: string;
+  bytes: number;
+  durationS: number | null;
+  credit: string;
+  by: string;
+}): Promise<StudioReference> {
+  const rows = await q(
+    `insert into audio (project_id, role, r2_key, original_filename, bytes, duration_s, credit, uploaded_by)
+     values ($1, 'reference', $2, $3, $4, $5, $6, $7)
+     returning id, project_id, credit, original_filename, bytes, duration_s, uploaded_by, uploaded_at`,
+    [input.projectId, input.key, input.originalFilename, input.bytes, input.durationS, input.credit, input.by],
+  );
+  return toReference(rows[0], await memberCodes());
+}
+
+export async function getReferenceWithKey(id: number): Promise<{ reference: StudioReference; key: string } | null> {
+  const rows = await q(
+    `select id, project_id, credit, original_filename, bytes, duration_s, uploaded_by, uploaded_at, r2_key
+     from audio where id = $1 and role = 'reference'`,
+    [id],
+  );
+  if (!rows.length) return null;
+  return { reference: toReference(rows[0], await memberCodes()), key: String(rows[0].r2_key) };
+}
+
+export async function updateReferenceCredit(id: number, credit: string): Promise<StudioReference | null> {
+  await q(`update audio set credit = $2 where id = $1 and role = 'reference'`, [id, credit]);
+  return (await getReferenceWithKey(id))?.reference ?? null;
+}
+
+export async function deleteReferenceRow(id: number): Promise<void> {
+  await q(`delete from audio where id = $1 and role = 'reference'`, [id]);
 }
 
 // ── Genres ───────────────────────────────────────────────────────────────────
