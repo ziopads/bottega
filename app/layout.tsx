@@ -47,7 +47,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             ) : null}
             {user ? (
               <form action={signOut} className="ml-auto flex items-baseline gap-3 text-sm">
-                <span className="text-muted">{user.name ?? user.email}</span>
+                <Link href="/account" className="text-muted hover:text-rust">
+                  {user.name ?? user.email}
+                </Link>
                 <button type="submit" className="text-muted hover:text-rust">
                   Sign out
                 </button>

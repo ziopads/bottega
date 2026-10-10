@@ -1,7 +1,7 @@
 # Bottega — architecture
 
-**Version:** 0.1
-**Date:** 2026-10-09
+**Version:** 0.2
+**Date:** 2026-10-10
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
 story IDs below (S-3, W-6 and so on) refer to it.
@@ -10,6 +10,10 @@ story IDs below (S-3, W-6 and so on) refer to it.
 
 ## Changelog
 
+- **0.2** (2026-10-10) — Phase 0 as built: accounts are created by a sign-up
+  request, not in the Console (§3); audio, the current mix and the routes
+  recorded as built (§4); environment variables as built, with `ADMIN_EMAILS`
+  and the R2 names (§9); the account page.
 - **0.1** (2026-10-09) — Initial draft. Hosting on Neon, sign-in and connector
   copied from Scriptorium, projects stored as one shared table plus a table per
   kind, parts as an ordered membership table.
@@ -55,8 +59,11 @@ time.
 
 - **Sign-in.** Neon Auth (managed Better Auth) for identity; an
   `ALLOWED_EMAILS` allowlist checked on every page and every server action for
-  authorization. Accounts are created in the Neon Console, because Neon Auth
-  otherwise allows open sign-up. `lib/auth/`, `proxy.ts`.
+  authorization. Neon Auth allows open sign-up, so the allowlist, not
+  registration, decides access. Accounts are created by a sign-up request to
+  `/api/auth/sign-up/email` (the Console's "Create user" sets no password; see
+  `HANDOFF.md` §3). A signed-in person changes their own password at
+  `/account`; there is no reset by email. `lib/auth/`, `proxy.ts`.
 - **Connector.** `mcp-handler` route at `app/api/mcp`, with the application as
   its own OAuth authorization server (`lib/oauth.ts`, `.well-known/`,
   `app/oauth/`), token hashes only in the database.
@@ -106,20 +113,57 @@ a real foreign key.
   or through others. The name is provisional (`members` is taken by people).
 - `genres` — the extendable list.
 
-### Audio (Phase 0)
+### Audio (Phase 0, as built)
 
-- `audio` — project, role (`mix` or `reference`), version (mixes only,
-  numbered per project), R2 key, original filename, bytes, duration in
-  seconds, credit (references: artist and title), uploaded by and when.
-- `music_projects.current_mix` points at one `audio` row with role `mix`;
-  when null, the newest mix is current.
-- Duration is read in the browser at upload and stored; existing files without
-  it are filled by a one-time script.
+- `audio` — project, `role` (`mix` or `reference`), `version`, `r2_key`
+  (unique), original filename, bytes, `duration_s`, `credit`, uploaded by and
+  when. A check ties the two roles apart: a mix has a version and a reference
+  has none. Versions are unique per project. Mixes copied from Vivarium kept
+  their R2 keys.
+- `credit` is free text naming a reference's artist and title; it is empty on
+  mixes.
+- `music_projects.current_mix_id` points at one `audio` row; null means the
+  newest mix is current. It is set to null if that row is deleted. A trigger
+  refuses a reference or another project's mix.
+- `duration_s` is read in the browser from the file's metadata at upload and
+  sent with the record. Files uploaded without it (the older Vivarium uploads)
+  are filled by the admin page `/admin/lengths`, which plays each file's
+  metadata through the usual signed link and posts the length to
+  `/api/audio/[id]/duration`. No server-side audio library is involved.
 
 ### Notes (Phase 0)
 
 - `notes` — project, optional audio row, author, body, created, edited,
   `origin`, `reviewed`, `rejected_at`.
+
+### Routes (Phase 0, as built)
+
+Pages: `/` (sessions), `/projects/[id]`, `/collections`, `/collections/[id]`,
+`/admin/lengths` (admins), `/account`, `/auth/sign-in`, `/auth/denied`.
+
+Route handlers under `app/api/`, each checking the allowlist itself:
+
+| Path | Methods | Does |
+|---|---|---|
+| `projects` | GET, POST | list music projects; create one |
+| `projects/bulk` | POST | bulk edit from the session list |
+| `projects/[id]` | GET, PATCH | read; change title, rating, genre, BPM, artist, current mix |
+| `projects/[id]/tracks/upload` | POST | sign an R2 upload for a mix (step 1 of 2) |
+| `projects/[id]/tracks` | GET, POST | list mixes; record an uploaded mix (step 2) |
+| `projects/[id]/references` | GET, POST | list references; record an uploaded reference |
+| `projects/[id]/notes` | GET, POST | list notes; add one |
+| `tracks/[trackId]` | DELETE | delete a mix (admins) |
+| `tracks/[trackId]/audio` | GET | redirect to a short-lived signed link; `?download=1` names the file |
+| `references/[id]` | PATCH, DELETE | change a reference's credit; delete (uploader or admin) |
+| `audio/[id]/duration` | POST | store a length read in the browser |
+| `notes/[noteId]` | PATCH, DELETE | edit; delete (author or admin) |
+| `genres` | GET, POST | the genre list; add one |
+| `collections` | GET, POST | list; create |
+| `collections/[id]` | GET, PATCH, DELETE | read, edit, delete a collection |
+| `collections/[id]/tracks` | POST, PUT, DELETE | add, reorder, remove parts |
+| `auth/[...path]` | GET, POST | Neon Auth's proxy |
+
+The names `tracks` and `trackId` for mixes are carried over from Vivarium.
 
 ### Workflow (Phase 2)
 
@@ -235,11 +279,13 @@ docs/           REQUIREMENTS, ARCHITECTURE, HANDOFF
 |---|---|
 | `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | app, pipeline |
 | `NEON_AUTH_BASE_URL`, `NEON_AUTH_COOKIE_SECRET` | sign-in; required at build time |
-| `ALLOWED_EMAILS` | sign-in and OAuth consent |
-| `R2_*` and bucket names | uploads and signed links |
+| `ALLOWED_EMAILS` | every page and route; OAuth consent from Phase 1. Empty admits nobody |
+| `ADMIN_EMAILS` | deleting mixes, other people's notes and references; `/admin` pages. Empty means no admins |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | the R2 client |
+| `R2_AUDIO_BUCKET` | mixes and references: signed uploads and links |
 | `VOYAGE_API_KEY` | `embed.py`, search |
 | `NEON_API_KEY`, `NEON_PROJECT_ID` | health page |
-| `SUPABASE_*` (Vivarium's Sirsinate project) | the migration script only, then removed |
+| `VIVARIUM_DB_URL` (Vivarium's Sirsinate database) | `scripts/migrate_from_vivarium.py` only; removed after the copy |
 
 ## 10. Checked and recalled
 

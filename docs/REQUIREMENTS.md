@@ -4,7 +4,7 @@
 **Date:** 2026-10-09
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
-built is in `ARCHITECTURE.md` (not yet written).
+built is in `ARCHITECTURE.md`.
 
 ---
 

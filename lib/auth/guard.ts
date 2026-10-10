@@ -12,7 +12,7 @@ import { auth } from '@/lib/auth/server';
 // goes wrong.
 //
 // Who someone is within the studio (their artist on the roster) is a separate
-// question, answered by the members table (lib/members.ts).
+// question, answered by the members table (getMemberArtistId() in lib/studio.ts).
 
 export interface AllowedUser {
   id: string;
