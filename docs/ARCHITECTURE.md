@@ -1,6 +1,6 @@
 # Bottega — architecture
 
-**Version:** 0.3
+**Version:** 0.4
 **Date:** 2026-10-10
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
@@ -10,6 +10,9 @@ story IDs below (S-3, W-6 and so on) refer to it.
 
 ## Changelog
 
+- **0.4** (2026-10-10) — Gear as built in migration 003: model catalogue,
+  units, the owner-only insurance record, files, typed capabilities with unit
+  overrides, gear shares (§4, §11).
 - **0.3** (2026-10-10) — Separate accounts with item-by-item sharing
   (REQUIREMENTS 0.4, AC-1 to AC-12, K-6, K-7, L-7 to L-11). New §11 sets out
   accounts, ownership, shares, the platform library, study groups, the access
@@ -196,19 +199,46 @@ The names `tracks` and `trackId` for mixes are carried over from Vivarium.
 
 ### Gear (Phase 1)
 
-- `gear` — kind, maker, model, serial, purchase date and price, condition,
-  location, owned or wished for.
-- `gear_files` — gear, role (photo, receipt, serial plate, manual), R2 key.
-- `gear_capabilities` — gear, capability, value. Whether these are rows or
-  typed columns is open; the test is answering "which sound sources support
-  alternate tunings" in one query.
+Migration 003. REQUIREMENTS G-1 to G-7.
+
+- `gear_models` — the platform catalogue: kind, category (a closed list, so
+  `is_sound_source(category)` can answer "sound sources"), maker, model, year,
+  description, status (`suggested`, `approved`, `rejected`), suggested by. A
+  trigger makes any non-administrator insert a suggestion and refuses their
+  updates.
+- `capability_defs` — the vocabulary: key, label, value type (`boolean`,
+  `integer`, `number`, `text`, `enum`, `list`), unit, choices. Seeded with
+  seventeen capabilities; any active account may add one, the administrator
+  edits.
+- `model_capabilities` — model, capability, value (JSON, checked against its
+  definition by `capability_value_ok`). Administrator only.
+- `gear` — the account's unit: owner, model (or its own maker and name),
+  nickname, status (`owned`, `wishlist`, `gone`), firmware, notes.
+- `gear_private` — one row per unit, created with it: serial, purchase date,
+  price and currency, seller, condition, location, service history, licence
+  key, seats, activation, renewal. A separate table because row-level security
+  works on rows: a shared unit's row is visible to the grantee, so the
+  insurance record must be a row they cannot see.
+- `gear_capabilities` — the unit's overrides, checked like the model's.
+- `gear_capabilities_effective` — a view, run as the caller: each visible
+  unit's capabilities, its own where set, else its model's, with `overridden`.
+- `gear_files` — unit, role (`photo`, `receipt`, `serial_plate`, `document`,
+  `other`), R2 key in the private gear bucket, filename, type, bytes, caption.
+
+"Which of my sound sources can hold a non-equal-tempered scale?":
+
+    select g.* from gear g
+    join gear_models m on m.id = g.model_id
+    join gear_capabilities_effective e on e.gear_id = g.id
+    where g.status = 'owned' and is_sound_source(m.category)
+      and e.capability = 'microtuning' and e.value = 'true';
 
 ### Corpus (Phase 1)
 
 - `documents` — title, kind (manual, book, other), maker and model for
   manuals, `library` (platform-wide) or `owner_id` (private; exactly one of
   the two), R2 key, page count, load state. Linked to gear through
-  `gear_documents` (§11).
+  `model_documents` and `library_picks` (§11).
 - `pages` — document, page number, text.
 - `chunks` — document, first and last page, text, folded text for search, a
   generated full-text column, embedding, embedding model and dimension,
@@ -345,7 +375,7 @@ Bottega's:
 ### What belongs to whom
 
 - Top-level items carry `owner_id` referencing `accounts`: `projects` (all
-  kinds), and from their migrations `gear` and private `documents`.
+  kinds), `gear` (migration 003), and private `documents` (004).
 - Platform-wide rows have no owner: `genres`, the capability vocabulary,
   library `documents` (`owner_id` null, `library = true`), and study groups
   (custodian, not owner; below).
@@ -363,8 +393,8 @@ Bottega's:
 ### Shares
 
 - `shares` — one row per item, person and level: a nullable foreign key per
-  kind of item (`project_id` now; `gear_id` and `document_id` with their
-  tables), exactly one set; `grantee_id`; `level` (`view`, `contribute`,
+  kind of item (`project_id`; `gear_id` from 003; `document_id` with its
+  table), exactly one set; `grantee_id`; `level` (`view`, `contribute`,
   `edit`); granted by and when. Unique per item and grantee.
 - Only the item's owner can insert, change or delete a share.
 - AC-6, collections: a share on a collection gives view on each part **owned
@@ -375,7 +405,8 @@ Bottega's:
 
 One SQL function per kind of item answers "what may the current person do
 with this?": `project_level(project_id)` returns `owner`, `edit`,
-`contribute`, `view`, or null. It considers ownership, a direct share, and
+`contribute`, `view`, or null (`gear_rank`/`gear_level` from 003 are the
+same without collections). It considers ownership, a direct share, and
 shares on collections above the project (walking `project_parts` upward,
 same-owner parts only). It returns `view` for the platform administrator only
 when the request is marked as an administrator's read-only view (below), and
@@ -412,9 +443,11 @@ nothing.
 - Library documents, their pages and chunks are readable by every active
   account; only the owner role (the pipeline, run by the platform
   administrator) writes them.
-- `gear_documents` — gear, document. An account links a library manual to its
-  own gear (insert and delete allowed when the gear is theirs). This link is
-  what puts a manual in that account's default search (K-7).
+- `model_documents` — model, document. The administrator links a library
+  manual to a catalogue model; every unit of that model then has it.
+- `library_picks` — account, document: further library documents a person has
+  chosen. An account's default search (K-7) covers the manuals of its units'
+  models, its picks, its private documents and those shared with it.
 - `library_suggestions` — account, title, maker, link, note, status. Any
   active account suggests; the platform administrator decides.
 - Private documents follow the ownership and sharing rules above, with
@@ -506,3 +539,18 @@ out. In order:
 
 Audio keys in R2 stay as they are. Files are reached only through signed links
 minted after authorization, so a key's prefix carries no access meaning.
+
+### Gear in the policies (migration 003)
+
+| Table | Read | Write | Delete |
+|---|---|---|---|
+| `capability_defs` | active accounts | insert: active accounts; update: administrator | never |
+| `gear_models` | approved models; your own suggestions; models of units you can see; administrator all | insert: active (as a suggestion); update: administrator | administrator |
+| `model_capabilities` | as its model | administrator | administrator |
+| `gear` | own, or shared | insert: own; update: `edit` or `owner` | `owner` |
+| `gear_private` | `owner` only, at every share level and in the administrator's view | `owner` | with the unit |
+| `gear_capabilities` | as the unit | `edit` or `owner` | `edit` or `owner` |
+| `gear_files` | photos as the unit; other roles `owner` only | photos from `contribute`; other roles `owner` | `owner` |
+
+003 also redefines `app_admin_viewing()` to answer false rather than null
+where `app.admin_view` was never set, which scripts and tests rely on.

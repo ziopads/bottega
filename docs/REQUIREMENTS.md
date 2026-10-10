@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.4
+**Version:** 0.5
 **Date:** 2026-10-10
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -10,6 +10,11 @@ built is in `ARCHITECTURE.md`.
 
 ## Changelog
 
+- **0.5** (2026-10-10) — Gear in two levels: a platform catalogue of makes and
+  models holding capabilities and manuals, and each account's own units holding
+  the insurance record (G-1 to G-7). Sharing a unit shows its model,
+  capabilities, firmware and photos; serial, price, receipts, location and
+  licence keys stay with the owner.
 - **0.4** (2026-10-10) — Bottega becomes a platform of separate accounts.
   Each person's account holds their own projects, gear and documents. Nobody
   sees another account's work unless its owner shares it, item by item, at
@@ -146,21 +151,40 @@ place they left.
 
 ## 4. Gear (G)
 
-- **G-1** Catalogue each piece of gear: kind (hardware, software, book, cable,
-  other), maker, model, serial, purchase date and price, condition, location.
-- **G-2** Attach private files: photographs, receipts, serial plates, manuals.
-  Nothing in gear is public. The record must be sufficient to support an
-  insurance claim.
-- **G-3** Record capabilities as structured facts that can be queried: polyphony,
-  synthesis method, inputs and outputs, MIDI and CV, alternate tuning and just
-  intonation support, sync, effects. The question the catalogue must answer is
-  of the form "which of my sound sources can hold a non-equal-tempered scale?"
-- **G-4** A piece of gear is linked to the manuals that describe it, chosen
-  from the platform library (K-6), so a passage found by search names the
-  instrument it describes. Linking a manual adds it to that account's
-  searchable corpus; nothing is copied.
+- **G-1** Two levels. The platform keeps one **catalogue** of makes and models
+  (a Sequential Prophet-6, Ableton Live 12): kind (hardware, software, book,
+  cable, other), category (synthesizer, sampler, effect, interface and so on),
+  maker, model, year. Each account keeps its own **units**: which model, a
+  nickname, firmware, status (owned, wishlist, gone), notes. A unit whose model
+  is not in the catalogue can name itself until it is.
+- **G-2** Each unit has an insurance record: serial, purchase date and price,
+  seller, condition, location, service history, and for software the licence
+  key, seats, activation and renewal. Files attach to the unit: photographs,
+  receipts, serial plates, documents. The record must be sufficient to support
+  an insurance claim. Nothing in gear is public.
+- **G-3** Capabilities are structured facts from a platform vocabulary
+  (polyphony, synthesis method, microtuning and tuning methods, MPE,
+  aftertouch, MIDI, CV and gate, sync, inputs and outputs, sampling,
+  sequencer, effects, form factor), each typed and checked. They are set on
+  the model and overridden on a unit where the unit differs (a modded voice
+  card, newer firmware). The question the catalogue must answer is of the form
+  "which of my sound sources can hold a non-equal-tempered scale?", in one
+  query.
+- **G-4** Manuals belong to models: the platform administrator links library
+  manuals (K-6) to a model in the catalogue, and every account's unit of that
+  model has them, so a passage found by search names the instrument it
+  describes. A person can also pick further library documents for their own
+  search. Nothing is copied.
 - **G-5** A wishlist: gear not yet owned, with the same fields, convertible to an
   owned record.
+- **G-6** Anyone may suggest a model for the catalogue; the platform
+  administrator approves it and keeps its facts. A suggestion is visible to
+  whoever made it until then.
+- **G-7** A unit is shared like a project (AC-5). A share shows the unit's
+  model, capabilities, firmware and photos; contribute adds photos; edit
+  changes nickname, firmware and capability overrides. The insurance record,
+  receipts, serial plates and documents stay with the owner at every level,
+  and the platform administrator's read-only view does not reach them.
 
 ## 5. Projects (P)
 
