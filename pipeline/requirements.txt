@@ -1,0 +1,9 @@
+# What pipeline/.venv is built from. Python 3.13 (Homebrew), as in Scriptorium.
+#
+#   /opt/homebrew/bin/python3.13 -m venv pipeline/.venv
+#   pipeline/.venv/bin/python3 -m pip install -r pipeline/requirements.txt
+#
+# Only what the pipeline imports itself. Exact versions, because each shapes
+# what reaches the database. Grows in Phase 1 (PyMuPDF, voyageai) and Phase 3.
+
+psycopg[binary]==3.2.13

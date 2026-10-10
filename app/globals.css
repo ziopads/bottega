@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+/* Token names are Vivarium's (parchment, card, ink, muted, rust, moss, line),
+   so the studio components ported from it in Phase 0 keep their classes
+   unchanged. The values are the Sirsinate instance's: white ground, near-black
+   ink, black as the accent. The styling pass changes this block and nothing
+   else; components never use raw colour values. */
+
+:root {
+  color-scheme: light;
+  --parchment: #ffffff;
+  --card: #ffffff;
+  --ink: #1a1a1a;
+  --muted: #666666;
+  --rust: #1a1a1a;
+  --moss: #666666;
+  --line: #e5e5e5;
+}
+
+@theme inline {
+  --color-parchment: var(--parchment);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-rust: var(--rust);
+  --color-moss: var(--moss);
+  --color-line: var(--line);
+  --font-sans: var(--font-instrument), system-ui, sans-serif;
+  --font-serif: var(--font-instrument), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+body {
+  background: var(--parchment);
+  color: var(--ink);
+}
+
+a {
+  color: inherit;
+}
+
+/* Form controls, styled once. Tailwind's base resets every control to no
+   border on a transparent background, so a type missing from this list is
+   invisible (Scriptorium's password field was, until it was added). */
+input[type='text'],
+input[type='password'],
+input[type='email'],
+input[type='search'],
+input[type='url'],
+input[type='date'],
+input[type='number'],
+select,
+textarea {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.875rem;
+  color: var(--ink);
+}
