@@ -13,8 +13,8 @@ export async function GET() {
   return NextResponse.json({ gear: await listGear(account.db) });
 }
 
-// POST /api/gear   { modelId? | maker + name, nickname?, status? }
-// Adds a unit to the viewer's own account: a catalogue model, or a maker and
+// POST /api/gear   { modelId? | manufacturer + name, nickname?, status? }
+// Adds a unit to the viewer's own account: a catalogue model, or a manufacturer and
 // name for something not in the catalogue yet.
 export async function POST(req: Request) {
   const account = await apiAccount();
@@ -35,10 +35,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'That model is not in the catalogue.' }, { status: 400 });
     }
   }
-  const maker = parseShortText(body.maker, 'Maker');
+  const manufacturer = parseShortText(body.manufacturer, 'Manufacturer');
   const name = parseShortText(body.name, 'Name');
   const nickname = parseShortText(body.nickname, 'Nickname');
-  for (const r of [maker, name, nickname]) if ('error' in r) return NextResponse.json({ error: r.error }, { status: 400 });
+  for (const r of [manufacturer, name, nickname]) if ('error' in r) return NextResponse.json({ error: r.error }, { status: 400 });
   if (!modelId && !('value' in name && name.value)) {
     return NextResponse.json({ error: 'Choose a model, or give the unit a name.' }, { status: 400 });
   }
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
   const unit = await createGear(db, {
     modelId,
-    maker: 'value' in maker ? maker.value : '',
+    manufacturer: 'value' in manufacturer ? manufacturer.value : '',
     name: 'value' in name ? name.value : '',
     nickname: 'value' in nickname ? nickname.value : '',
     status,

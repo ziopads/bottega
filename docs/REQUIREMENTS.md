@@ -1,7 +1,7 @@
 # Bottega — requirements
 
-**Version:** 0.7
-**Date:** 2026-10-10
+**Version:** 0.8
+**Date:** 2026-10-11
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
 built is in `ARCHITECTURE.md`.
@@ -10,6 +10,13 @@ built is in `ARCHITECTURE.md`.
 
 ## Changelog
 
+- **0.8** (2026-10-11) — Gear fitted to the subject before importing James's
+  hardware list: models name their manufacturer and the years they were made;
+  more categories; power, rack units and effect types as capabilities; an
+  estimated value on the insurance record; a unit moves between owned and
+  wishlist in one click (G-1 to G-5, G-8). Documents gain service manuals,
+  firmware notes and reference material; the library takes manufacturers'
+  documents only (K-4, K-6).
 - **0.7** (2026-10-10) — Documents are processed in the app, in batches that
   resume (K-9). Every account has an allowance of storage and of pages
   processed each month, and the platform has a monthly ceiling that stops
@@ -161,21 +168,24 @@ place they left.
 
 ## 4. Gear (G)
 
-- **G-1** Two levels. The platform keeps one **catalogue** of makes and models
-  (a Sequential Prophet-6, Ableton Live 12): kind (hardware, software, book,
-  cable, other), category (synthesizer, sampler, effect, interface and so on),
-  maker, model, year. Each account keeps its own **units**: which model, a
+- **G-1** Two levels. The platform keeps one **catalogue** of models (a
+  Sequential Prophet-6, Ableton Live 12): kind (hardware, software, book,
+  cable, other), category (synthesizer, sequencer, sampler, effect, preamp,
+  recorder, interface, test equipment and so on), manufacturer, model, and
+  the years it was made (introduced, and discontinued unless still made). Each account keeps its own **units**: which model, a
   nickname, firmware, status (owned, wishlist, gone), notes. A unit whose model
   is not in the catalogue can name itself until it is.
 - **G-2** Each unit has an insurance record: serial, purchase date and price,
-  seller, condition, location, service history, and for software the licence
+  seller, estimated value and when it was estimated, condition, location,
+  service history, and for software the licence
   key, seats, activation and renewal. Files attach to the unit: photographs,
   receipts, serial plates, documents. The record must be sufficient to support
   an insurance claim. Nothing in gear is public.
 - **G-3** Capabilities are structured facts from a platform vocabulary
   (polyphony, synthesis method, microtuning and tuning methods, MPE,
   aftertouch, MIDI, CV and gate, sync, inputs and outputs, sampling,
-  sequencer, effects, form factor), each typed and checked. They are set on
+  sequencer, effects and effect types, form factor, power, rack units), each
+  typed and checked. They are set on
   the model and overridden on a unit where the unit differs (a modded voice
   card, newer firmware). The question the catalogue must answer is of the form
   "which of my sound sources can hold a non-equal-tempered scale?", in one
@@ -185,8 +195,8 @@ place they left.
   model has them, so a passage found by search names the instrument it
   describes. A person can also pick further library documents for their own
   search. Nothing is copied.
-- **G-5** A wishlist: gear not yet owned, with the same fields, convertible to an
-  owned record.
+- **G-5** A wishlist: gear not yet owned, with the same fields. A unit moves
+  between owned and wishlist in one action from the gear list.
 - **G-6** Anyone may suggest a model for the catalogue; the platform
   administrator approves it and keeps its facts. A suggestion is visible to
   whoever made it until then.
@@ -195,6 +205,9 @@ place they left.
   changes nickname, firmware and capability overrides. The insurance record,
   receipts, serial plates and documents stay with the owner at every level,
   and the platform administrator's read-only view does not reach them.
+- **G-8** An account's gear can be imported from a spreadsheet: one row per
+  unit, in a documented format, checked by the database in a dry run before
+  anything is kept. The first import is James's hardware list.
 
 ## 5. Projects (P)
 
@@ -455,3 +468,5 @@ Recorded so that early decisions do not close them off; none is designed yet.
     putting one account's copy in front of every account is redistribution.
     Decided: books go in as private documents, shared with named people or
     with a study group's members, and the library holds manuals only.
+    Widened in 0.8 to manufacturers' documents: manuals, service manuals and
+    firmware notes. Reference material is private, like books.

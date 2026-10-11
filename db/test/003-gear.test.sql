@@ -13,7 +13,7 @@ insert into accounts (user_id, email, display_name, status, is_platform_admin) v
   ('J', 'j@x', 'James', 'active', true), ('C', 'c@x', 'Chris', 'active', false), ('G', 'g@x', 'Gordon', 'active', false)
 on conflict (user_id) do nothing;
 -- As the owner role (the administrator's pipeline), an approved model with capabilities.
-insert into gear_models (kind, category, maker, model, status) values
+insert into gear_models (kind, category, manufacturer, model, status) values
   ('hardware', 'synthesizer', 'Sequential', 'Prophet-6', 'approved'),
   ('hardware', 'effect', 'Strymon', 'BigSky', 'approved');
 insert into model_capabilities (model_id, capability, value)
@@ -66,7 +66,7 @@ select tst.expect(
   'which of my sound sources can hold a non-equal-tempered scale');
 
 select set_config('app.user_id', 'C', false);
-insert into gear_models (kind, category, maker, model, status) values ('hardware', 'sampler', 'Akai', 'MPC Live II', 'approved');
+insert into gear_models (kind, category, manufacturer, model, status) values ('hardware', 'sampler', 'Akai', 'MPC Live II', 'approved');
 select tst.expect((select status from gear_models where model = 'MPC Live II') = 'suggested', 'a non-admin suggestion arrives as suggested');
 select tst.expect((select count(*) from gear) = 0, 'Chris sees none of James''s gear');
 select tst.expect((select count(*) from gear_private) = 0, 'Chris sees no insurance records');
@@ -125,7 +125,7 @@ end $$;
 -- The administrator's read-only view never reaches the insurance record -----------------
 select set_config('app.user_id', 'J', false);
 reset role;
-insert into gear (owner_id, name, maker) values ('G', 'Juno-106', 'Roland');
+insert into gear (owner_id, name, manufacturer) values ('G', 'Juno-106', 'Roland');
 set role bottega_app;
 select set_config('app.admin_view', 'on', false);
 select tst.expect((select count(*) from gear where name = 'Juno-106') = 1, 'admin view sees Gordon''s unit');

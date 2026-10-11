@@ -420,6 +420,19 @@ function InsuranceRecord({ gearId, initial, isSoftware }: { gearId: number; init
           </label>
         </span>
         {text('purchasedFrom', 'Bought from')}
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-muted">Estimated value</span>
+          <input
+            inputMode="decimal"
+            value={rec.estimatedValue ?? ''}
+            onChange={(e) => set('estimatedValue', e.target.value === '' ? null : (e.target.value as unknown as number))}
+            className={field}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-muted">Valued on</span>
+          <input type="date" value={rec.valuedOn ?? ''} onChange={(e) => set('valuedOn', e.target.value || null)} className={field} />
+        </label>
         {text('condition', 'Condition')}
         {text('location', 'Location')}
         <label className="flex flex-col gap-1 sm:col-span-3">

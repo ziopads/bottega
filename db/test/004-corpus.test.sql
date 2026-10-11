@@ -15,7 +15,7 @@ insert into accounts (user_id, email, display_name, status, is_platform_admin) v
   ('J', 'j@x', 'James', 'active', true), ('C', 'c@x', 'Chris', 'active', false),
   ('G', 'g@x', 'Gordon', 'active', false), ('P', 'p@x', 'Pending', 'pending', false)
 on conflict (user_id) do nothing;
-insert into gear_models (kind, category, maker, model, status)
+insert into gear_models (kind, category, manufacturer, model, status)
   select 'hardware', 'synthesizer', 'Moog', 'Matriarch', 'approved'
   where not exists (select 1 from gear_models where model = 'Matriarch');
 select set_config('app.actor', '', false);
@@ -55,7 +55,7 @@ set role bottega_app;
 
 -- Library submissions -------------------------------------------------------------------
 select set_config('app.user_id', 'C', false);
-insert into documents (library, review_status, owner_id, title, maker, model, r2_key, filename, bytes, sha256)
+insert into documents (library, review_status, owner_id, title, manufacturer, model, r2_key, filename, bytes, sha256)
   values (true, 'approved', 'C', 'Matriarch Manual', 'Moog', 'Matriarch', 'library/1/a.pdf', 'm.pdf', 1000, tst.sha('a'));
 reset role;
 select tst.expect((select review_status = 'submitted' and contributed_by = 'C' and owner_id is null
@@ -63,7 +63,7 @@ select tst.expect((select review_status = 'submitted' and contributed_by = 'C' a
   'a contributor''s library upload arrives submitted, contributed by them, owned by nobody');
 set role bottega_app;
 select tst.expect(document_level(tst.doc('Matriarch Manual')) = 'edit', 'the contributor edits their submission');
-select tst.affects($$update documents set title = 'Matriarch Manual' , maker = 'Moog Music' where title = 'Matriarch Manual'$$, 1,
+select tst.affects($$update documents set title = 'Matriarch Manual' , manufacturer = 'Moog Music' where title = 'Matriarch Manual'$$, 1,
   'the contributor corrects their submission');
 select tst.refused($$update documents set review_status = 'approved' where title = 'Matriarch Manual'$$,
   'a contributor approving their own submission');

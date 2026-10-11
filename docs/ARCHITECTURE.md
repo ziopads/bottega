@@ -207,23 +207,26 @@ The names `tracks` and `trackId` for mixes are carried over from Vivarium.
 
 ### Gear (Phase 1)
 
-Migration 003. REQUIREMENTS G-1 to G-7.
+Migrations 003 and 005. REQUIREMENTS G-1 to G-8.
 
 - `gear_models` — the platform catalogue: kind, category (a closed list, so
-  `is_sound_source(category)` can answer "sound sources"), maker, model, year,
+  `is_sound_source(category)` can answer "sound sources"), manufacturer,
+  model, year introduced and year discontinued (null while still made),
   description, status (`suggested`, `approved`, `rejected`), suggested by. A
   trigger makes any non-administrator insert a suggestion and refuses their
   updates.
 - `capability_defs` — the vocabulary: key, label, value type (`boolean`,
   `integer`, `number`, `text`, `enum`, `list`), unit, choices. Seeded with
-  seventeen capabilities; any active account may add one, the administrator
-  edits.
+  seventeen capabilities in 003 and three more in 005 (power, rack units,
+  effect types); form factor became a list in 005. Any active account may add
+  one; the administrator edits.
 - `model_capabilities` — model, capability, value (JSON, checked against its
   definition by `capability_value_ok`). Administrator only.
-- `gear` — the account's unit: owner, model (or its own maker and name),
+- `gear` — the account's unit: owner, model (or its own manufacturer and name),
   nickname, status (`owned`, `wishlist`, `gone`), firmware, notes.
 - `gear_private` — one row per unit, created with it: serial, purchase date,
-  price and currency, seller, condition, location, service history, licence
+  price and currency, seller, estimated value and the date of the estimate,
+  condition, location, service history, licence
   key, seats, activation, renewal. A separate table because row-level security
   works on rows: a shared unit's row is visible to the grantee, so the
   insurance record must be a row they cannot see.
@@ -232,6 +235,14 @@ Migration 003. REQUIREMENTS G-1 to G-7.
   unit's capabilities, its own where set, else its model's, with `overridden`.
 - `gear_files` — unit, role (`photo`, `receipt`, `serial_plate`, `document`,
   `other`), R2 key in the private gear bucket, filename, type, bytes, caption.
+
+Importing an account's gear (G-8): `pipeline/gear_clean.py` turns a
+spreadsheet into the import format (one row per unit; its docstring lists the
+columns) and marks rows a person should check; `pipeline/gear_import.py`
+loads it as the owner role, finding or adding approved catalogue models,
+adding capabilities a model lacks, and adding units with their private
+records. Its dry run does everything in a transaction and rolls it back; a
+second run adds nothing.
 
 "Which of my sound sources can hold a non-equal-tempered scale?":
 
@@ -243,7 +254,8 @@ Migration 003. REQUIREMENTS G-1 to G-7.
 
 ### Corpus (Phase 1)
 
-- `documents` — title, kind (manual, book, other), maker and model for
+- `documents` — title, kind (manual, service, firmware, reference, book,
+  other; the library takes the first three), manufacturer and model for
   manuals, `library` (platform-wide) or `owner_id` (private; exactly one of
   the two), contributor and review status, R2 key, size and SHA-256, page
   count, and processing state (`pending`, `processing`, `ready`,
@@ -255,6 +267,30 @@ Migration 003. REQUIREMENTS G-1 to G-7.
   chunker version. Embedding model and dimension are recorded per document.
 - `platform_settings`, `account_limits`, `processing_usage` — the allowances
   and the ledger behind them (§11).
+
+Pages: `/library` (upload, the review queue for the administrator, the
+person's submissions, their own and shared documents, the approved library)
+and `/library/[id]` (one document: review, processing, model links). Route
+handlers under `app/api/documents/`:
+
+| Path | Methods | Does |
+|---|---|---|
+| `check` | POST | by fingerprint: does the library, or the person, already hold this file |
+| `upload` | POST | a signed PUT for a PDF, after the duplicate and storage checks |
+| (root) | GET, POST | list what the person can see; record an upload once it is in R2 |
+| `[id]` | GET, PATCH, DELETE | read; edit details [edit]; review [administrator]; pick for one's search; delete [as the policy] |
+| `[id]/process` | POST | one processing step [edit]; the page calls it until the document is ready |
+| `[id]/file` | GET | a 10-minute download link [view] |
+| `[id]/models` | POST, DELETE | link a library manual to a catalogue model; remove a link |
+
+Processing, one step per call (`lib/pdf.ts`, `lib/chunk.ts`, `lib/embed.ts`):
+the first steps download the PDF, check its SHA-256 against the one the
+browser sent (a mismatch deletes the document and its file), refuse a
+document longer than the person's limit, and store up to 300 pages of text a
+call. Later steps each claim up to 40 pages, chunk them (about 2,000
+characters with 300 of overlap), embed the chunks and commit them with
+`pages_done` in one transaction that applies only if `pages_done` has not
+moved, so two open pages cannot process the same pages twice.
 
 ### Study (Phase 2)
 
@@ -660,8 +696,8 @@ is the database's job.
     a/<owner account id>/gear/<gear id>/<uuid>.<ext>
     a/<owner account id>/audio/<project id>/<uuid>.mp3
     a/<owner account id>/projects/<project id>/<uuid>.<ext>
-    a/<owner account id>/documents/<document id>/<uuid>.pdf
-    library/<document id>/<uuid>.pdf
+    a/<owner account id>/documents/<uuid>.pdf
+    library/<uuid>.pdf
 
 - The account id is Neon Auth's opaque id. Keys hold no email, filename,
   serial or model name; the original filename is in the database and applied
@@ -671,6 +707,8 @@ is the database's job.
 - Prefixes are not a security boundary (R2 credentials are scoped to buckets,
   not prefixes). They make one account's files listable, exportable and
   deletable together.
+- Documents carry no item id: their row is created only once the upload has
+  landed and been read back, so a document has no id when its key is issued.
 - Mixes uploaded before this scheme keep `studio/<project id>/<uuid>.mp3`;
   the routes accept both.
 

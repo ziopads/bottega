@@ -7,10 +7,11 @@ import type { AccessLevel } from '@/lib/studioTypes';
 export const GEAR_KINDS = ['hardware', 'software', 'book', 'cable', 'other'] as const;
 export type GearKind = (typeof GEAR_KINDS)[number];
 
-// db/003 gear_models.category, a closed list so a query can name it.
+// gear_models.category (db/003, widened in db/005), a closed list so a query can name it.
 export const GEAR_CATEGORIES = [
-  'synthesizer', 'drum machine', 'sampler', 'groovebox', 'instrument',
+  'synthesizer', 'drum machine', 'sampler', 'groovebox', 'instrument', 'sequencer',
   'effect', 'mixer', 'interface', 'controller', 'monitor', 'microphone',
+  'preamp', 'amplifier', 'recorder', 'patchbay', 'midi utility', 'utility', 'test equipment',
   'instrument plugin', 'effect plugin', 'host', 'sample library',
   'book', 'cable', 'power', 'other',
 ] as const;
@@ -51,9 +52,11 @@ export type GearModel = {
   id: number;
   kind: GearKind;
   category: GearCategory;
-  maker: string;
+  manufacturer: string;
   model: string;
-  year: number | null;
+  yearIntroduced: number | null;
+  /** Null while still made. */
+  yearDiscontinued: number | null;
   description: string;
   status: 'suggested' | 'approved' | 'rejected';
   /** Suggested by the viewer. */
@@ -67,9 +70,9 @@ export type GearUnit = {
   ownerId: string;
   ownerName: string;
   level: AccessLevel;
-  model: Pick<GearModel, 'id' | 'kind' | 'category' | 'maker' | 'model' | 'status'> | null;
+  model: Pick<GearModel, 'id' | 'kind' | 'category' | 'manufacturer' | 'model' | 'status'> | null;
   /** For a unit with no catalogue model. */
-  maker: string;
+  manufacturer: string;
   name: string;
   nickname: string;
   status: GearStatus;
@@ -96,6 +99,9 @@ export type GearPrivate = {
   licenseSeats: number | null;
   licenseActivation: string;
   licenseRenewal: string | null;
+  /** What it would cost to replace, for insurance, and when that was judged. */
+  estimatedValue: number | null;
+  valuedOn: string | null;
 };
 
 export type GearFile = {
@@ -110,9 +116,17 @@ export type GearFile = {
   uploadedAt: string;
 };
 
-/** "Sequential Prophet-6", or the unit's own maker and name. */
-export function unitTitle(u: Pick<GearUnit, 'model' | 'maker' | 'name'>): string {
-  return u.model ? `${u.model.maker} ${u.model.model}` : [u.maker, u.name].filter(Boolean).join(' ');
+/** "1972–1977", "2015–", "1981", or "" when unknown. */
+export function modelYears(m: Pick<GearModel, 'yearIntroduced' | 'yearDiscontinued'>): string {
+  const a = m.yearIntroduced, b = m.yearDiscontinued;
+  if (a === null && b === null) return '';
+  if (a !== null && b === a) return String(a);
+  return `${a ?? '?'}–${b ?? ''}`;
+}
+
+/** "Sequential Prophet-6", or the unit's own manufacturer and name. */
+export function unitTitle(u: Pick<GearUnit, 'model' | 'manufacturer' | 'name'>): string {
+  return u.model ? `${u.model.manufacturer} ${u.model.model}` : [u.manufacturer, u.name].filter(Boolean).join(' ');
 }
 
 export function isSoundSource(u: Pick<GearUnit, 'model'>): boolean {
@@ -165,4 +179,12 @@ export function parseShortText(raw: unknown, label: string, max = 200): { value:
   const value = raw.trim().replace(/\s+/g, ' ');
   if (value.length > max) return { error: `Keep ${label.toLowerCase()} under ${max} characters.` };
   return { value };
+}
+
+/** A year field from a request: undefined when absent, null when cleared, else a year or an error. */
+export function parseYear(v: unknown): number | null | undefined | { error: string } {
+  if (v === undefined) return undefined;
+  if (v === null || v === '') return null;
+  const y = Number(v);
+  return Number.isInteger(y) && y >= 1900 && y <= 2200 ? y : { error: 'A year must be four digits.' };
 }

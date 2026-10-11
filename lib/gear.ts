@@ -56,7 +56,7 @@ export async function listCapabilityDefs(db: Scoped): Promise<CapabilityDef[]> {
 
 // ── The model catalogue ─────────────────────────────────────────────────────
 
-const MODEL_COLUMNS = `m.id, m.kind, m.category, m.maker, m.model, m.year, m.description, m.status,
+const MODEL_COLUMNS = `m.id, m.kind, m.category, m.manufacturer, m.model, m.year_introduced, m.year_discontinued, m.description, m.status,
   m.suggested_by, coalesce(m.suggested_by = app_user(), false) as mine`;
 
 async function toModels(db: Scoped, rows: Row[]): Promise<GearModel[]> {
@@ -77,9 +77,10 @@ async function toModels(db: Scoped, rows: Row[]): Promise<GearModel[]> {
     id: num(r.id),
     kind: String(r.kind) as GearKind,
     category: String(r.category) as GearCategory,
-    maker: String(r.maker),
+    manufacturer: String(r.manufacturer),
     model: String(r.model),
-    year: numOrNull(r.year),
+    yearIntroduced: numOrNull(r.year_introduced),
+    yearDiscontinued: numOrNull(r.year_discontinued),
     description: str(r.description),
     status: String(r.status) as GearModel['status'],
     mine: r.mine === true,
@@ -94,8 +95,8 @@ export async function searchModels(db: Scoped, query: string, limit = 20): Promi
   const rows = await db.q(
     `select ${MODEL_COLUMNS} from gear_models m
      where m.status <> 'rejected'
-       and ($1 = '' or (m.maker || ' ' || m.model) ilike '%' || $1 || '%')
-     order by (m.status = 'approved') desc, m.maker, m.model
+       and ($1 = '' or (m.manufacturer || ' ' || m.model) ilike '%' || $1 || '%')
+     order by (m.status = 'approved') desc, m.manufacturer, m.model
      limit $2`,
     [q.replace(/[%_\\]/g, (c) => `\\${c}`), limit],
   );
@@ -106,7 +107,7 @@ export async function searchModels(db: Scoped, query: string, limit = 20): Promi
 export async function listModels(db: Scoped): Promise<GearModel[]> {
   const rows = await db.q(
     `select ${MODEL_COLUMNS} from gear_models m
-     order by case m.status when 'suggested' then 0 when 'approved' then 1 else 2 end, m.maker, m.model`,
+     order by case m.status when 'suggested' then 0 when 'approved' then 1 else 2 end, m.manufacturer, m.model`,
   );
   return toModels(db, rows);
 }
@@ -125,13 +126,20 @@ export type SuggestResult = { ok: true; model: GearModel } | { ok: false; reason
  */
 export async function suggestModel(
   db: Scoped,
-  input: { kind: GearKind; category: GearCategory; maker: string; model: string; year: number | null },
+  input: {
+    kind: GearKind;
+    category: GearCategory;
+    manufacturer: string;
+    model: string;
+    yearIntroduced: number | null;
+    yearDiscontinued: number | null;
+  },
 ): Promise<SuggestResult> {
   try {
     const rows = await db.q(
-      `insert into gear_models (kind, category, maker, model, year, status)
-       values ($1, $2, $3, $4, $5, 'approved') returning id`,
-      [input.kind, input.category, input.maker, input.model, input.year],
+      `insert into gear_models (kind, category, manufacturer, model, year_introduced, year_discontinued, status)
+       values ($1, $2, $3, $4, $5, $6, 'approved') returning id`,
+      [input.kind, input.category, input.manufacturer, input.model, input.yearIntroduced, input.yearDiscontinued],
     );
     const model = await getModel(db, num(rows[0].id));
     if (!model) throw new Error('model vanished after insert');
@@ -139,27 +147,31 @@ export async function suggestModel(
   } catch (err) {
     if (pgCode(err) !== UNIQUE_VIOLATION) throw err;
     const existing = await db.q(
-      `select ${MODEL_COLUMNS} from gear_models m where lower(m.maker) = lower($1) and lower(m.model) = lower($2)`,
-      [input.maker, input.model],
+      `select ${MODEL_COLUMNS} from gear_models m where lower(m.manufacturer) = lower($1) and lower(m.model) = lower($2)`,
+      [input.manufacturer, input.model],
     );
     return { ok: false, reason: 'exists', existing: existing.length ? (await toModels(db, existing))[0] : null };
   }
 }
 
+export type ModelField =
+  | 'kind' | 'category' | 'manufacturer' | 'model' | 'yearIntroduced' | 'yearDiscontinued' | 'description' | 'status';
+
 /** The administrator's changes to a model: its facts and its status. */
 export async function updateModel(
   db: Scoped,
   id: number,
-  patch: Partial<Pick<GearModel, 'kind' | 'category' | 'maker' | 'model' | 'year' | 'description' | 'status'>>,
+  patch: Partial<Pick<GearModel, ModelField>>,
 ): Promise<GearModel | null> {
   const set: string[] = [];
   const params: unknown[] = [];
   for (const [field, column] of [
     ['kind', 'kind'],
     ['category', 'category'],
-    ['maker', 'maker'],
+    ['manufacturer', 'manufacturer'],
     ['model', 'model'],
-    ['year', 'year'],
+    ['yearIntroduced', 'year_introduced'],
+    ['yearDiscontinued', 'year_discontinued'],
     ['description', 'description'],
     ['status', 'status'],
   ] as const) {
@@ -184,9 +196,9 @@ export async function setModelCapability(db: Scoped, modelId: number, key: strin
 // ── Units ───────────────────────────────────────────────────────────────────
 
 const UNIT_SELECT = `
-  select g.id, g.owner_id, gear_level(g.id) as level, g.maker, g.name, g.nickname, g.status, g.firmware,
+  select g.id, g.owner_id, gear_level(g.id) as level, g.manufacturer, g.name, g.nickname, g.status, g.firmware,
          g.notes, g.created_at, m.id as model_id, m.kind as model_kind, m.category as model_category,
-         m.maker as model_maker, m.model as model_model, m.status as model_status,
+         m.manufacturer as model_manufacturer, m.model as model_model, m.status as model_status,
          (select f.id from gear_files f where f.gear_id = g.id and f.role = 'photo'
           order by f.uploaded_at limit 1) as photo_id
   from gear g
@@ -221,11 +233,11 @@ async function toUnits(db: Scoped, rows: Row[]): Promise<GearUnit[]> {
             id: num(r.model_id),
             kind: String(r.model_kind) as GearKind,
             category: String(r.model_category) as GearCategory,
-            maker: String(r.model_maker),
+            manufacturer: String(r.model_manufacturer),
             model: String(r.model_model),
             status: String(r.model_status) as GearModel['status'],
           },
-    maker: str(r.maker),
+    manufacturer: str(r.manufacturer),
     name: str(r.name),
     nickname: str(r.nickname),
     status: String(r.status) as GearStatus,
@@ -241,7 +253,7 @@ async function toUnits(db: Scoped, rows: Row[]): Promise<GearUnit[]> {
 export async function listGear(db: Scoped): Promise<GearUnit[]> {
   const rows = await db.q(
     `${UNIT_SELECT} where ${UNIT_VISIBLE}
-     order by coalesce(m.maker, g.maker), coalesce(m.model, g.name), g.nickname`,
+     order by coalesce(m.manufacturer, g.manufacturer), coalesce(m.model, g.name), g.nickname`,
   );
   return toUnits(db, rows);
 }
@@ -253,18 +265,18 @@ export async function getGear(db: Scoped, id: number): Promise<GearUnit | null> 
 
 export async function createGear(
   db: Scoped,
-  input: { modelId: number | null; maker: string; name: string; nickname: string; status: GearStatus },
+  input: { modelId: number | null; manufacturer: string; name: string; nickname: string; status: GearStatus },
 ): Promise<GearUnit> {
   const rows = await db.q(
-    'insert into gear (model_id, maker, name, nickname, status) values ($1, $2, $3, $4, $5) returning id',
-    [input.modelId, input.modelId ? '' : input.maker, input.modelId ? '' : input.name, input.nickname, input.status],
+    'insert into gear (model_id, manufacturer, name, nickname, status) values ($1, $2, $3, $4, $5) returning id',
+    [input.modelId, input.modelId ? '' : input.manufacturer, input.modelId ? '' : input.name, input.nickname, input.status],
   );
   const unit = await getGear(db, num(rows[0].id));
   if (!unit) throw new Error('gear vanished after insert');
   return unit;
 }
 
-export type GearPatch = Partial<Pick<GearUnit, 'nickname' | 'status' | 'firmware' | 'notes' | 'maker' | 'name'>> & {
+export type GearPatch = Partial<Pick<GearUnit, 'nickname' | 'status' | 'firmware' | 'notes' | 'manufacturer' | 'name'>> & {
   modelId?: number | null;
 };
 
@@ -276,7 +288,7 @@ export async function updateGear(db: Scoped, id: number, patch: GearPatch): Prom
     ['status', 'status'],
     ['firmware', 'firmware'],
     ['notes', 'notes'],
-    ['maker', 'maker'],
+    ['manufacturer', 'manufacturer'],
     ['name', 'name'],
     ['modelId', 'model_id'],
   ] as const) {
@@ -312,7 +324,7 @@ export function isCapabilityRefusal(err: unknown): boolean {
 // ── The insurance record (owner only) ───────────────────────────────────────
 
 const PRIVATE_COLUMNS = `serial, purchase_date, purchase_price, currency, purchased_from, condition, location,
-  service_history, license_key, license_seats, license_activation, license_renewal`;
+  service_history, license_key, license_seats, license_activation, license_renewal, estimated_value, valued_on`;
 
 /** The owner's record, or null for anyone else (the database returns no row). */
 export async function getGearPrivate(db: Scoped, gearId: number): Promise<GearPrivate | null> {
@@ -332,6 +344,8 @@ export async function getGearPrivate(db: Scoped, gearId: number): Promise<GearPr
     licenseSeats: numOrNull(r.license_seats),
     licenseActivation: str(r.license_activation),
     licenseRenewal: dateOrNull(r.license_renewal),
+    estimatedValue: numOrNull(r.estimated_value),
+    valuedOn: dateOrNull(r.valued_on),
   };
 }
 
@@ -348,6 +362,8 @@ const PRIVATE_FIELDS: [keyof GearPrivate, string][] = [
   ['licenseSeats', 'license_seats'],
   ['licenseActivation', 'license_activation'],
   ['licenseRenewal', 'license_renewal'],
+  ['estimatedValue', 'estimated_value'],
+  ['valuedOn', 'valued_on'],
 ];
 
 export async function updateGearPrivate(db: Scoped, gearId: number, patch: Partial<GearPrivate>): Promise<GearPrivate | null> {

@@ -9,8 +9,10 @@ import { getClient, r2Configured } from './storage';
 // images, private documents and library manuals as they arrive. The rules are
 // ARCHITECTURE §12:
 //
-//   - keys are a/<owner account id>/<kind>/<item id>/<uuid>.<ext>, or
-//     library/<document id>/<uuid>.<ext>; nothing personal in them;
+//   - keys are a/<owner account id>/<kind>/<item id>/<uuid>.<ext>; documents,
+//     which get their row only once the upload has landed, are
+//     a/<owner>/documents/<uuid>.pdf or library/<uuid>.pdf; nothing
+//     personal in any of them;
 //   - the browser uploads by a signed PUT and only ever holds short-lived
 //     signed links, minted after the route has authorized the request;
 //   - an upload is recorded only once the app has read its size and type back
@@ -50,6 +52,24 @@ export function isAccountFileKey(key: string, ownerId: string, kind: FileKind, i
   const prefix = `a/${ownerId}/${kind}/${itemId}/`;
   if (!key.startsWith(prefix)) return false;
   return /^[0-9a-f-]{36}\.(jpg|png|webp|heic|pdf)$/.test(key.slice(prefix.length));
+}
+
+/** A new document's key: under its owner's prefix, or the library's. */
+export function newDocumentKey(ownerId: string | null): string {
+  return ownerId ? `a/${ownerId}/documents/${randomUUID()}.pdf` : `library/${randomUUID()}.pdf`;
+}
+
+/** A document key the app issued for this owner (or the library), and nothing else. */
+export function isDocumentKey(key: string, ownerId: string | null): boolean {
+  const prefix = ownerId ? `a/${ownerId}/documents/` : 'library/';
+  return key.startsWith(prefix) && /^[0-9a-f-]{36}\.pdf$/.test(key.slice(prefix.length));
+}
+
+/** The whole object, for processing on the server. */
+export async function getFileBytes(key: string): Promise<Uint8Array> {
+  const res = await getClient().send(new GetObjectCommand({ Bucket: filesBucket, Key: key }));
+  if (!res.Body) throw new Error(`getFileBytes: ${key} has no body`);
+  return res.Body.transformToByteArray();
 }
 
 export async function signFileUpload(key: string, contentType: string): Promise<string> {

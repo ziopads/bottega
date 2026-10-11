@@ -24,7 +24,7 @@ const TEXT: [keyof GearPrivate, number][] = [
   ['licenseKey', 2_000],
   ['licenseActivation', 500],
 ];
-const DATES: (keyof GearPrivate)[] = ['purchaseDate', 'licenseRenewal'];
+const DATES: (keyof GearPrivate)[] = ['purchaseDate', 'licenseRenewal', 'valuedOn'];
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const account = await apiAccount();
@@ -67,13 +67,15 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       else return NextResponse.json({ error: 'Dates are YYYY-MM-DD.' }, { status: 400 });
     }
   }
-  if ('purchasePrice' in body) {
-    const v = body.purchasePrice;
-    if (v === null || v === '') patch.purchasePrice = null;
-    else {
-      const n = Number(v);
-      if (!Number.isFinite(n) || n < 0) return NextResponse.json({ error: 'The price must be a positive number.' }, { status: 400 });
-      patch.purchasePrice = Math.round(n * 100) / 100;
+  for (const field of ['purchasePrice', 'estimatedValue'] as const) {
+    if (field in body) {
+      const v = body[field];
+      if (v === null || v === '') patch[field] = null;
+      else {
+        const n = Number(v);
+        if (!Number.isFinite(n) || n < 0) return NextResponse.json({ error: 'Amounts must be positive numbers.' }, { status: 400 });
+        patch[field] = Math.round(n * 100) / 100;
+      }
     }
   }
   if ('currency' in body) {

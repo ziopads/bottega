@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { apiAccount } from '@/lib/access';
 import { searchModels, suggestModel } from '@/lib/gear';
-import { GEAR_CATEGORIES, GEAR_KINDS, parseShortText, type GearCategory, type GearKind } from '@/lib/gearTypes';
+import { GEAR_CATEGORIES, GEAR_KINDS, parseShortText, parseYear, type GearCategory, type GearKind } from '@/lib/gearTypes';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   return NextResponse.json({ models: await searchModels(account.db, q) });
 }
 
-// POST /api/gear-models   { kind, category, maker, model, year? }
+// POST /api/gear-models   { kind, category, manufacturer, model, yearIntroduced?, yearDiscontinued? }
 // Suggests a model for the catalogue (REQUIREMENTS G-6). It is usable at once
 // by whoever suggested it and visible to others once the platform
 // administrator approves it; a model the administrator adds is approved.
@@ -32,17 +32,28 @@ export async function POST(req: Request) {
   if (!GEAR_KINDS.includes(kind)) return NextResponse.json({ error: 'Invalid kind' }, { status: 400 });
   const category = (body.category ?? 'other') as GearCategory;
   if (!GEAR_CATEGORIES.includes(category)) return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
-  const maker = parseShortText(body.maker, 'Maker');
+  const manufacturer = parseShortText(body.manufacturer, 'Manufacturer');
   const model = parseShortText(body.model, 'Model');
-  if ('error' in maker) return NextResponse.json({ error: maker.error }, { status: 400 });
+  if ('error' in manufacturer) return NextResponse.json({ error: manufacturer.error }, { status: 400 });
   if ('error' in model) return NextResponse.json({ error: model.error }, { status: 400 });
-  if (!maker.value || !model.value) return NextResponse.json({ error: 'Give both a maker and a model.' }, { status: 400 });
-  const year = body.year === undefined || body.year === null || body.year === '' ? null : Number(body.year);
-  if (year !== null && (!Number.isInteger(year) || year < 1900 || year > 2200)) {
-    return NextResponse.json({ error: 'Year must be a four-digit year.' }, { status: 400 });
+  if (!manufacturer.value || !model.value) return NextResponse.json({ error: 'Give both a manufacturer and a model.' }, { status: 400 });
+  const from = parseYear(body.yearIntroduced);
+  const to = parseYear(body.yearDiscontinued);
+  for (const y of [from, to]) if (y && typeof y === 'object') return NextResponse.json({ error: y.error }, { status: 400 });
+  const yearIntroduced = (from ?? null) as number | null;
+  const yearDiscontinued = (to ?? null) as number | null;
+  if (yearIntroduced !== null && yearDiscontinued !== null && yearDiscontinued < yearIntroduced) {
+    return NextResponse.json({ error: 'It cannot be discontinued before it was introduced.' }, { status: 400 });
   }
 
-  const result = await suggestModel(account.db, { kind, category, maker: maker.value, model: model.value, year });
+  const result = await suggestModel(account.db, {
+    kind,
+    category,
+    manufacturer: manufacturer.value,
+    model: model.value,
+    yearIntroduced,
+    yearDiscontinued,
+  });
   if (!result.ok) {
     return NextResponse.json(
       { error: 'That model is already in the catalogue.', existing: result.existing },

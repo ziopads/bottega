@@ -48,14 +48,14 @@ export default function CatalogueAdmin({ initialModels, defs }: { initialModels:
   const suggested = models.filter((m) => m.status === 'suggested');
   const rest = models
     .filter((m) => m.status !== 'suggested')
-    .filter((m) => !filter || `${m.maker} ${m.model}`.toLowerCase().includes(filter.toLowerCase()));
+    .filter((m) => !filter || `${m.manufacturer} ${m.model}`.toLowerCase().includes(filter.toLowerCase()));
   const sel = 'rounded-md border border-line bg-card px-2 py-1 text-sm';
 
   const row = (m: GearModel) => (
     <li key={m.id} className="py-2">
       <div className="flex flex-wrap items-baseline gap-3 text-sm">
         <button onClick={() => setOpen(open === m.id ? null : m.id)} className="min-w-0 flex-1 text-left hover:text-rust">
-          {m.maker} {m.model}
+          {m.manufacturer} {m.model}
           <span className="text-xs text-muted">
             {' '}
             · {m.category} · {m.kind}
@@ -77,7 +77,7 @@ export default function CatalogueAdmin({ initialModels, defs }: { initialModels:
         <div className="mt-3 space-y-3 rounded-lg border border-line bg-card p-3 text-sm">
           <div className="flex flex-wrap items-center gap-3">
             <span className="w-40">
-              <InlineEdit value={m.maker} placeholder="maker" label="Maker" onSave={(v) => patch(m.id, { maker: v })} />
+              <InlineEdit value={m.manufacturer} placeholder="manufacturer" label="Manufacturer" onSave={(v) => patch(m.id, { manufacturer: v })} />
             </span>
             <span className="w-56">
               <InlineEdit value={m.model} placeholder="model" label="Model" onSave={(v) => patch(m.id, { model: v })} />
@@ -97,14 +97,26 @@ export default function CatalogueAdmin({ initialModels, defs }: { initialModels:
                 <option key={c}>{c}</option>
               ))}
             </select>
-            <span className="w-20">
-              <InlineEdit
-                value={m.year === null ? '' : String(m.year)}
-                placeholder="year"
-                label="Year"
-                inputMode="decimal"
-                onSave={(v) => patch(m.id, { year: v || null })}
-              />
+            <span className="flex items-baseline gap-1">
+              <span className="w-14">
+                <InlineEdit
+                  value={m.yearIntroduced === null ? '' : String(m.yearIntroduced)}
+                  placeholder="from"
+                  label="Year introduced"
+                  inputMode="decimal"
+                  onSave={(v) => patch(m.id, { yearIntroduced: v || null })}
+                />
+              </span>
+              –
+              <span className="w-14">
+                <InlineEdit
+                  value={m.yearDiscontinued === null ? '' : String(m.yearDiscontinued)}
+                  placeholder="still made"
+                  label="Year discontinued"
+                  inputMode="decimal"
+                  onSave={(v) => patch(m.id, { yearDiscontinued: v || null })}
+                />
+              </span>
             </span>
           </div>
           <table className="w-full">

@@ -23,6 +23,7 @@ const NAV = [
   { href: '/', label: 'Sessions' },
   { href: '/collections', label: 'Collections' },
   { href: '/gear', label: 'Gear' },
+  { href: '/library', label: 'Library' },
 ];
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

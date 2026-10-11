@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 
 import { apiAccount } from '@/lib/access';
-import { getModel, updateModel } from '@/lib/gear';
-import { GEAR_CATEGORIES, GEAR_KINDS, parseShortText, type GearCategory, type GearKind, type GearModel } from '@/lib/gearTypes';
+import { getModel, updateModel, type ModelField } from '@/lib/gear';
+import { GEAR_CATEGORIES, GEAR_KINDS, parseShortText, parseYear, type GearCategory, type GearKind, type GearModel } from '@/lib/gearTypes';
 
 export const dynamic = 'force-dynamic';
 
 const STATUSES = ['suggested', 'approved', 'rejected'] as const;
 
-// PATCH /api/gear-models/:id   { status?, kind?, category?, maker?, model?, year?, description? }
+// PATCH /api/gear-models/:id   { status?, kind?, category?, manufacturer?, model?, yearIntroduced?, yearDiscontinued?, description? }
 // The platform administrator approves, rejects and corrects catalogue models
 // (REQUIREMENTS G-6). The database refuses anyone else.
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -25,7 +25,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   } catch {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
-  const patch: Partial<Pick<GearModel, 'kind' | 'category' | 'maker' | 'model' | 'year' | 'description' | 'status'>> = {};
+  const patch: Partial<Pick<GearModel, ModelField>> = {};
   if ('status' in body) {
     if (!STATUSES.includes(body.status as (typeof STATUSES)[number])) return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     patch.status = body.status as GearModel['status'];
@@ -38,17 +38,17 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (!GEAR_CATEGORIES.includes(body.category as GearCategory)) return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
     patch.category = body.category as GearCategory;
   }
-  for (const field of ['maker', 'model'] as const) {
+  for (const field of ['manufacturer', 'model'] as const) {
     if (field in body) {
-      const r = parseShortText(body[field], field === 'maker' ? 'Maker' : 'Model');
+      const r = parseShortText(body[field], field === 'manufacturer' ? 'Manufacturer' : 'Model');
       if ('error' in r || !r.value) return NextResponse.json({ error: `Invalid ${field}` }, { status: 400 });
       patch[field] = r.value;
     }
   }
-  if ('year' in body) {
-    const y = body.year === null || body.year === '' ? null : Number(body.year);
-    if (y !== null && (!Number.isInteger(y) || y < 1900 || y > 2200)) return NextResponse.json({ error: 'Invalid year' }, { status: 400 });
-    patch.year = y;
+  for (const field of ['yearIntroduced', 'yearDiscontinued'] as const) {
+    const y = parseYear(body[field]);
+    if (y && typeof y === 'object') return NextResponse.json({ error: y.error }, { status: 400 });
+    if (y !== undefined) patch[field] = y;
   }
   if ('description' in body) {
     if (typeof body.description !== 'string') return NextResponse.json({ error: 'Invalid description' }, { status: 400 });
@@ -58,7 +58,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     return NextResponse.json({ model: await updateModel(account.db, id, patch) });
   } catch (err) {
     if ((err as { code?: string })?.code === '23505') {
-      return NextResponse.json({ error: 'Another model already has that maker and name.' }, { status: 409 });
+      return NextResponse.json({ error: 'Another model already has that manufacturer and name.' }, { status: 409 });
     }
     throw err;
   }

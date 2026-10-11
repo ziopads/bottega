@@ -23,9 +23,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   return NextResponse.json({ unit });
 }
 
-// PATCH /api/gear/:id   { nickname?, status?, firmware?, notes?, modelId?, maker?, name? }
+// PATCH /api/gear/:id   { nickname?, status?, firmware?, notes?, modelId?, manufacturer?, name? }
 // Nickname, firmware and notes need edit access; what the unit is (model,
-// maker, name) and its status need ownership.
+// manufacturer, name) and its status need ownership.
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const account = await apiAccount();
   if (account instanceof NextResponse) return account;
@@ -44,7 +44,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   for (const [field, label, max] of [
     ['nickname', 'Nickname', 200],
     ['firmware', 'Firmware', 200],
-    ['maker', 'Maker', 200],
+    ['manufacturer', 'Manufacturer', 200],
     ['name', 'Name', 200],
   ] as const) {
     if (field in body) {
@@ -72,7 +72,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     }
   }
 
-  const ownerOnly = ['status', 'modelId', 'maker', 'name'].some((f) => f in patch);
+  const ownerOnly = ['status', 'modelId', 'manufacturer', 'name'].some((f) => f in patch);
   const refusal = await gearRefusal(db, id, ownerOnly ? 'owner' : 'edit');
   if (refusal) return refusal;
 

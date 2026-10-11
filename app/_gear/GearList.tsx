@@ -133,7 +133,14 @@ export default function GearList({
           {own.length === 0 ? 'No gear yet. Add your first piece above.' : 'Nothing here matches.'}
         </p>
       ) : (
-        <UnitTable units={shown} defByKey={defByKey} />
+        <UnitTable
+          units={shown}
+          defByKey={defByKey}
+          onMove={async (u, to) => {
+            const r = await api<{ unit: GearUnit }>(`/api/gear/${u.id}`, { method: 'PATCH', body: JSON.stringify({ status: to }) });
+            if (r.ok) setUnits((list) => list.map((x) => (x.id === u.id ? { ...x, status: to } : x)));
+          }}
+        />
       )}
 
       {shared.length > 0 && (
@@ -146,20 +153,29 @@ export default function GearList({
   );
 }
 
+// One click between owned and wishlist, on the owner's own list.
+const MOVE: Partial<Record<GearStatus, { to: GearStatus; label: string }>> = {
+  owned: { to: 'wishlist', label: 'To wishlist' },
+  wishlist: { to: 'owned', label: 'I have it' },
+  gone: { to: 'owned', label: 'Back to owned' },
+};
+
 function UnitTable({
   units,
   defByKey,
   showOwner = false,
+  onMove,
 }: {
   units: GearUnit[];
   defByKey: Map<string, CapabilityDef>;
   showOwner?: boolean;
+  onMove?: (u: GearUnit, to: GearStatus) => void;
 }) {
   return (
     <ul className="divide-y divide-line rounded-lg border border-line bg-card">
       {units.map((u) => (
-        <li key={u.id}>
-          <Link href={`/gear/${u.id}`} className="flex items-center gap-4 px-4 py-2 hover:bg-ink/5">
+        <li key={u.id} className="flex items-center hover:bg-ink/5">
+          <Link href={`/gear/${u.id}`} className="flex min-w-0 flex-1 items-center gap-4 px-4 py-2">
             {u.photoId ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={`/api/gear-files/${u.photoId}`} alt="" className="h-10 w-10 shrink-0 rounded object-cover" />
@@ -185,6 +201,14 @@ function UnitTable({
             {u.model?.status === 'suggested' && <span className="text-xs text-muted">model awaiting approval</span>}
             {showOwner && <span className="text-xs text-muted">{u.ownerName}</span>}
           </Link>
+          {onMove && MOVE[u.status] && (
+            <button
+              onClick={() => onMove(u, MOVE[u.status]!.to)}
+              className="mr-4 shrink-0 rounded-md border border-line px-2 py-0.5 text-xs text-muted hover:border-ink hover:text-ink"
+            >
+              {MOVE[u.status]!.label}
+            </button>
+          )}
         </li>
       ))}
     </ul>
@@ -201,7 +225,7 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
   const [results, setResults] = useState<GearModel[]>([]);
   const [model, setModel] = useState<GearModel | null>(null);
   const [manual, setManual] = useState(false);
-  const [maker, setMaker] = useState('');
+  const [manufacturer, setManufacturer] = useState('');
   const [name, setName] = useState('');
   const [suggest, setSuggest] = useState(true);
   const [kind, setKind] = useState<GearKind>('hardware');
@@ -228,7 +252,7 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
     if (!modelId && manual && suggest) {
       const s = await api<{ model: GearModel }>('/api/gear-models', {
         method: 'POST',
-        body: JSON.stringify({ kind, category, maker, model: name }),
+        body: JSON.stringify({ kind, category, manufacturer, model: name }),
       });
       if (s.ok) modelId = s.data.model.id;
       else if (s.status === 409 && s.body.existing) modelId = s.body.existing.id;
@@ -240,7 +264,7 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
     }
     const r = await api<{ unit: GearUnit }>('/api/gear', {
       method: 'POST',
-      body: JSON.stringify(modelId ? { modelId, nickname, status } : { maker, name, nickname, status }),
+      body: JSON.stringify(modelId ? { modelId, nickname, status } : { manufacturer, name, nickname, status }),
     });
     setBusy(false);
     if (!r.ok) {
@@ -257,7 +281,7 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
       {model ? (
         <p>
           <span className="font-medium">
-            {model.maker} {model.model}
+            {model.manufacturer} {model.model}
           </span>{' '}
           <span className="text-muted">· {model.category}</span>{' '}
           <button type="button" onClick={() => setModel(null)} className="text-xs text-muted underline hover:text-ink">
@@ -267,8 +291,8 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
       ) : manual ? (
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-muted">Maker</span>
-            <input value={maker} onChange={(e) => setMaker(e.target.value)} className={`${field} w-44`} />
+            <span className="text-muted">Manufacturer</span>
+            <input value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} className={`${field} w-44`} />
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-muted">Model</span>
@@ -312,7 +336,7 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search the catalogue: maker or model…"
+            placeholder="Search the catalogue: manufacturer or model…"
             className={`${field} w-full sm:w-96`}
           />
           <ul className="mt-2 divide-y divide-line rounded-md border border-line sm:w-96">
@@ -320,7 +344,7 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
               <li key={m.id}>
                 <button type="button" onClick={() => setModel(m)} className="flex w-full gap-2 px-3 py-1.5 text-left hover:bg-ink/5">
                   <span>
-                    {m.maker} {m.model}
+                    {m.manufacturer} {m.model}
                   </span>
                   <span className="ml-auto text-xs text-muted">
                     {m.status === 'suggested' ? 'your suggestion' : m.category}
