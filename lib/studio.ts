@@ -346,7 +346,7 @@ export async function listNames(db: Scoped, projectId: number): Promise<StudioNa
 // ── Mixes ────────────────────────────────────────────────────────────────────
 
 const TRACK_SELECT = `
-  select id, project_id, version, r2_key, original_filename, bytes, duration_s, uploaded_by_id, uploaded_at
+  select id, project_id, version, r2_key, original_filename, bytes, duration_s, peaks, uploaded_by_id, uploaded_at
   from audio`;
 
 function toTrack(r: Row, who: Map<string, string>): StudioTrack {
@@ -357,6 +357,7 @@ function toTrack(r: Row, who: Map<string, string>): StudioTrack {
     originalFilename: String(r.original_filename),
     bytes: numOrNull(r.bytes),
     durationS: numOrNull(r.duration_s),
+    peaks: (r.peaks as number[] | null) ?? null,
     uploadedById: strOrNull(r.uploaded_by_id),
     uploadedByName: nameOf(who, strOrNull(r.uploaded_by_id)),
     uploadedAt: iso(r.uploaded_at),
@@ -400,7 +401,7 @@ export async function addTrack(db: Scoped, input: {
         `insert into audio (project_id, role, version, r2_key, original_filename, bytes, duration_s, uploaded_by)
          select $1, 'mix', coalesce(max(version), 0) + 1, $2, $3, $4, $5, $6
          from audio where project_id = $1 and role = 'mix'
-         returning id, project_id, version, r2_key, original_filename, bytes, duration_s, uploaded_by_id, uploaded_at`,
+         returning id, project_id, version, r2_key, original_filename, bytes, duration_s, peaks, uploaded_by_id, uploaded_at`,
         [input.projectId, input.key, input.originalFilename, input.bytes, input.durationS, input.by],
       );
       return toTrack(rows[0], await uploaders(db, rows));
@@ -448,6 +449,31 @@ export async function fillDuration(db: Scoped, id: number, durationS: number): P
   return rows.length > 0;
 }
 
+/** Stores a file's waveform (db/009) unless it has one. Contributors and above, like lengths. */
+export async function fillPeaks(db: Scoped, id: number, peaks: number[]): Promise<boolean> {
+  const rows = await db.q('update audio set peaks = $2::smallint[] where id = $1 and peaks is null returning id', [id, peaks]);
+  return rows.length > 0;
+}
+
+/** Every audio row in the viewer's own projects still without a waveform, for the backfill page. */
+export async function missingPeaks(db: Scoped): Promise<{ id: number; label: string }[]> {
+  const rows = await db.q(
+    `select a.id, a.role, a.version, a.credit, m.canonical_id, ar.code
+     from audio a
+     left join music_projects m on m.project_id = a.project_id
+     left join artists ar on ar.id = m.artist_id
+     where a.peaks is null and project_level(a.project_id) = 'owner'
+     order by a.id`,
+  );
+  return rows.map((r) => ({
+    id: num(r.id),
+    label:
+      r.role === 'mix'
+        ? `${r.code ?? ''} ${r.canonical_id ?? ''} v${r.version}`.trim()
+        : `reference: ${String(r.credit || 'uncredited')}`,
+  }));
+}
+
 /** Every audio row in the viewer's own projects still missing its length, for the backfill page. */
 export async function missingDurations(db: Scoped): Promise<{ id: number; label: string }[]> {
   const rows = await db.q(
@@ -477,6 +503,7 @@ function toReference(r: Row, who: Map<string, string>): StudioReference {
     originalFilename: String(r.original_filename),
     bytes: numOrNull(r.bytes),
     durationS: numOrNull(r.duration_s),
+    peaks: (r.peaks as number[] | null) ?? null,
     uploadedById: strOrNull(r.uploaded_by_id),
     uploadedByName: nameOf(who, strOrNull(r.uploaded_by_id)),
     uploadedAt: iso(r.uploaded_at),
@@ -486,7 +513,7 @@ function toReference(r: Row, who: Map<string, string>): StudioReference {
 /** Oldest first: references are a set to compare against, not a history. */
 export async function listReferences(db: Scoped, projectId: number): Promise<StudioReference[]> {
   const rows = await db.q(
-    `select id, project_id, credit, original_filename, bytes, duration_s, uploaded_by_id, uploaded_at
+    `select id, project_id, credit, original_filename, bytes, duration_s, peaks, uploaded_by_id, uploaded_at
      from audio where project_id = $1 and role = 'reference' order by uploaded_at, id`,
     [projectId],
   );
@@ -506,7 +533,7 @@ export async function addReference(db: Scoped, input: {
   const rows = await db.q(
     `insert into audio (project_id, role, r2_key, original_filename, bytes, duration_s, credit, uploaded_by)
      values ($1, 'reference', $2, $3, $4, $5, $6, $7)
-     returning id, project_id, credit, original_filename, bytes, duration_s, uploaded_by_id, uploaded_at`,
+     returning id, project_id, credit, original_filename, bytes, duration_s, peaks, uploaded_by_id, uploaded_at`,
     [input.projectId, input.key, input.originalFilename, input.bytes, input.durationS, input.credit, input.by],
   );
   return toReference(rows[0], await uploaders(db, rows));
@@ -514,7 +541,7 @@ export async function addReference(db: Scoped, input: {
 
 export async function getReferenceWithKey(db: Scoped, id: number): Promise<{ reference: StudioReference; key: string } | null> {
   const rows = await db.q(
-    `select id, project_id, credit, original_filename, bytes, duration_s, uploaded_by_id, uploaded_at, r2_key
+    `select id, project_id, credit, original_filename, bytes, duration_s, peaks, uploaded_by_id, uploaded_at, r2_key
      from audio where id = $1 and role = 'reference'`,
     [id],
   );
@@ -559,7 +586,7 @@ export async function addGenre(db: Scoped, name: string): Promise<string> {
 
 // Assistant proposals (Phase 1) are not shown here until accepted.
 const NOTE_SELECT = `
-  select n.id, n.project_id, n.audio_id, n.author_id, n.body, n.created_at, n.edited_at, a.version
+  select n.id, n.project_id, n.audio_id, n.author_id, n.body, n.created_at, n.edited_at, n.position_s, a.version
   from notes n left join audio a on a.id = n.audio_id`;
 
 function toNote(r: Row, who: Map<string, string>): StudioNote {
@@ -573,6 +600,7 @@ function toNote(r: Row, who: Map<string, string>): StudioNote {
     body: String(r.body),
     createdAt: iso(r.created_at),
     editedAt: isoOrNull(r.edited_at),
+    positionS: numOrNull(r.position_s),
   };
 }
 
@@ -606,13 +634,15 @@ export async function addNote(db: Scoped, input: {
   trackId: number | null;
   body: string;
   by: string;
+  /** Seconds into the mix; only with a trackId. */
+  positionS?: number | null;
 }): Promise<NoteResult> {
   if (input.trackId !== null && !(await trackInProject(db, input.trackId, input.projectId))) {
     return { ok: false, reason: 'bad-track' };
   }
   const rows = await db.q(
-    'insert into notes (project_id, audio_id, author, body) values ($1, $2, $3, $4) returning id',
-    [input.projectId, input.trackId, input.by, input.body],
+    'insert into notes (project_id, audio_id, author, body, position_s) values ($1, $2, $3, $4, $5) returning id',
+    [input.projectId, input.trackId, input.by, input.body, input.trackId === null ? null : (input.positionS ?? null)],
   );
   const note = await getNote(db, num(rows[0].id));
   if (!note) throw new Error('note vanished after insert');
@@ -620,7 +650,11 @@ export async function addNote(db: Scoped, input: {
 }
 
 /** Edit the text or the version a note is about. The route decides who may. */
-export async function updateNote(db: Scoped, id: number, patch: { body?: string; trackId?: number | null }): Promise<NoteResult> {
+export async function updateNote(
+  db: Scoped,
+  id: number,
+  patch: { body?: string; trackId?: number | null; positionS?: number | null },
+): Promise<NoteResult> {
   const current = await getNote(db, id);
   if (!current) return { ok: false, reason: 'not-found' };
   if (patch.trackId !== undefined && patch.trackId !== null && !(await trackInProject(db, patch.trackId, current.projectId))) {
@@ -633,7 +667,12 @@ export async function updateNote(db: Scoped, id: number, patch: { body?: string;
     // Only a change to the text counts as an edit worth showing.
     set.push('edited_at = now()');
   }
-  if (patch.trackId !== undefined && patch.trackId !== current.trackId) set.push(`audio_id = $${params.push(patch.trackId)}`);
+  if (patch.trackId !== undefined && patch.trackId !== current.trackId) {
+    set.push(`audio_id = $${params.push(patch.trackId)}`);
+    // A moment belongs to the version it was heard in.
+    if (patch.positionS === undefined) set.push('position_s = null');
+  }
+  if (patch.positionS !== undefined && patch.positionS !== current.positionS) set.push(`position_s = $${params.push(patch.positionS)}`);
   if (!set.length) return { ok: true, note: current };
   await db.q(`update notes set ${set.join(', ')} where id = $${params.push(id)}`, params);
   const note = await getNote(db, id);

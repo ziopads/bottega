@@ -130,6 +130,8 @@ export type StudioReference = {
   originalFilename: string;
   bytes: number | null;
   durationS: number | null;
+  /** The loudness outline the player draws (db/009): up to 2000 values, 0–255; null until measured. */
+  peaks: number[] | null;
   /** The uploader's account, or null for uploads recorded before accounts existed. */
   uploadedById: string | null;
   /** The uploader's display name. */
@@ -161,6 +163,8 @@ export type StudioTrack = {
   originalFilename: string;
   bytes: number | null;
   durationS: number | null;
+  /** The loudness outline the player draws (db/009): up to 2000 values, 0–255; null until measured. */
+  peaks: number[] | null;
   /** The uploader's account, or null for uploads recorded before accounts existed. */
   uploadedById: string | null;
   /** The uploader's display name. */
@@ -209,6 +213,8 @@ export type StudioNote = {
   body: string;
   createdAt: string;
   editedAt: string | null;
+  /** Seconds into the mix the note is about (db/009), or null. */
+  positionS: number | null;
 };
 
 export const NOTE_MAX = 10_000;

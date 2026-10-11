@@ -35,6 +35,34 @@ body {
   color: var(--ink);
 }
 
+/* The type scale (ARCHITECTURE §13): four sizes and one emphasis. Pages use
+   these and nothing else for text size; medium weight is the only emphasis.
+   Numbers that line up (codes, times, dates, BPM) add t-num. */
+@utility t-title {
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+@utility t-lead {
+  font-size: 15px;
+  line-height: 1.35;
+}
+@utility t-body {
+  font-size: 13px;
+  line-height: 1.45;
+}
+@utility t-label {
+  font-size: 11px;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+@utility t-num {
+  font-variant-numeric: tabular-nums;
+}
+
 a {
   color: inherit;
 }

@@ -5,12 +5,20 @@ import { parseNoteBody } from '@/lib/studioTypes';
 
 export const dynamic = 'force-dynamic';
 
+/** Seconds into a mix, from a request: undefined when absent, null when cleared, else a time or an error. */
+function parsePosition(v: unknown): number | null | undefined | { error: string } {
+  if (v === undefined) return undefined;
+  if (v === null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 && n < 43200 ? Math.round(n * 10) / 10 : { error: 'Invalid position in the mix' };
+}
+
 function parseId(raw: string): number | null {
   const id = Number(raw);
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-// PATCH /api/notes/:noteId   { body?, trackId? }
+// PATCH /api/notes/:noteId   { body?, trackId?, positionS? }
 // The author only: a note is someone's own words, so nobody else rewrites it.
 export async function PATCH(req: Request, ctx: { params: Promise<{ noteId: string }> }) {
   const params = await ctx.params;
@@ -29,7 +37,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ noteId: strin
   } catch {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
-  const patch: { body?: string; trackId?: number | null } = {};
+  const patch: { body?: string; trackId?: number | null; positionS?: number | null } = {};
+  const position = parsePosition(body.positionS);
+  if (position && typeof position === 'object') return NextResponse.json({ error: position.error }, { status: 400 });
+  if (position !== undefined) patch.positionS = position;
   if ('body' in body) {
     const text = parseNoteBody(body.body);
     if ('error' in text) return NextResponse.json({ error: text.error }, { status: 400 });

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import ProjectDetail from '@/app/_studio/ProjectDetail';
+import ProjectDetail, { SESSION_TABS, type SessionTab } from '@/app/_studio/ProjectDetail';
 import { requireAccount } from '@/lib/access';
 import {
   getProject,
@@ -19,7 +19,7 @@ import { audioConfigured } from '@/lib/studioAudio';
 // One music project, as the signed-in person may see it: a project they can
 // neither own nor see is not found (its existence is not disclosed).
 
-type Params = { params: Promise<{ id: string }> };
+type Params = { params: Promise<{ id: string }>; searchParams?: Promise<{ tab?: string }> };
 
 function parseId(raw: string): number | null {
   const id = Number(raw);
@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: Params) {
   return { title: `${project.artist.code} ${project.canonicalId}${project.workingName ? ` — ${project.workingName}` : ''}` };
 }
 
-export default async function ProjectPage({ params }: Params) {
+export default async function ProjectPage({ params, searchParams }: Params) {
   const { db, userId } = await requireAccount();
 
   const id = parseId((await params).id);
@@ -42,6 +42,8 @@ export default async function ProjectPage({ params }: Params) {
   const project = await getProject(db, id);
   if (!project) notFound();
   const isOwner = project.level === 'owner';
+  const asked = (await searchParams)?.tab;
+  const tab: SessionTab = SESSION_TABS.includes(asked as SessionTab) ? (asked as SessionTab) : 'overview';
 
   const [tracks, names, artists, genres, notes, releases, references, shares] = await Promise.all([
     listTracks(db, id),
@@ -56,10 +58,11 @@ export default async function ProjectPage({ params }: Params) {
 
   return (
     <div>
-      <Link href="/" className="text-sm text-muted hover:text-rust">
+      <Link href="/" className="t-body text-muted hover:text-ink">
         ← Sessions
       </Link>
       <ProjectDetail
+        initialTab={tab}
         initialProject={project}
         initialTracks={tracks}
         names={names}

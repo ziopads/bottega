@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import type { StudioProject } from '@/lib/studioTypes';
 import { formatDuration } from '@/lib/studioTypes';
+import VolumeControl from '@/app/_ui/audio/VolumeControl';
 import { Stars } from './controls';
 
 // The list page's one shared player, fixed to the bottom of the window.
@@ -87,6 +88,7 @@ export default function PlayerBar({
               <Stars rating={project.rating} onRate={onRate} />
             </span>
           )}
+          <VolumeControl />
           <label className="flex items-center gap-1" title="Play the next project when this one ends">
             <input type="checkbox" checked={autoAdvance} onChange={(e) => onAutoAdvance(e.target.checked)} />
             continue

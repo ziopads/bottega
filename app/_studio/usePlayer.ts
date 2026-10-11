@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { applyVolume, useVolume } from '@/app/_ui/audio/volume';
 import type { StudioProject } from '@/lib/studioTypes';
 
 // One shared <audio> element that plays sessions' newest reference tracks and
@@ -19,6 +20,9 @@ function typingInField(e: KeyboardEvent): boolean {
 
 export function usePlayer(queue: StudioProject[], all: StudioProject[], onRateKey?: (p: StudioProject, n: number) => void) {
   const audio = useRef<HTMLAudioElement>(null);
+  // The app's one volume (REQUIREMENTS S-12).
+  const { level, muted } = useVolume();
+  useEffect(() => applyVolume(audio.current, { level, muted }), [level, muted]);
   const [currentId, setCurrentId] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState(0);

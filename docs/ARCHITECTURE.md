@@ -759,3 +759,33 @@ bytes and type: `audio`, `gear_files`, and `documents` as each arrives. So
 storage per account is a sum, an export is a list, account deletion is a
 query followed by deleting a prefix, and an orphan is a key under a prefix
 with no row.
+
+## 13. Layout and type
+
+Every page is put together from the same few pieces (`app/_ui/layout.tsx`),
+so pages differ in content and never in how they are built.
+
+- **Grid.** Twelve columns inside the 1280-pixel page. Detail pages split 8
+  and 4: the work itself on the left (players, lists, forms), an aside on the
+  right (metadata, the notes for what is selected, filters). Below the `lg`
+  breakpoint the aside follows the main column. Overview pages (the gear
+  map) use all twelve. `DetailGrid` does this; pages do not lay out columns
+  of their own.
+- **Type.** Four sizes, as utilities in `globals.css`: `t-title` (22px, the
+  page title only), `t-lead` (15px, the main thing in a block, such as a
+  mix's version), `t-body` (13px, everything else) and `t-label` (11px,
+  uppercase, grey: labels and metadata). Medium weight is the only
+  emphasis. Numbers that line up (codes, times, dates, BPM) add `t-num` for
+  even-width digits; no monospace face.
+- **Sections.** A `t-label` heading over a hairline rule (`Section`), no
+  boxes. Label and value pairs in an aside are a `MetaList`.
+- **Tabs.** `TabBar`: links when each tab is its own page (gear's Map and
+  List), buttons when tabs share state on one page (a session, where
+  switching must not stop what is playing). The tab is in the address
+  either way.
+- **Audio.** One player (`app/_ui/audio/Player.tsx`): play, time, the
+  waveform from `audio.peaks` (migration 009, measured by `lib/peaks.ts` in
+  the browser), length, and ticks for notes at a moment. The volume is one
+  store for the app (`volume.ts`), kept in the browser's storage and applied
+  by every player, including the list page's bar.
+

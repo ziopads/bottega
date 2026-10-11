@@ -4,6 +4,7 @@ import { Geist_Mono, Instrument_Sans } from 'next/font/google';
 import './globals.css';
 
 import { signOut } from '@/app/auth/sign-in/actions';
+import VolumeControl from '@/app/_ui/audio/VolumeControl';
 import { getAccount } from '@/lib/access';
 
 const instrument = Instrument_Sans({ variable: '--font-instrument', subsets: ['latin'] });
@@ -53,7 +54,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </nav>
             ) : null}
             {user ? (
-              <form action={signOut} className="ml-auto flex items-baseline gap-3 text-sm">
+              <form action={signOut} className="ml-auto flex items-center gap-4 text-sm">
+                <VolumeControl />
                 <Link href="/account" className="text-muted hover:text-rust">
                   {user.name || user.email}
                 </Link>

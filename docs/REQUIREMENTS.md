@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.11
+**Version:** 0.12
 **Date:** 2026-10-11
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -10,6 +10,10 @@ built is in `ARCHITECTURE.md`.
 
 ## Changelog
 
+- **0.12** (2026-10-11) — The session page in tabs (S-13) with a slim player
+  that draws the mix's waveform (S-10), notes pinned to a moment in a mix
+  (S-11), and one volume for the whole app (S-12). A grid and type scale for
+  every page (ARCHITECTURE §13).
 - **0.11** (2026-10-11) — The gear page has a map of the studio by group,
   beside the filterable list (G-11); signal processors are a catalogue
   category of their own.
@@ -296,6 +300,22 @@ there may be lost in the move.
 - **S-9 (new)** The session list shows the length of the current mix.
   `studio_tracks.duration_s` already exists in Vivarium; how many rows have it
   filled is to be checked before the migration.
+- **S-10** Every mix and reference plays in one slim player that draws its
+  waveform, measured in the browser when the file is uploaded (older files
+  from a backfill page). Clicking the waveform plays from that point; one
+  player sounds at a time.
+- **S-11** A note on a mix can be pinned to a moment in it: written while the
+  mix plays, it takes the playback time, shows as a tick on that mix's
+  waveform, and plays the mix from there when clicked.
+- **S-12** One volume for the whole app, set from the header or any player,
+  kept between visits in the browser.
+- **S-13** The session page has four tabs. Overview: the current mix, where
+  the session stands, the latest notes, and its details beside them. Mixes:
+  every version and reference with its waveform, and beside them the notes
+  on the selected version, ordered by moment. Workflow: stages and cards
+  (§7). Notes: every note and event on the session (versions and references
+  uploaded, names changed), newest first, filterable by kind, person,
+  version and date.
 
 ## 7. Workflow (W)
 
@@ -478,7 +498,7 @@ Recorded so that early decisions do not close them off; none is designed yet.
 | Phase | Delivers | Stories |
 |---|---|---|
 | 0 | Repository, Neon, sign-in, the studio moved across with parity as music projects and collections, plus references, current mix and length | P-1 to P-4, P-7, S-1 to S-9, O-1, O-3 |
-| 1 | Accounts and access first; then gear catalogue, corpus, first connector tools | AC-1 to AC-12, G-1 to G-11, K-1 to K-10, M-1 to M-4, O-2, O-4 to O-7 |
+| 1 | Accounts and access first; then gear catalogue, corpus, first connector tools | AC-1 to AC-12, G-1 to G-11, S-10 to S-13, K-1 to K-10, M-1 to M-4, O-2, O-4 to O-7 |
 | 2 | Workflow and board for every kind; study group | P-5, P-6, W-1 to W-10, L-1 to L-6 |
 | 3 | Analysis | A-1 to A-5 |
 
