@@ -25,7 +25,7 @@ select set_config('app.actor', '', false);
 create schema if not exists tst; grant usage on schema tst to bottega_app;
 create or replace function tst.expect(ok boolean, what text) returns void language plpgsql as $$
 begin
-  if not ok then raise exception 'FAILED: %', what; end if;
+  if ok is not true then raise exception 'FAILED: %', what; end if;
   raise notice 'ok: %', what;
 end $$;
 create or replace function tst.model(m text) returns bigint language sql as $$ select id from gear_models where model = m $$;
@@ -37,12 +37,12 @@ reset role;
 do $$ begin
   insert into model_capabilities (model_id, capability, value) values (tst.model('Prophet-6'), 'polyphony', '"six"');
   raise exception 'FAILED: text accepted as an integer';
-exception when raise_exception then raise notice 'ok: polyphony must be an integer';
+exception when others then if sqlerrm like 'FAILED%' then raise; end if; raise notice 'ok: polyphony must be an integer';
 end $$;
 do $$ begin
   insert into model_capabilities (model_id, capability, value) values (tst.model('Prophet-6'), 'tuning_methods', '["telepathy"]');
   raise exception 'FAILED: list value outside its choices';
-exception when raise_exception then raise notice 'ok: list values must be among the choices';
+exception when others then if sqlerrm like 'FAILED%' then raise; end if; raise notice 'ok: list values must be among the choices';
 end $$;
 set role bottega_app;
 

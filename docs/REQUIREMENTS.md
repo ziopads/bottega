@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.6
+**Version:** 0.7
 **Date:** 2026-10-10
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -10,6 +10,11 @@ built is in `ARCHITECTURE.md`.
 
 ## Changelog
 
+- **0.7** (2026-10-10) — Documents are processed in the app, in batches that
+  resume (K-9). Every account has an allowance of storage and of pages
+  processed each month, and the platform has a monthly ceiling that stops
+  processing for everyone, the administrator included (K-10). Bottega uses
+  an embedding account of its own (O-6). Open decision 5 closed.
 - **0.6** (2026-10-10) — The library is contributed to by its users (K-6,
   K-8): anyone uploads a manual, it serves them at once, and others see it
   once the platform administrator approves it. The same file is stored and
@@ -305,6 +310,22 @@ there may be lost in the move.
   the existing copy instead. Every library document names its contributor, and
   a contribution stays in the library when its contributor's account is
   deleted, since once approved it belongs to the platform.
+- **K-9** Documents are processed in the app, after upload, in batches small
+  enough for one serverless request. Processing records how far it has got,
+  so a batch that fails or runs out of allowance resumes where it stopped.
+  A document whose pages carry no text is marked as needing OCR (K-1) and
+  waits for that step.
+- **K-10** Processing and storage are limited, so that no account can run up
+  costs without bound. Each account has a storage allowance, a number of
+  pages it may process each calendar month, and a longest document it may
+  load; the platform administrator sets the defaults and may raise or lower
+  them for one account. The platform has a monthly ceiling on pages
+  processed by everyone together, which applies to the administrator too.
+  Every page processed is recorded against the account that processed it,
+  with the embedding tokens it used; that record cannot be edited. A library
+  submission counts against its contributor until it is approved, and
+  against nobody after. Changes to allowances are written to the access log
+  (AC-11).
 
 ## 9. Analysis (A)
 
@@ -380,6 +401,9 @@ travel to the database.
   library), its item and its size, so per-account storage use, exports,
   deletion and the search for orphaned objects are queries, never scans of
   storage.
+- **O-6** Bottega has its own accounts with outside services, its embedding
+  service included, so that its use and costs are never mixed with another
+  project's.
 
 ## 13. Later
 
@@ -397,7 +421,7 @@ Recorded so that early decisions do not close them off; none is designed yet.
 | Phase | Delivers | Stories |
 |---|---|---|
 | 0 | Repository, Neon, sign-in, the studio moved across with parity as music projects and collections, plus references, current mix and length | P-1 to P-4, P-7, S-1 to S-9, O-1, O-3 |
-| 1 | Accounts and access first; then gear catalogue, corpus, first connector tools | AC-1 to AC-12, G-1 to G-5, K-1 to K-5, M-1 to M-4, O-2 |
+| 1 | Accounts and access first; then gear catalogue, corpus, first connector tools | AC-1 to AC-12, G-1 to G-5, K-1 to K-10, M-1 to M-4, O-2, O-4 to O-6 |
 | 2 | Workflow and board for every kind; study group | P-5, P-6, W-1 to W-10, L-1 to L-6 |
 | 3 | Analysis | A-1 to A-5 |
 
@@ -410,8 +434,10 @@ Recorded so that early decisions do not close them off; none is designed yet.
 3. **Element template.** To be supplied from the track-components work.
 4. ~~**Gear data in Vivarium.**~~ Closed 10 October 2026: nothing to migrate.
    The gear inventory is in a spreadsheet, imported in Phase 1 (G-1).
-5. **Embedding size.** Dimensions chosen against a measured estimate of the
-   corpus, recorded in `ARCHITECTURE.md`.
+5. ~~**Embedding size.**~~ Closed 10 October 2026: voyage-4 at 1024
+   dimensions, stored at half precision (§5 of `ARCHITECTURE.md`). Storage is
+   measured from the first load (K-5) and the size revisited if it grows
+   past the plan.
 6. ~~**Domain.**~~ Closed for now, 10 October 2026: studio.sirsinate.com.
 7. ~~**Shared vocabularies.**~~ Closed 10 October 2026: genres are one list
    for the platform, which any active account may add to. The gear capability

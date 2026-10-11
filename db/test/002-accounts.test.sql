@@ -38,7 +38,7 @@ create schema if not exists tst; grant usage on schema tst to bottega_app;
 create or replace function tst.id(t text) returns bigint language sql as $$ select id from projects where title = t $$;
 create or replace function tst.expect(ok boolean, what text) returns void language plpgsql as $$
 begin
-  if not ok then raise exception 'FAILED: %', what; end if;
+  if ok is not true then raise exception 'FAILED: %', what; end if;
   raise notice 'ok: %', what;
 end $$;
 -- pg_temp functions belong to the session, so grant use to the app role.
@@ -121,11 +121,11 @@ select tst.expect((select title from projects where id = tst.id('p2')) = 'p2', '
 update shares set level = 'edit' where project_id = tst.id('p2') and grantee_id = 'C';
 select set_config('app.user_id', 'C', false);
 update projects set title = 'renamed' where id = tst.id('p2');
-select tst.expect((select title from projects where id = tst.id('p2')) = 'renamed', 'editor renames');
+select tst.expect((select title from projects where id = tst.id('renamed')) = 'renamed', 'editor renames');
 do $$ begin
-  update music_projects set artist_id = (select id from artists where code = 'KR') where project_id = tst.id('p2');
+  update music_projects set artist_id = (select id from artists where code = 'KR') where project_id = tst.id('renamed');
   raise exception 'FAILED: credited own artist on James project';
-exception when raise_exception then raise notice 'ok: cannot credit another account''s artist';
+exception when others then if sqlerrm like 'FAILED%' then raise; end if; raise notice 'ok: cannot credit another account''s artist';
 end $$;
 
 -- Creating a project: one statement, as lib/studio.ts does -------------------------------------
@@ -143,7 +143,7 @@ do $$ begin
   insert into music_projects (project_id, artist_id, canonical_id)
     values (current_setting('tst.bare')::bigint, 1, 'x');
   raise exception 'FAILED: kind row on another project';
-exception when others then raise notice 'ok: kind row on another''s project refused (%)', sqlerrm;
+exception when others then if sqlerrm like 'FAILED%' then raise; end if; raise notice 'ok: kind row on another''s project refused (%)', sqlerrm;
 end $$;
 
 -- Owner deletes; cascade logs the share --------------------------------------------------------
@@ -156,7 +156,7 @@ select tst.expect(tst.id('p1') is null, 'owner deletes');
 do $$ begin
   insert into project_parts values (tst.id('c1'), (select id from projects where title = 'p3'), 9);
   raise exception 'FAILED: added an invisible project to a collection';
-exception when others then raise notice 'ok: cannot add unseen project (%)', sqlerrm;
+exception when others then if sqlerrm like 'FAILED%' then raise; end if; raise notice 'ok: cannot add unseen project (%)', sqlerrm;
 end $$;
 
 -- Admin read-only view ---------------------------------------------------------------------
@@ -180,13 +180,13 @@ select admin_set_account('P', 'active', false, 'known to James');
 do $$ begin
   perform admin_set_account('J', 'active', false, null);
   raise exception 'FAILED: removed last admin';
-exception when raise_exception then raise notice 'ok: last admin protected (%)', sqlerrm;
+exception when others then if sqlerrm like 'FAILED%' then raise; end if; raise notice 'ok: last admin protected (%)', sqlerrm;
 end $$;
 select set_config('app.user_id', 'C', false);
 do $$ begin
   perform admin_set_account('C', 'active', true, null);
   raise exception 'FAILED: non-admin promoted self';
-exception when raise_exception then raise notice 'ok: non-admin cannot change accounts';
+exception when others then if sqlerrm like 'FAILED%' then raise; end if; raise notice 'ok: non-admin cannot change accounts';
 end $$;
 do $$ begin
   insert into access_log (actor, action) values ('C', 'forged');
@@ -196,7 +196,7 @@ end $$;
 do $$ begin
   perform log_event('share_granted', null, null, null, null);
   raise exception 'FAILED: log_event accepted arbitrary action';
-exception when raise_exception then raise notice 'ok: log_event action list closed';
+exception when others then if sqlerrm like 'FAILED%' then raise; end if; raise notice 'ok: log_event action list closed';
 end $$;
 select log_event('password_changed', null, null, null, null);
 select tst.expect((select count(*) from accounts) = 1, 'Chris reads only his own account row');
@@ -218,7 +218,7 @@ reset role;
 do $$ begin
   update access_log set reason = 'x';
   raise exception 'FAILED: log updated';
-exception when raise_exception then raise notice 'ok: log cannot be updated, even by the owner';
+exception when others then if sqlerrm like 'FAILED%' then raise; end if; raise notice 'ok: log cannot be updated, even by the owner';
 end $$;
 \echo
 \echo access_log:
