@@ -31,7 +31,9 @@ export const SHARE_LEVEL_LABEL: Record<ShareLevel, string> = {
 /** One person an owner has shared a project with. */
 export type StudioShare = {
   id: number;
-  projectId: number;
+  /** One of these is set: the item shared. */
+  projectId: number | null;
+  gearId: number | null;
   granteeId: string;
   granteeName: string;
   level: ShareLevel;

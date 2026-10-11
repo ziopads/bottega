@@ -1,4 +1,5 @@
 import type { Scoped, Statement } from '@/lib/db';
+import { accountNames as names, nameOf } from '@/lib/names';
 import type {
   AccessLevel,
   LatestTrack,
@@ -55,25 +56,6 @@ function pgError(err: unknown): { code?: string; constraint?: string; message: s
 /** Raised by db/002's credit_artist_check: an artist of another account. */
 function isForeignArtist(err: unknown): boolean {
   return /belongs to another account than project/.test(pgError(err).message);
-}
-
-// ── Names ────────────────────────────────────────────────────────────────────
-
-const NO_NAME = 'someone';
-
-/**
- * Display names for account ids (never emails), through the database's
- * account_names(), which returns names only for active accounts.
- */
-async function names(db: Scoped, ids: Iterable<string | null | undefined>): Promise<Map<string, string>> {
-  const wanted = Array.from(new Set(Array.from(ids).filter((x): x is string => !!x)));
-  if (!wanted.length) return new Map();
-  const rows = await db.q('select user_id, display_name from account_names($1)', [wanted]);
-  return new Map(rows.map((r) => [String(r.user_id), String(r.display_name) || NO_NAME]));
-}
-
-function nameOf(map: Map<string, string>, id: string | null | undefined): string {
-  return (id && map.get(id)) || NO_NAME;
 }
 
 // ── Artists ──────────────────────────────────────────────────────────────────
@@ -821,17 +803,22 @@ export async function releasesForProject(db: Scoped, projectId: number): Promise
   return toReleases(db, rows);
 }
 
-// ── Sharing (REQUIREMENTS AC-5) ──────────────────────────────────────────────
+// ── Sharing (REQUIREMENTS AC-5, G-7) ─────────────────────────────────────────
 //
-// Only a project's owner can read or change its shares; the database's
-// policies and triggers enforce that and write every change to the access
-// log. A grantee sees their own share rows, which is how a shared item names
-// the level the viewer holds.
+// Shares on projects and on gear units live in one table with one column per
+// kind of item. Only an item's owner can read or change its shares; the
+// database's policies and triggers enforce that and write every change to the
+// access log. A grantee sees their own share rows.
+
+export type ShareItem = { kind: 'project'; id: number } | { kind: 'gear'; id: number };
+
+const SHARE_COLUMNS = 'id, project_id, gear_id, grantee_id, level, granted_at';
 
 function toShare(r: Row, who: Map<string, string>): StudioShare {
   return {
     id: num(r.id),
-    projectId: num(r.project_id),
+    projectId: numOrNull(r.project_id),
+    gearId: numOrNull(r.gear_id),
     granteeId: String(r.grantee_id),
     granteeName: nameOf(who, String(r.grantee_id)),
     level: String(r.level) as ShareLevel,
@@ -839,17 +826,21 @@ function toShare(r: Row, who: Map<string, string>): StudioShare {
   };
 }
 
-export async function listShares(db: Scoped, projectId: number): Promise<StudioShare[]> {
+function itemColumn(item: ShareItem): 'project_id' | 'gear_id' {
+  return item.kind === 'project' ? 'project_id' : 'gear_id';
+}
+
+export async function listShares(db: Scoped, item: ShareItem): Promise<StudioShare[]> {
   const rows = await db.q(
-    'select id, project_id, grantee_id, level, granted_at from shares where project_id = $1 order by granted_at',
-    [projectId],
+    `select ${SHARE_COLUMNS} from shares where ${itemColumn(item)} = $1 order by granted_at`,
+    [item.id],
   );
   const who = await names(db, rows.map((r) => String(r.grantee_id)));
   return rows.map((r) => toShare(r, who));
 }
 
 export async function getShare(db: Scoped, id: number): Promise<StudioShare | null> {
-  const rows = await db.q('select id, project_id, grantee_id, level, granted_at from shares where id = $1', [id]);
+  const rows = await db.q(`select ${SHARE_COLUMNS} from shares where id = $1`, [id]);
   if (!rows.length) return null;
   return toShare(rows[0], await names(db, [String(rows[0].grantee_id)]));
 }
@@ -859,16 +850,15 @@ export type ShareResult =
   | { ok: false; reason: 'no-account' | 'self' | 'exists' };
 
 /** Share with the active account that has this email. */
-export async function addShare(db: Scoped, projectId: number, email: string, level: ShareLevel): Promise<ShareResult> {
+export async function addShare(db: Scoped, item: ShareItem, email: string, level: ShareLevel): Promise<ShareResult> {
   const found = await db.q('select user_id from find_account($1)', [email]);
   if (!found.length) return { ok: false, reason: 'no-account' };
   const granteeId = String(found[0].user_id);
   if (granteeId === db.person.userId) return { ok: false, reason: 'self' };
   try {
     const rows = await db.q(
-      `insert into shares (project_id, grantee_id, level) values ($1, $2, $3)
-       returning id, project_id, grantee_id, level, granted_at`,
-      [projectId, granteeId, level],
+      `insert into shares (${itemColumn(item)}, grantee_id, level) values ($1, $2, $3) returning ${SHARE_COLUMNS}`,
+      [item.id, granteeId, level],
     );
     return { ok: true, share: toShare(rows[0], await names(db, [granteeId])) };
   } catch (err) {

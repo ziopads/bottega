@@ -22,6 +22,7 @@ export const dynamic = 'force-dynamic';
 const NAV = [
   { href: '/', label: 'Sessions' },
   { href: '/collections', label: 'Collections' },
+  { href: '/gear', label: 'Gear' },
 ];
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -29,7 +30,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // the database. Pending and disabled accounts get no navigation.
   const account = await getAccount();
   const user = account?.status === 'active' ? account : null;
-  const nav = user?.isPlatformAdmin ? [...NAV, { href: '/admin/accounts', label: 'Accounts' }] : NAV;
+  const nav = user?.isPlatformAdmin
+    ? [...NAV, { href: '/admin/catalogue', label: 'Catalogue' }, { href: '/admin/accounts', label: 'Accounts' }]
+    : NAV;
 
   return (
     <html lang="en" className={`${instrument.variable} ${geistMono.variable} h-full antialiased`}>

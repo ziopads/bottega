@@ -24,7 +24,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
   const refusal = await projectRefusal(db, id, 'owner');
   if (refusal) return refusal;
-  return NextResponse.json({ shares: await listShares(db, id) });
+  return NextResponse.json({ shares: await listShares(db, { kind: 'project', id }) });
 }
 
 // POST /api/projects/:id/shares   { email, level }
@@ -50,7 +50,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const level = body.level as ShareLevel;
   if (!SHARE_LEVELS.includes(level)) return NextResponse.json({ error: 'Choose view, contribute or edit.' }, { status: 400 });
 
-  const result = await addShare(db, id, email, level);
+  const result = await addShare(db, { kind: 'project', id }, email, level);
   if (!result.ok) {
     const message = {
       'no-account': 'No active Bottega account has that email. They need to sign up and be approved first.',

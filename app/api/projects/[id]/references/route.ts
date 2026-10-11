@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { apiAccount, projectRefusal } from '@/lib/access';
-import { addReference, listReferences } from '@/lib/studio';
+import { addReference, getProject, listReferences } from '@/lib/studio';
 import { audioConfigured, audioObjectSize, isKeyForProject } from '@/lib/studioAudio';
 import { parseCredit } from '@/lib/studioTypes';
 
@@ -51,10 +51,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const credit = parseCredit(body.credit);
   if ('error' in credit) return NextResponse.json({ error: credit.error }, { status: 400 });
 
-  if (!isKeyForProject(key, id)) return NextResponse.json({ error: 'Invalid upload key' }, { status: 400 });
   if (!filename) return NextResponse.json({ error: 'Missing filename' }, { status: 400 });
   const refusal = await projectRefusal(db, id, 'contribute');
   if (refusal) return refusal;
+  const project = await getProject(db, id);
+  if (!project || !isKeyForProject(key, id, project.ownerId)) {
+    return NextResponse.json({ error: 'Invalid upload key' }, { status: 400 });
+  }
 
   const bytes = await audioObjectSize(key);
   if (bytes === null) {

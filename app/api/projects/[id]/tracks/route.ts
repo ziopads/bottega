@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { apiAccount, projectRefusal } from '@/lib/access';
-import { addTrack, listTracks } from '@/lib/studio';
+import { addTrack, getProject, listTracks } from '@/lib/studio';
 import { audioConfigured, audioObjectSize, isKeyForProject } from '@/lib/studioAudio';
 
 export const dynamic = 'force-dynamic';
@@ -50,10 +50,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const duration = Number(body.durationS);
   const durationS = Number.isFinite(duration) && duration > 0 ? duration : null;
 
-  if (!isKeyForProject(key, id)) return NextResponse.json({ error: 'Invalid upload key' }, { status: 400 });
   if (!filename) return NextResponse.json({ error: 'Missing filename' }, { status: 400 });
   const refusal = await projectRefusal(db, id, 'contribute');
   if (refusal) return refusal;
+  const project = await getProject(db, id);
+  if (!project || !isKeyForProject(key, id, project.ownerId)) {
+    return NextResponse.json({ error: 'Invalid upload key' }, { status: 400 });
+  }
 
   const bytes = await audioObjectSize(key);
   if (bytes === null) {

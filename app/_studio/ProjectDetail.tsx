@@ -523,7 +523,7 @@ export default function ProjectDetail({
         focus={noteFocus}
       />
 
-      {isOwner && <Sharing projectId={project.id} initialShares={initialShares} />}
+      {isOwner && <Sharing sharesUrl={`/api/projects/${project.id}/shares`} initialShares={initialShares} />}
     </div>
   );
 }

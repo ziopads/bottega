@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { apiAccount, projectRefusal } from '@/lib/access';
+import { getProject } from '@/lib/studio';
 import { AUDIO_MAX_BYTES, audioConfigured, newAudioKey, signAudioUpload } from '@/lib/studioAudio';
 
 export const dynamic = 'force-dynamic';
@@ -38,6 +39,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const refusal = await projectRefusal(db, id, 'contribute');
   if (refusal) return refusal;
 
-  const key = newAudioKey(id);
+  const project = await getProject(db, id);
+  if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+  const key = newAudioKey(project.ownerId, id);
   return NextResponse.json({ url: await signAudioUpload(key), key });
 }

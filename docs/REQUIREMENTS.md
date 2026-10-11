@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.5
+**Version:** 0.6
 **Date:** 2026-10-10
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -10,6 +10,11 @@ built is in `ARCHITECTURE.md`.
 
 ## Changelog
 
+- **0.6** (2026-10-10) — The library is contributed to by its users (K-6,
+  K-8): anyone uploads a manual, it serves them at once, and others see it
+  once the platform administrator approves it. The same file is stored and
+  embedded once. Files are kept per account and deleted with it, apart from
+  library contributions (O-4, O-5).
 - **0.5** (2026-10-10) — Gear in two levels: a platform catalogue of makes and
   models holding capabilities and manuals, and each account's own units holding
   the insurance record (G-1 to G-7). Sharing a unit shows its model,
@@ -286,12 +291,20 @@ there may be lost in the move.
   use against the database plan's limits (Scriptorium reached its limit and had
   to drop its vector index; §5 of `ARCHITECTURE.md` carries the estimate).
 - **K-6** The library: manuals for instruments and software, stored, extracted
-  and embedded once. A person browsing it picks the manuals they want and links
-  them to their gear (G-4). The platform administrator adds library documents
-  and decides what belongs there; any account may suggest one.
+  and embedded once for the whole platform. Its users build it: anyone may
+  upload a manual, from a piece of gear's page or the library itself, and
+  link it to a catalogue model. It serves the person who uploaded it at once.
+  Others see it once the platform administrator approves it, from the same
+  queue as model suggestions (G-6); the administrator approves rather than
+  finds. A rejected upload stays private to its contributor.
 - **K-7** A search runs over the library documents the person has linked plus
   their private documents and those shared with them, unless they ask for the
   whole library.
+- **K-8** The same file is never stored twice. Each upload's SHA-256
+  fingerprint is recorded; uploading a manual the library already holds links
+  the existing copy instead. Every library document names its contributor, and
+  a contribution stays in the library when its contributor's account is
+  deleted, since once approved it belongs to the platform.
 
 ## 9. Analysis (A)
 
@@ -358,6 +371,15 @@ travel to the database.
   status against their limits.
 - **O-3** A documented, repeatable migration from Vivarium's Sirsinate database,
   verified by row counts, before studio.sirsinate.com is pointed at Bottega.
+- **O-4** Files are private. Nothing has a public address; the browser only
+  holds short-lived signed links, issued after the request is authorized
+  (AC-10). Storage keys carry no personal information, and an account's files
+  sit under its own prefix, so they can be listed, exported or deleted
+  together.
+- **O-5** Every stored file has a database row naming its owner (or the
+  library), its item and its size, so per-account storage use, exports,
+  deletion and the search for orphaned objects are queries, never scans of
+  storage.
 
 ## 13. Later
 

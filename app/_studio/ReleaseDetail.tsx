@@ -269,7 +269,7 @@ export default function ReleaseDetail({
       </div>
       )}
 
-      {isOwner && <Sharing projectId={release.id} initialShares={initialShares} />}
+      {isOwner && <Sharing sharesUrl={`/api/projects/${release.id}/shares`} initialShares={initialShares} />}
 
       {isOwner && (
       <div className="mt-10 text-xs">

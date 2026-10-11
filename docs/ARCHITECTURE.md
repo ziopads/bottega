@@ -1,6 +1,6 @@
 # Bottega — architecture
 
-**Version:** 0.4
+**Version:** 0.5
 **Date:** 2026-10-10
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
@@ -10,6 +10,10 @@ story IDs below (S-3, W-6 and so on) refer to it.
 
 ## Changelog
 
+- **0.5** (2026-10-10) — File storage (§12): buckets by access model, the key
+  scheme, one credential per app and environment, a database row per object.
+  The library is contributed to by users and approved by the administrator
+  (§11).
 - **0.4** (2026-10-10) — Gear as built in migration 003: model catalogue,
   units, the owner-only insurance record, files, typed capabilities with unit
   overrides, gear shares (§4, §11).
@@ -335,6 +339,7 @@ docs/           REQUIREMENTS, ARCHITECTURE, HANDOFF
 | `ALLOWED_EMAILS`, `ADMIN_EMAILS` | Phase 0 only. Removed once §11 is deployed; accounts and the platform administrator live in the database |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | the R2 client |
 | `R2_AUDIO_BUCKET` | mixes and references: signed uploads and links |
+| `R2_FILES_BUCKET` | every other upload, library manuals included (§12) |
 | `VOYAGE_API_KEY` | `embed.py`, search |
 | `NEON_API_KEY`, `NEON_PROJECT_ID` | health page |
 | `VIVARIUM_DB_URL` (Vivarium's Sirsinate database) | `scripts/migrate_from_vivarium.py` only; removed after the copy |
@@ -440,16 +445,20 @@ nothing.
 
 ### The library (Phase 1)
 
-- Library documents, their pages and chunks are readable by every active
-  account; only the owner role (the pipeline, run by the platform
-  administrator) writes them.
+- Library documents are contributed by users (REQUIREMENTS K-6, K-8): an
+  upload creates a `documents` row with `library = true`, `status =
+  'submitted'`, `contributed_by` and the file's `sha256`. The contributor
+  reads it at once; everyone active reads it once `status = 'approved'`; a
+  rejected document stays visible to its contributor only. Only the
+  administrator changes `status`. An upload whose `sha256` matches an existing
+  library document is not stored: the person is linked to the existing one.
+- `contributed_by` is kept for attribution but is not an owner: deleting that
+  account leaves the document in the library.
 - `model_documents` — model, document. The administrator links a library
   manual to a catalogue model; every unit of that model then has it.
 - `library_picks` — account, document: further library documents a person has
   chosen. An account's default search (K-7) covers the manuals of its units'
   models, its picks, its private documents and those shared with it.
-- `library_suggestions` — account, title, maker, link, note, status. Any
-  active account suggests; the platform administrator decides.
 - Private documents follow the ownership and sharing rules above, with
   `document_level()`.
 
@@ -554,3 +563,69 @@ minted after authorization, so a key's prefix carries no access meaning.
 
 003 also redefines `app_admin_viewing()` to answer false rather than null
 where `app.admin_view` was never set, which scripts and tests rely on.
+
+## 12. File storage
+
+Implements REQUIREMENTS O-4 and O-5.
+
+### Buckets, by access model
+
+A new bucket is warranted when files differ in who writes them, whether the
+browser uploads to them, how long they are kept, or which credential reaches
+them. Kind of content alone is not a reason.
+
+| Variable | Bucket | Holds | Written by | Kept |
+|---|---|---|---|---|
+| `R2_AUDIO_BUCKET` | `sirsinate-audio` | mixes, references | browser, signed PUT | until deleted |
+| `R2_FILES_BUCKET` | `sirsinate-files` | every other upload: gear photos, receipts and serial plates, project images, avatars, private documents, library manuals | browser, signed PUT | until deleted; library documents indefinitely |
+| later | an exports bucket | each account's data export | the app | deleted after about 7 days by a lifecycle rule |
+| later | a records bucket | invoices, contracts | the business layer | retention-locked, its own credential |
+
+No bucket per account: R2 limits buckets per Cloudflare account, and tenancy
+is the database's job.
+
+### Keys
+
+    a/<owner account id>/gear/<gear id>/<uuid>.<ext>
+    a/<owner account id>/audio/<project id>/<uuid>.mp3
+    a/<owner account id>/projects/<project id>/<uuid>.<ext>
+    a/<owner account id>/documents/<document id>/<uuid>.pdf
+    library/<document id>/<uuid>.pdf
+
+- The account id is Neon Auth's opaque id. Keys hold no email, filename,
+  serial or model name; the original filename is in the database and applied
+  as `Content-Disposition` on download.
+- The prefix is the item owner's, whoever uploaded: a collaborator's mix on
+  your project is under your prefix, because it is your project's data.
+- Prefixes are not a security boundary (R2 credentials are scoped to buckets,
+  not prefixes). They make one account's files listable, exportable and
+  deletable together.
+- Mixes uploaded before this scheme keep `studio/<project id>/<uuid>.mp3`;
+  the routes accept both.
+
+### What protects a file
+
+1. Neither bucket has public access: no r2.dev address, no custom domain.
+2. The credentials live only on the server, and belong to Bottega alone: one
+   R2 API token per app and environment, limited to the buckets that app
+   uses.
+3. Every signed link is minted by a route that has already authorized the
+   person (§11): `projectRefusal` for audio, `gear_level` and the gear file
+   policies for gear files.
+4. Keys are random UUIDs, so one key reveals nothing about another.
+5. Links are short: uploads 15 minutes; gear files and documents 10 minutes;
+   audio playback 6 hours, because a link must outlive a long listen (the
+   trade-off: a copied playback link works for anyone until it expires).
+6. An upload is recorded only after the app checks it landed: the key is one
+   it issued for that item, and size and type are read from R2. Gear and
+   document uploads accept JPEG, PNG, WebP, HEIC and PDF only; SVG and HTML
+   are refused, and anything that is not an image downloads rather than
+   opening inline.
+
+### One row per object
+
+Every object has a row naming its bucket, key, owner (or the library), item,
+bytes and type: `audio`, `gear_files`, and `documents` as each arrives. So
+storage per account is a sum, an export is a list, account deletion is a
+query followed by deleting a prefix, and an orphan is a key under a prefix
+with no row.

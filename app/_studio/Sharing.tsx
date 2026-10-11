@@ -9,7 +9,17 @@ import { api } from './controls';
 // by the other person's email; they need an approved account first. Every
 // grant, change and revocation is written to the access log by the database.
 
-export default function Sharing({ projectId, initialShares }: { projectId: number; initialShares: StudioShare[] }) {
+export default function Sharing({
+  sharesUrl,
+  initialShares,
+  note,
+}: {
+  /** The item's shares endpoint, e.g. /api/projects/7/shares or /api/gear/3/shares. */
+  sharesUrl: string;
+  initialShares: StudioShare[];
+  /** What a share shows, when it is not everything. */
+  note?: string;
+}) {
   const [shares, setShares] = useState(initialShares);
   const [email, setEmail] = useState('');
   const [level, setLevel] = useState<ShareLevel>('view');
@@ -21,7 +31,7 @@ export default function Sharing({ projectId, initialShares }: { projectId: numbe
     if (!email.trim()) return;
     setBusy(true);
     setError('');
-    const r = await api<{ share: StudioShare }>(`/api/projects/${projectId}/shares`, {
+    const r = await api<{ share: StudioShare }>(sharesUrl, {
       method: 'POST',
       body: JSON.stringify({ email, level }),
     });
@@ -60,6 +70,7 @@ export default function Sharing({ projectId, initialShares }: { projectId: numbe
   return (
     <section className="mt-10">
       <h2 className="mb-3 text-xs uppercase tracking-wide text-muted">Shared with</h2>
+      {note && <p className="mb-3 text-xs text-muted">{note}</p>}
       {shares.length === 0 ? (
         <p className="text-sm text-muted">Only you can see this.</p>
       ) : (

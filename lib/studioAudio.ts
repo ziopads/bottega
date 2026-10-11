@@ -35,14 +35,26 @@ export function audioConfigured(): boolean {
   return r2Configured() && !!audioBucket;
 }
 
-/** studio/<projectId>/<uuid>.mp3 — random, so a key can never be guessed or collide. */
-export function newAudioKey(projectId: number): string {
-  return `studio/${projectId}/${randomUUID()}.mp3`;
+/**
+ * a/<owner account id>/audio/<projectId>/<uuid>.mp3 (ARCHITECTURE §12): the
+ * project owner's prefix, whoever uploads; random, so a key can never be
+ * guessed or collide.
+ */
+export function newAudioKey(ownerId: string, projectId: number): string {
+  return `a/${ownerId}/audio/${projectId}/${randomUUID()}.mp3`;
 }
 
-/** A key the app issued for this project, and nothing else. */
-export function isKeyForProject(key: string, projectId: number): boolean {
-  return new RegExp(`^studio/${projectId}/[0-9a-f-]{36}\\.mp3$`).test(key);
+/**
+ * A key the app issued for this project, and nothing else. Mixes uploaded
+ * before the per-account scheme keep studio/<projectId>/<uuid>.mp3.
+ */
+export function isKeyForProject(key: string, projectId: number, ownerId: string): boolean {
+  const name = '[0-9a-f-]{36}\\.mp3';
+  return (
+    new RegExp(`^studio/${projectId}/${name}$`).test(key) ||
+    (key.startsWith(`a/${ownerId}/audio/${projectId}/`) &&
+      new RegExp(`^${name}$`).test(key.slice(`a/${ownerId}/audio/${projectId}/`.length)))
+  );
 }
 
 export async function signAudioUpload(key: string): Promise<string> {

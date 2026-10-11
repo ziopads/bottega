@@ -51,7 +51,7 @@ export default async function ProjectPage({ params }: Params) {
     listNotes(db, id),
     releasesForProject(db, id),
     listReferences(db, id),
-    isOwner ? listShares(db, id) : Promise.resolve([]),
+    isOwner ? listShares(db, { kind: 'project', id }) : Promise.resolve([]),
   ]);
 
   return (

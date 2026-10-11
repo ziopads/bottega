@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 
-import { apiAccount, projectRefusal } from '@/lib/access';
+import { apiAccount, gearRefusal, projectRefusal } from '@/lib/access';
 import { deleteShare, getShare, updateShare } from '@/lib/studio';
 import { SHARE_LEVELS, type ShareLevel } from '@/lib/studioTypes';
 
 export const dynamic = 'force-dynamic';
 
-// One share: change its level or revoke it. The item's owner only; the
-// database logs both (REQUIREMENTS AC-5, AC-11).
+// One share, on a project or a gear unit: change its level or revoke it. The
+// item's owner only; the database logs both (REQUIREMENTS AC-5, AC-11).
 
 function parseId(raw: string): number | null {
   const id = Number(raw);
@@ -23,7 +23,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
   const share = await getShare(db, id);
   if (!share) return NextResponse.json({ error: 'Share not found' }, { status: 404 });
-  const refusal = await projectRefusal(db, share.projectId, 'owner');
+  const refusal =
+    share.projectId !== null
+      ? await projectRefusal(db, share.projectId, 'owner')
+      : await gearRefusal(db, share.gearId ?? 0, 'owner');
   if (refusal) return refusal;
 
   let body: Record<string, unknown>;
@@ -46,7 +49,10 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
   const share = await getShare(db, id);
   if (!share) return NextResponse.json({ error: 'Share not found' }, { status: 404 });
-  const refusal = await projectRefusal(db, share.projectId, 'owner');
+  const refusal =
+    share.projectId !== null
+      ? await projectRefusal(db, share.projectId, 'owner')
+      : await gearRefusal(db, share.gearId ?? 0, 'owner');
   if (refusal) return refusal;
   await deleteShare(db, id);
   return NextResponse.json({ ok: true });

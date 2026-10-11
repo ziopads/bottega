@@ -124,6 +124,24 @@ export async function projectRefusal(
   return null;
 }
 
+/** What this person may do with a gear unit (db/003 gear_level). */
+export async function gearLevel(db: Scoped, gearId: number): Promise<Level | null> {
+  const rows = await db.q('select gear_level($1) as level', [gearId]);
+  const level = rows[0]?.level;
+  return typeof level === 'string' ? (level as Level) : null;
+}
+
+/** As projectRefusal, for a gear unit. */
+export async function gearRefusal(db: Scoped, gearId: number, minimum: Level): Promise<NextResponse | null> {
+  const level = await gearLevel(db, gearId);
+  if (level === null) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+  if (!atLeast(level, minimum)) {
+    const need = minimum === 'owner' ? 'Only the owner can do that.' : `That needs ${minimum} access.`;
+    return NextResponse.json({ error: need }, { status: 403 });
+  }
+  return null;
+}
+
 /**
  * The platform administrator's read-only view of another account (AC-9).
  * Writes the access log entry, then returns a handle that can read every

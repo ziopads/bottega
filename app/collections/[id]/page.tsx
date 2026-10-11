@@ -29,7 +29,7 @@ export default async function CollectionPage({ params }: Params) {
     releaseProjects(db, id),
     listArtists(db),
     listProjects(db),
-    release.level === 'owner' ? listShares(db, id) : Promise.resolve([]),
+    release.level === 'owner' ? listShares(db, { kind: 'project', id }) : Promise.resolve([]),
   ]);
   return (
     <div>
