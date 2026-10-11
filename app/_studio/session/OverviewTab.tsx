@@ -13,7 +13,8 @@ import { formatDuration } from '@/lib/studioTypes';
 import { audioUrl, formatDate } from './audioUpload';
 
 // The Overview tab (REQUIREMENTS S-1, S-2): the current mix to play, where
-// the session stands, the latest notes; beside them, its details.
+// the session stands, the latest notes; to their left, its details and who it
+// is shared with.
 
 export default function OverviewTab({
   project,
@@ -199,11 +200,11 @@ export default function OverviewTab({
       </Section>
       {isOwner && (
         <Section label="Shared with">
-          <Sharing sharesUrl={`/api/projects/${project.id}/shares`} initialShares={initialShares} />
+          <Sharing sharesUrl={`/api/projects/${project.id}/shares`} initialShares={initialShares} bare />
         </Section>
       )}
     </>
   );
 
-  return <DetailGrid main={main} aside={aside} />;
+  return <DetailGrid main={main} aside={aside} side="left" />;
 }

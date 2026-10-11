@@ -13,12 +13,15 @@ export default function Sharing({
   sharesUrl,
   initialShares,
   note,
+  bare = false,
 }: {
   /** The item's shares endpoint, e.g. /api/projects/7/shares or /api/gear/3/shares. */
   sharesUrl: string;
   initialShares: StudioShare[];
   /** What a share shows, when it is not everything. */
   note?: string;
+  /** Inside a layout Section, which carries the heading: no heading of its own, sized for an aside. */
+  bare?: boolean;
 }) {
   const [shares, setShares] = useState(initialShares);
   const [email, setEmail] = useState('');
@@ -68,8 +71,8 @@ export default function Sharing({
   }
 
   return (
-    <section className="mt-10">
-      <h2 className="mb-3 text-xs uppercase tracking-wide text-muted">Shared with</h2>
+    <section className={bare ? 't-body' : 'mt-10'}>
+      {!bare && <h2 className="mb-3 text-xs uppercase tracking-wide text-muted">Shared with</h2>}
       {note && <p className="mb-3 text-xs text-muted">{note}</p>}
       {shares.length === 0 ? (
         <p className="text-sm text-muted">Only you can see this.</p>
@@ -105,13 +108,13 @@ export default function Sharing({
           onChange={(e) => setEmail(e.target.value)}
           placeholder="their@email"
           aria-label="Email of the person to share with"
-          className="w-64 rounded-md border border-line bg-card px-2 py-1 outline-none focus:border-rust"
+          className={`${bare ? 'w-full' : 'w-64'} rounded-md border border-line bg-card px-2 py-1 outline-none focus:border-rust`}
         />
         <select
           value={level}
           onChange={(e) => setLevel(e.target.value as ShareLevel)}
           aria-label="Access to give"
-          className="rounded-md border border-line bg-card px-2 py-1 outline-none focus:border-rust"
+          className={`${bare ? 'min-w-0 flex-1' : ''} rounded-md border border-line bg-card px-2 py-1 outline-none focus:border-rust`}
         >
           {SHARE_LEVELS.map((l) => (
             <option key={l} value={l}>

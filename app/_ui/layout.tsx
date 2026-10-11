@@ -3,7 +3,8 @@ import Link from 'next/link';
 // The app's layout pieces (ARCHITECTURE §13): the same few, used on every
 // page, so pages differ in content and never in how they are put together.
 //
-//   DetailGrid   twelve columns: main 8, aside 4; one column below lg
+//   DetailGrid   twelve columns: main 8, aside 4, the aside on the right or
+//                the left (side); one column below lg, main first
 //   Section      a small grey label over a hairline rule, then the content
 //   MetaList     label / value rows, for an aside
 //   TabBar       tabs as links (a page per tab) or as buttons (one page)
@@ -12,11 +13,20 @@ import Link from 'next/link';
 // titles only), t-lead (15px, the main thing in a block), t-body (13px,
 // everything else) and t-label (11px uppercase, labels and metadata).
 
-export function DetailGrid({ main, aside }: { main: React.ReactNode; aside?: React.ReactNode }) {
+export function DetailGrid({
+  main,
+  aside,
+  side = 'right',
+}: {
+  main: React.ReactNode;
+  aside?: React.ReactNode;
+  /** Where the narrow column sits from lg up. Below lg, main always comes first. */
+  side?: 'left' | 'right';
+}) {
   return (
     <div className="grid grid-cols-1 gap-x-10 gap-y-8 lg:grid-cols-12">
       <div className={`min-w-0 ${aside ? 'lg:col-span-8' : 'lg:col-span-12'}`}>{main}</div>
-      {aside && <aside className="min-w-0 lg:col-span-4">{aside}</aside>}
+      {aside && <aside className={`min-w-0 lg:col-span-4 ${side === 'left' ? 'lg:order-first' : ''}`}>{aside}</aside>}
     </div>
   );
 }

@@ -278,9 +278,10 @@ function MixRow({
 }) {
   const [armed, setArmed] = useState(false);
   return (
-    <li className={`-ml-3 border-l-2 py-2.5 pl-3 ${selected ? 'border-ink' : 'border-transparent'}`} onClick={onSelect}>
+    <li className="cursor-pointer py-2.5" onClick={onSelect} aria-current={selected ? 'true' : undefined}>
       <div className="t-body mb-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-        <span className="t-lead t-num font-medium">v{t.version}</span>
+        {/* The version whose notes the aside shows is marked by its number alone. */}
+        <span className={`t-lead t-num font-medium ${selected ? 'text-rust' : ''}`}>v{t.version}</span>
         <span className="min-w-0 max-w-full truncate" title={t.originalFilename}>
           {t.originalFilename}
         </span>

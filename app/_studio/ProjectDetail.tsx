@@ -19,6 +19,7 @@ import { levelAtLeast } from '@/lib/studioTypes';
 import { api, InlineEdit, Stars } from './controls';
 import HistoryTab from './session/HistoryTab';
 import MixesTab from './session/MixesTab';
+import NotesTab from './session/NotesTab';
 import OverviewTab from './session/OverviewTab';
 
 // One session (REQUIREMENTS S-1 to S-13), as tabs over one shared state, so
@@ -27,7 +28,8 @@ import OverviewTab from './session/OverviewTab';
 //   Overview   the current mix, where it stands, the latest notes; details
 //   Mixes      every version with its waveform, references; notes by moment
 //   Workflow   stages and cards (Phase 2)
-//   Notes      every note and event, filterable
+//   Notes      every note, filterable
+//   History    uploads and name changes
 //
 // The tab is in the address (?tab=), so a link can open one. What the
 // controls offer follows the viewer's level (AC-5); the routes and the
@@ -185,6 +187,7 @@ export default function ProjectDetail({
             { key: 'mixes', label: 'Mixes', count: tracks.length },
             { key: 'workflow', label: 'Workflow' },
             { key: 'notes', label: 'Notes', count: notes.length },
+            { key: 'history', label: 'History' },
           ]}
         />
       </div>
@@ -248,11 +251,9 @@ export default function ProjectDetail({
         />
       )}
       {tab === 'notes' && (
-        <HistoryTab
+        <NotesTab
           projectId={project.id}
           tracks={tracks}
-          references={references}
-          names={nameHistory}
           notes={notes}
           setNotes={setNotes}
           viewerId={viewerId}
@@ -260,6 +261,7 @@ export default function ProjectDetail({
           canDelete={isOwner}
         />
       )}
+      {tab === 'history' && <HistoryTab tracks={tracks} references={references} names={nameHistory} />}
     </div>
   );
 }
