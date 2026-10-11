@@ -489,7 +489,9 @@ travel to the database.
   being kept in the current stage when reaching ahead, being shown a settled
   decision before reopening it, turning a collaborator's timed notes into
   cards, judging whether a stage is finished, and drafting a new stage's exit
-  criteria. The last three need the proposal tools (M-3), which come next.
+  criteria. The proposal tools follow (M-3): `draft_criteria` proposes exit
+  criteria for a stage and `draft_card` a card, optionally from a note and
+  its moment; both wait in the Workflow tab's review band (W-11).
 
 ## 12. Operations (O)
 

@@ -354,7 +354,7 @@ them.
 | Phase | Tools |
 |---|---|
 | 1 | `search`, `read_pages`, `find_gear`, `get_gear`, `list_projects` ✓, `get_session` ✓ (named `get_project` in earlier drafts) |
-| 2 | `get_board`, `draft_card`, `list_study_notes`, `draft_study_note`, `get_progress` |
+| 2 | `get_board`, `draft_card` ✓, `draft_criteria` ✓, `list_study_notes`, `draft_study_note`, `get_progress` |
 | 3 | `get_analysis`, `compare_to_reference` |
 
 ## 7. Migration from Vivarium (Phase 0)

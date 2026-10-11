@@ -209,6 +209,31 @@ export async function addCriterion(
   });
 }
 
+/**
+ * Several criteria for one stage in one transaction, after the existing
+ * ones; for Claude's proposals (M-3), which arrive unreviewed.
+ */
+export async function addCriteria(
+  db: Scoped,
+  projectId: number,
+  stage: string,
+  bodies: string[],
+  origin: 'human' | 'assistant',
+): Promise<number[]> {
+  return run(async () => {
+    const assistant = origin === 'assistant';
+    const results = await db.tx(
+      bodies.map((body) => ({
+        text: `insert into exit_criteria (project_id, stage, body, position, origin, reviewed)
+               values ($1, $2, $3, (select coalesce(max(position), 0) + 1 from exit_criteria where project_id = $1 and stage = $2), $4, $5)
+               returning id`,
+        params: [projectId, stage, body, assistant ? 'assistant' : 'human', !assistant],
+      })),
+    );
+    return results.map((rows) => num(rows[0].id));
+  });
+}
+
 export type CriterionPatch = { body?: string; met?: boolean; accept?: boolean; reject?: boolean };
 
 export async function updateCriterion(db: Scoped, id: number, patch: CriterionPatch): Promise<boolean> {
