@@ -1,6 +1,7 @@
 import type { Scoped, Statement } from '@/lib/db';
 import { ELEMENT_TEMPLATES } from '@/lib/elementTemplate';
 import { accountNames, nameOf } from '@/lib/names';
+import { mixLabel } from '@/lib/studioTypes';
 import type {
   CardKind,
   CardStatus,
@@ -51,7 +52,7 @@ async function run<T>(fn: () => Promise<T>): Promise<T> {
 
 const CARD_SELECT = `
   select c.id, c.element_id, c.stage, c.kind, c.what, c.done_when, c.status, c.origin, c.source_note_id,
-         c.audio_id, a.version as audio_version, c.position_s, c.settled, c.settled_reason, c.settled_at,
+         c.audio_id, a.version as audio_version, a.variant as audio_variant, c.position_s, c.settled, c.settled_reason, c.settled_at,
          c.reopen_count, c.created_by, c.created_at, c.updated_at
     from cards c left join audio a on a.id = c.audio_id`;
 
@@ -68,6 +69,7 @@ function toCard(r: Row, who: Map<string, string>): WorkflowCard {
     sourceNoteId: numOrNull(r.source_note_id),
     audioId: numOrNull(r.audio_id),
     audioVersion: numOrNull(r.audio_version),
+    audioLabel: r.audio_version === null || r.audio_version === undefined ? null : mixLabel(String(r.audio_variant ?? ''), num(r.audio_version)),
     positionS: numOrNull(r.position_s),
     settled: r.settled === true,
     settledReason: String(r.settled_reason ?? ''),

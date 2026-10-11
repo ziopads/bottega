@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.13
+**Version:** 0.14
 **Date:** 2026-10-11
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -9,6 +9,12 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.14** (2026-10-11) — Mix variants (S-14): a radio edit or an extended
+  mix kept beside the main mix, numbered within its variant; remixes are
+  their own sessions. Parked cards stay folded away until opened (W-8).
+  Planned: the State tab (S-15) and session analysis from `.als` files
+  (A-6 to A-9), with automatic updates from the Mac later.
 
 - **0.13** (2026-10-11) — The workflow designed with the mentor scenarios
   (§7, §11): music stages are sketch, arrange, mix and master, and sound
@@ -331,6 +337,17 @@ there may be lost in the move.
   by moment. Workflow: stages and cards (§7). Notes: every note, filterable
   by person, version and date from the left. History: versions and
   references uploaded and names changed, newest first.
+- **S-14** Mix variants: a mix belongs to the main mix or to a named variant
+  (radio edit, extended, instrumental…), chosen at upload, and versions are
+  numbered within it ("Radio edit v1"). The Mixes tab groups by variant; the
+  session's current mix can be any version of any variant. A remix is its
+  own session; a link between a remix and its original comes later.
+- **S-15 (planned)** A State tab, between Mixes and Workflow: each element's
+  state as the person reads it (empty, sketched, working, baked; each change
+  dated) beside what the latest analysis shows (how much of the arrangement
+  the element covers, its clips, devices and automation), and a map of the
+  arrangement: elements down the side, time across, clips where they play,
+  locators along the top, at any saved version of the set.
 
 ## 7. Workflow (W)
 
@@ -357,7 +374,9 @@ there may be lost in the move.
 - **W-7** The board: columns by status, swimlanes by element, filtered to the
   current stage.
 - **W-8** Parked cards. A card for a later stage can be written at any time and
-  is held out of view until that stage begins.
+  is held out of view until that stage begins: folded away on the Workflow
+  tab, opened from its section or from that stage in the stage strip, where
+  it can be read and edited.
 - **W-9** Settled decisions. A card can be marked settled, with a reason. A
   note marked settled becomes a settled card carrying its text, mix and
   moment, so decisions live in one list. Reopening one is an explicit act
@@ -438,6 +457,26 @@ travel to the database.
 - **A-4** Measurements are stamped with the file, its modification date and the
   analyser's version, so a stale reading can be told from a current one.
 - **A-5** Analysis never changes a session file.
+- **A-6 (planned)** Dropping a session's Ableton project folder on its page
+  reads every `.als` file in it in the browser, lists the folder's files by
+  name and size without uploading the audio, and stores one snapshot per
+  saved set (dated by the file, identified by its contents, so dropping the
+  folder again adds only new saves) with a copy of the `.als` for re-reading
+  when the parser improves. One parser, in TypeScript, serves the browser
+  now and the Mac later.
+- **A-7 (planned)** Maintenance, from the snapshots: plugins and devices with
+  their instances and tracks; samples outside the project folder ("collect
+  all and save"); files the set expects in the folder that are missing; files
+  in the folder no saved version uses (candidates to purge); frozen tracks,
+  disabled devices, empty and muted tracks.
+- **A-8 (planned)** Session history: the differences between consecutive
+  snapshots (tracks, devices, clips, coverage per element, length) as a log
+  of work sessions. Plugin use and sample references are also kept in tables
+  of their own, for questions across sessions.
+- **A-9 (planned)** Automatic updates: a small program on the Mac watches the
+  sessions folder and sends each newly saved set, using the same parser and
+  a token of the person's own, so Bottega follows the work in Live without an
+  extra step.
 
 ## 10. Study (L)
 

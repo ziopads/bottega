@@ -42,7 +42,8 @@ const LARGEST: Record<UsageKind, string> = {
   audio: `
     select a.id, a.original_filename as name, a.bytes,
            coalesce(nullif(btrim(concat_ws(' · ', mp.canonical_id, nullif(p.title, ''))), ''), 'untitled')
-             || case when a.role = 'mix' then ' · v' || a.version else ' · reference' end as place,
+             || case when a.role = 'mix' then ' · ' || case when a.variant = '' then '' else a.variant || ' ' end || 'v' || a.version
+                     else ' · reference' end as place,
            '/projects/' || p.id || '?tab=mixes' as href
       from audio a join projects p on p.id = a.project_id left join music_projects mp on mp.project_id = p.id
      where p.owner_id = app_user()`,

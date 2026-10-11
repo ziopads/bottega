@@ -87,7 +87,7 @@ export function NoteItem({
         )}
         <span className="font-medium text-ink">{n.authorName}</span>
         <span>{formatWhen(n.createdAt)}</span>
-        {showVersion && (n.trackVersion !== null ? <span>v{n.trackVersion}</span> : n.trackId !== null && <span>deleted version</span>)}
+        {showVersion && (n.trackLabel !== null ? <span>{n.trackLabel}</span> : n.trackId !== null && <span>deleted version</span>)}
         {n.editedAt && <span title={formatWhen(n.editedAt)}>edited</span>}
         {settled && <span className="text-ink">settled</span>}
         <span className="ml-auto flex gap-3">
@@ -143,7 +143,7 @@ export function NoteItem({
             >
               {tracks.map((t) => (
                 <option key={t.id} value={t.id}>
-                  v{t.version}
+                  {t.label}
                 </option>
               ))}
               <option value="project">the whole session</option>
@@ -255,7 +255,7 @@ export function NoteComposer({
             >
               {tracks.map((t, i) => (
                 <option key={t.id} value={t.id}>
-                  v{t.version}
+                  {t.label}
                   {i === 0 ? ' (latest)' : ''}
                 </option>
               ))}

@@ -8,7 +8,7 @@ import Player, { type PlayerHandle } from '@/app/_ui/audio/Player';
 import type { Marker } from '@/app/_ui/audio/Waveform';
 import { DetailGrid, Section } from '@/app/_ui/layout';
 import type { StudioNote, StudioReference, StudioTrack } from '@/lib/studioTypes';
-import { formatBytes, formatDuration } from '@/lib/studioTypes';
+import { COMMON_VARIANTS, formatBytes, formatDuration, parseVariant } from '@/lib/studioTypes';
 
 import { audioUrl, formatDate, uploadMix, uploadReference } from './audioUpload';
 
@@ -59,6 +59,11 @@ export default function MixesTab({
   const [selected, setSelected] = useState<number | null>(currentId ?? tracks[0]?.id ?? null);
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [dragging, setDragging] = useState(false);
+  // The variant new uploads go to (db/013): '' is the main mix.
+  const [variant, setVariant] = useState('');
+  const variants = Array.from(new Set(tracks.map((t) => t.variant))).sort((a, b) =>
+    a === '' ? -1 : b === '' ? 1 : a.localeCompare(b),
+  );
   const [error, setError] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
   const players = useRef(new Map<number, PlayerHandle>());
@@ -85,8 +90,16 @@ export default function MixesTab({
     for (let i = 0; i < mp3s.length; i++) {
       const set = (u: Partial<Upload>) => setUploads((l) => l.map((x, j) => (j === start + i ? { ...x, ...u } : x)));
       try {
-        const track = await uploadMix(projectId, mp3s[i], (p) => set({ progress: p }));
-        setTracks((l) => [track, ...l].sort((a, b) => b.version - a.version));
+        const target = parseVariant(variant);
+        const track = await uploadMix(projectId, mp3s[i], (p) => set({ progress: p }), 'value' in target ? target.value : '');
+        setTracks((l) =>
+          [track, ...l].sort(
+            (a, b) =>
+              Number(a.variant !== '') - Number(b.variant !== '') ||
+              a.variant.toLowerCase().localeCompare(b.variant.toLowerCase()) ||
+              b.version - a.version,
+          ),
+        );
         setSelected(track.id);
         set({ progress: 1 });
       } catch (err) {
@@ -105,8 +118,11 @@ export default function MixesTab({
     <>
       <Section label={`Mixes · ${tracks.length}`}>
         {tracks.length === 0 && <p className="t-body text-muted">No mixes yet.</p>}
+        {variants.map((v) => (
+        <div key={v || 'main'} className={v ? 'mt-5' : ''}>
+        {variants.length > 1 && <h3 className="t-label mb-1">{v || 'Main mix'}</h3>}
         <ul className="divide-y divide-line">
-          {tracks.map((t) => (
+          {tracks.filter((t) => t.variant === v).map((t) => (
             <MixRow
               key={t.id}
               track={t}
@@ -130,6 +146,8 @@ export default function MixesTab({
             />
           ))}
         </ul>
+        </div>
+        ))}
 
         {canContribute &&
           (uploadsEnabled ? (
@@ -146,7 +164,22 @@ export default function MixesTab({
               }}
               className={`t-body mt-3 rounded border border-dashed px-3 py-3 text-center ${dragging ? 'border-ink' : 'border-line text-muted'}`}
             >
-              Drop an MP3 to add the next version, or{' '}
+              Drop an MP3 to add the next version of{' '}
+              <input
+                value={variant}
+                onChange={(e) => setVariant(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                placeholder="the main mix"
+                list="mix-variants"
+                aria-label="Variant: leave empty for the main mix, or name it (Radio edit, Extended…)"
+                className="w-36 rounded border border-line bg-card px-1.5 py-0 text-ink outline-none focus:border-rust"
+              />
+              <datalist id="mix-variants">
+                {Array.from(new Set([...variants.filter(Boolean), ...COMMON_VARIANTS])).map((v) => (
+                  <option key={v} value={v} />
+                ))}
+              </datalist>
+              , or{' '}
               <button onClick={() => fileInput.current?.click()} className="underline hover:text-ink">
                 choose a file
               </button>
@@ -200,7 +233,7 @@ export default function MixesTab({
   );
 
   const aside = selectedTrack ? (
-    <Section label={`Notes on v${selectedTrack.version}`}>
+    <Section label={`Notes on ${selectedTrack.label}`}>
       {canContribute && (
         <NoteComposer
           key={selectedTrack.id}
@@ -312,7 +345,7 @@ function MixRow({
             (armed ? (
               <>
                 <button onClick={onDelete} className="text-rust underline">
-                  Delete v{t.version}
+                  Delete {t.label}
                 </button>
                 <button onClick={() => setArmed(false)} className="hover:text-ink">
                   cancel

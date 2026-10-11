@@ -27,7 +27,7 @@ export async function listProjectsTool(db: Scoped, args: { query?: string }) {
       bpm: p.bpm,
       rating: p.rating || null,
       stage: stageOf.get(p.id) ?? null,
-      current_mix: p.latest ? { version: p.latest.version, length: formatDuration(p.latest.durationS) || null, of: p.latest.count } : null,
+      current_mix: p.latest ? { mix: p.latest.label, length: formatDuration(p.latest.durationS) || null, of: p.latest.count } : null,
       owner: p.ownerId === me ? 'you' : p.ownerName,
       your_access: p.level,
     })),

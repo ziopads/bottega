@@ -66,7 +66,7 @@ export default function OverviewTab({
   const main = (
     <>
       <Section
-        label={current ? `Current mix · v${current.version}` : 'Current mix'}
+        label={current ? `Current mix · ${current.label}` : 'Current mix'}
         action={
           versions > 0 && (
             <button onClick={() => onTab('mixes')} className="text-muted hover:text-ink">
@@ -153,7 +153,7 @@ export default function OverviewTab({
                 <div className="flex gap-2 text-[11px] text-muted">
                   {n.positionS !== null && <span className="t-num font-medium text-ink">{formatMoment(n.positionS)}</span>}
                   <span className="font-medium text-ink">{n.authorName}</span>
-                  {n.trackVersion !== null && <span>v{n.trackVersion}</span>}
+                  {n.trackLabel !== null && <span>{n.trackLabel}</span>}
                   <span>{formatDate(n.createdAt)}</span>
                 </div>
                 <p className="mt-0.5 line-clamp-3 whitespace-pre-wrap">{n.body}</p>

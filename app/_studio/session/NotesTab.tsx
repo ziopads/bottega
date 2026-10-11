@@ -153,7 +153,7 @@ export default function NotesTab({
             <option value="all">Anything</option>
             {tracks.map((t) => (
               <option key={t.id} value={t.id}>
-                v{t.version}
+                {t.label}
               </option>
             ))}
             <option value="session">the whole session</option>

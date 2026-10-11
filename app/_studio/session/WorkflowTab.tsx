@@ -159,6 +159,17 @@ function StartedWorkflow({
   const canChange = (c: WorkflowCard) => canEdit || (canContribute && c.createdById === viewerId);
   const cardProps = { elementName, stageLabel, canChange, canEdit, isOwner, busy, call };
 
+  // Parked cards stay folded away (W-8); a later stage's chip opens just its own.
+  const [parkedOpen, setParkedOpen] = useState(false);
+  const [parkedFocus, setParkedFocus] = useState<string | null>(null);
+  function openParked(stage: string | null) {
+    setParkedFocus(stage);
+    setParkedOpen(true);
+    if (typeof document !== 'undefined') {
+      requestAnimationFrame(() => document.getElementById('parked-cards')?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+    }
+  }
+
   // ── Stage strip ─────────────────────────────────────────────────────────────
   const strip = (
     <ol className="t-body mb-6 flex flex-wrap items-center gap-x-1 gap-y-2" aria-label="Stages">
@@ -167,18 +178,29 @@ function StartedWorkflow({
         return (
           <li key={s.key} className="flex items-center gap-1">
             {i > 0 && <span className="px-1 text-muted" aria-hidden>→</span>}
-            <span
-              aria-current={state === 'current' ? 'step' : undefined}
-              className={`rounded border px-2.5 py-0.5 ${
-                state === 'current' ? 'border-ink font-medium text-ink' : state === 'past' ? 'border-line text-ink' : 'border-line text-muted'
-              }`}
-            >
-              {state === 'past' && <span className="mr-1 text-muted">✓</span>}
-              {s.label}
-              {parked.some((c) => c.stage === s.key) && state === 'later' && (
-                <span className="t-num ml-1.5 text-[11px] text-muted">{parked.filter((c) => c.stage === s.key).length}</span>
-              )}
-            </span>
+            {state === 'later' && parked.some((c) => c.stage === s.key) ? (
+              <button
+                type="button"
+                onClick={() => (parkedOpen && parkedFocus === s.key ? setParkedOpen(false) : openParked(s.key))}
+                title={`Cards parked for ${s.label}`}
+                className={`rounded border px-2.5 py-0.5 hover:text-ink ${
+                  parkedOpen && parkedFocus === s.key ? 'border-ink text-ink' : 'border-line text-muted'
+                }`}
+              >
+                {s.label}
+                <span className="t-num ml-1.5 text-[11px]">{parked.filter((c) => c.stage === s.key).length}</span>
+              </button>
+            ) : (
+              <span
+                aria-current={state === 'current' ? 'step' : undefined}
+                className={`rounded border px-2.5 py-0.5 ${
+                  state === 'current' ? 'border-ink font-medium text-ink' : state === 'past' ? 'border-line text-ink' : 'border-line text-muted'
+                }`}
+              >
+                {state === 'past' && <span className="mr-1 text-muted">✓</span>}
+                {s.label}
+              </span>
+            )}
           </li>
         );
       })}
@@ -342,10 +364,29 @@ function StartedWorkflow({
       </Section>
 
       {parked.length > 0 && (
-        <Section label={`Parked for later stages · ${parked.length}`}>
+        <Section
+          className="scroll-mt-4"
+          label={<span id="parked-cards">Parked for later stages · {parked.length}</span>}
+          action={
+            <button onClick={() => (parkedOpen ? setParkedOpen(false) : openParked(null))} className="text-muted hover:text-ink">
+              {parkedOpen ? 'Hide' : 'Show'}
+            </button>
+          }
+        >
+          {!parkedOpen ? (
+            <p className="t-body text-muted">
+              Held out of view until their stage begins. Open them here or from a stage above to read or edit them.
+            </p>
+          ) : (
           <div className="space-y-4">
+            {parkedFocus && (
+              <button onClick={() => setParkedFocus(null)} className="t-body text-muted hover:text-ink">
+                Show every later stage
+              </button>
+            )}
             {w.stages
               .filter((s) => s.position > pos && parked.some((c) => c.stage === s.key))
+              .filter((s) => !parkedFocus || s.key === parkedFocus)
               .map((s) => (
                 <div key={s.key}>
                   <h3 className="t-label mb-1">{s.label}</h3>
@@ -359,6 +400,7 @@ function StartedWorkflow({
                 </div>
               ))}
           </div>
+          )}
         </Section>
       )}
 
@@ -663,9 +705,9 @@ function CardRow({
       <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-[11px] text-muted">
         {el.part && <span>{el.part}</span>}
         {c.kind && <span>· {c.kind}</span>}
-        {c.audioVersion !== null && (
+        {c.audioLabel !== null && (
           <span>
-            · v{c.audioVersion}
+            · {c.audioLabel}
             {c.positionS !== null ? ` at ${formatMoment(c.positionS)}` : ''}
           </span>
         )}

@@ -206,7 +206,7 @@ export default function ReleaseDetail({
               </Link>
               <span className="min-w-0 flex-1 truncate">{p.workingName || <span className="text-muted">untitled</span>}</span>
               <span className="text-xs tabular-nums text-muted">
-                {p.latest ? `v${p.latest.version} · ${formatDuration(p.latest.durationS)}` : 'no audio'}
+                {p.latest ? `${p.latest.label} · ${formatDuration(p.latest.durationS)}` : 'no audio'}
               </span>
               {canEdit && (
               <span className="flex shrink-0 gap-1 text-muted">

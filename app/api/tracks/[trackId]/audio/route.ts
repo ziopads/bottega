@@ -31,7 +31,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ trackId: string
     if (found.role === 'reference') name = referenceDownloadName(found);
     else {
       const project = await getProject(db, found.projectId);
-      name = project && found.version ? downloadName(project, found.version) : found.originalFilename;
+      name = project && found.version ? downloadName(project, found.version, found.variant) : found.originalFilename;
     }
   }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiAccount, projectRefusal } from '@/lib/access';
 import { addTrack, getProject, listTracks } from '@/lib/studio';
+import { parseVariant } from '@/lib/studioTypes';
 import { audioConfigured, audioObjectSize, isKeyForProject } from '@/lib/studioAudio';
 
 export const dynamic = 'force-dynamic';
@@ -23,8 +24,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   return NextResponse.json({ tracks: await listTracks(db, id) });
 }
 
-// POST /api/projects/:id/tracks   { key, filename, durationS? }
-// Step 2 of 2: record an upload that has reached R2 as the next version.
+// POST /api/projects/:id/tracks   { key, filename, durationS?, variant? }
+// Step 2 of 2: record an upload that has reached R2 as the next version of
+// its variant ('' or absent: the main mix; db/013).
 // Needs contribute access or above.
 // The key must be one this project was issued, and the object must exist;
 // its size is read from R2 rather than trusted from the browser.
@@ -51,6 +53,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const durationS = Number.isFinite(duration) && duration > 0 ? duration : null;
 
   if (!filename) return NextResponse.json({ error: 'Missing filename' }, { status: 400 });
+  const variant = parseVariant(body.variant);
+  if ('error' in variant) return NextResponse.json({ error: variant.error }, { status: 400 });
   const refusal = await projectRefusal(db, id, 'contribute');
   if (refusal) return refusal;
   const project = await getProject(db, id);
@@ -63,6 +67,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ error: 'The upload did not reach storage. Please try again.' }, { status: 409 });
   }
 
-  const track = await addTrack(db, { projectId: id, key, originalFilename: filename, bytes, durationS, by: account.email });
+  const track = await addTrack(db, { projectId: id, variant: variant.value, key, originalFilename: filename, bytes, durationS, by: account.email });
   return NextResponse.json({ track }, { status: 201 });
 }

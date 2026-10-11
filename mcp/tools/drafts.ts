@@ -111,6 +111,7 @@ export async function draftCardTool(
     stage?: string;
     from_note?: number;
     mix?: number;
+    variant?: string;
     at?: string | number;
   },
 ) {
@@ -134,8 +135,13 @@ export async function draftCardTool(
     positionS = rows[0].position_s === null ? null : Number(rows[0].position_s);
   }
   if (args.mix !== undefined) {
-    const rows = await db.q(`select id from audio where project_id = $1 and role = 'mix' and version = $2`, [args.session_id, args.mix]);
-    if (!rows.length) throw new ToolError(`This session has no mix v${args.mix}.`);
+    const variant = (args.variant ?? '').trim().toLowerCase() === 'main' ? '' : (args.variant ?? '').trim();
+    const rows = await db.q(`select id from audio where project_id = $1 and role = 'mix' and version = $2 and lower(variant) = lower($3)`, [
+      args.session_id,
+      args.mix,
+      variant,
+    ]);
+    if (!rows.length) throw new ToolError(`This session has no mix ${variant ? `${variant} ` : ''}v${args.mix}.`);
     audioId = Number(rows[0].id);
   }
   const at = seconds(args.at);
@@ -167,7 +173,7 @@ export async function draftCardTool(
       kind: card.kind,
       what: card.what,
       done_when: card.doneWhen,
-      about: card.audioVersion !== null ? { mix: `v${card.audioVersion}`, at: card.positionS } : null,
+      about: card.audioLabel !== null ? { mix: card.audioLabel, at: card.positionS } : null,
       from_note: card.sourceNoteId,
       parked_for_later_stage: cardPos > pos || undefined,
     },

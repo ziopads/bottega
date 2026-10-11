@@ -14,6 +14,7 @@ import type {
   ShareLevel,
   StudioTrack,
 } from '@/lib/studioTypes';
+import { mixLabel } from '@/lib/studioTypes';
 
 // Server-only studio data layer, ported from Vivarium's lib/studio.ts.
 //
@@ -115,8 +116,8 @@ async function toProjects(db: Scoped, rows: Row[]): Promise<StudioProject[]> {
 export async function listProjects(db: Scoped): Promise<StudioProject[]> {
   const [rows, mixes, releases] = await Promise.all([
     db.q(`${PROJECT_SELECT} where ${VISIBLE} order by p.rating desc, p.created_at desc`),
-    db.q(`select id, project_id, version, duration_s, uploaded_at
-       from audio where role = 'mix' order by version desc`),
+    db.q(`select id, project_id, version, variant, duration_s, uploaded_at
+       from audio where role = 'mix' order by variant <> '', version desc`),
     releaseMembership(db),
   ]);
   const projects = await toProjects(db, rows);
@@ -136,6 +137,7 @@ export async function listProjects(db: Scoped): Promise<StudioProject[]> {
       ? {
           trackId: num(current.id),
           version: num(current.version),
+          label: mixLabel(String(current.variant ?? ''), num(current.version)),
           durationS: numOrNull(current.duration_s),
           uploadedAt: iso(current.uploaded_at),
           count: list.length,
@@ -346,7 +348,7 @@ export async function listNames(db: Scoped, projectId: number): Promise<StudioNa
 // ── Mixes ────────────────────────────────────────────────────────────────────
 
 const TRACK_SELECT = `
-  select id, project_id, version, r2_key, original_filename, bytes, duration_s, peaks, uploaded_by_id, uploaded_at
+  select id, project_id, version, variant, r2_key, original_filename, bytes, duration_s, peaks, uploaded_by_id, uploaded_at
   from audio`;
 
 function toTrack(r: Row, who: Map<string, string>): StudioTrack {
@@ -354,6 +356,8 @@ function toTrack(r: Row, who: Map<string, string>): StudioTrack {
     id: num(r.id),
     projectId: num(r.project_id),
     version: num(r.version),
+    variant: String(r.variant ?? ''),
+    label: mixLabel(String(r.variant ?? ''), num(r.version)),
     originalFilename: String(r.original_filename),
     bytes: numOrNull(r.bytes),
     durationS: numOrNull(r.duration_s),
@@ -368,9 +372,12 @@ async function uploaders(db: Scoped, rows: Row[]): Promise<Map<string, string>> 
   return names(db, rows.map((r) => strOrNull(r.uploaded_by_id)));
 }
 
-/** Newest version first. */
+/** The main mix first, then each variant by name; newest version first within each. */
 export async function listTracks(db: Scoped, projectId: number): Promise<StudioTrack[]> {
-  const rows = await db.q(`${TRACK_SELECT} where project_id = $1 and role = 'mix' order by version desc`, [projectId]);
+  const rows = await db.q(
+    `${TRACK_SELECT} where project_id = $1 and role = 'mix' order by variant <> '', lower(variant), version desc`,
+    [projectId],
+  );
   const who = await uploaders(db, rows);
   return rows.map((r) => toTrack(r, who));
 }
@@ -383,12 +390,14 @@ export async function getTrackWithKey(db: Scoped, id: number): Promise<{ track: 
 }
 
 /**
- * Record an uploaded MP3 as the project's next version, numbered in the same
- * statement. Two uploads finishing at once can still pick the same number; the
- * unique (project_id, version) constraint refuses the second, which retries.
+ * Record an uploaded MP3 as the next version of its variant (the main mix by
+ * default), numbered in the same statement. Two uploads finishing at once can
+ * still pick the same number; the unique (project_id, variant, version)
+ * constraint refuses the second, which retries.
  */
 export async function addTrack(db: Scoped, input: {
   projectId: number;
+  variant: string;
   key: string;
   originalFilename: string;
   bytes: number;
@@ -398,11 +407,11 @@ export async function addTrack(db: Scoped, input: {
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       const rows = await db.q(
-        `insert into audio (project_id, role, version, r2_key, original_filename, bytes, duration_s, uploaded_by)
-         select $1, 'mix', coalesce(max(version), 0) + 1, $2, $3, $4, $5, $6
-         from audio where project_id = $1 and role = 'mix'
-         returning id, project_id, version, r2_key, original_filename, bytes, duration_s, peaks, uploaded_by_id, uploaded_at`,
-        [input.projectId, input.key, input.originalFilename, input.bytes, input.durationS, input.by],
+        `insert into audio (project_id, role, version, variant, r2_key, original_filename, bytes, duration_s, uploaded_by)
+         select $1, 'mix', coalesce(max(version), 0) + 1, $7, $2, $3, $4, $5, $6
+         from audio where project_id = $1 and role = 'mix' and variant = $7
+         returning id, project_id, version, variant, r2_key, original_filename, bytes, duration_s, peaks, uploaded_by_id, uploaded_at`,
+        [input.projectId, input.key, input.originalFilename, input.bytes, input.durationS, input.by, input.variant],
       );
       return toTrack(rows[0], await uploaders(db, rows));
     } catch (err) {
@@ -423,14 +432,23 @@ export async function deleteTrackRow(db: Scoped, id: number): Promise<void> {
 export async function getAudioWithKey(
   db: Scoped,
   id: number,
-): Promise<{ role: 'mix' | 'reference'; projectId: number; version: number | null; credit: string; originalFilename: string; key: string } | null> {
-  const rows = await db.q('select role, project_id, version, credit, original_filename, r2_key from audio where id = $1', [id]);
+): Promise<{
+  role: 'mix' | 'reference';
+  projectId: number;
+  version: number | null;
+  variant: string;
+  credit: string;
+  originalFilename: string;
+  key: string;
+} | null> {
+  const rows = await db.q('select role, project_id, version, variant, credit, original_filename, r2_key from audio where id = $1', [id]);
   if (!rows.length) return null;
   const r = rows[0];
   return {
     role: r.role === 'reference' ? 'reference' : 'mix',
     projectId: num(r.project_id),
     version: numOrNull(r.version),
+    variant: String(r.variant ?? ''),
     credit: String(r.credit ?? ''),
     originalFilename: String(r.original_filename),
     key: String(r.r2_key),
@@ -458,7 +476,7 @@ export async function fillPeaks(db: Scoped, id: number, peaks: number[]): Promis
 /** Every audio row in the viewer's own projects still without a waveform, for the backfill page. */
 export async function missingPeaks(db: Scoped): Promise<{ id: number; label: string }[]> {
   const rows = await db.q(
-    `select a.id, a.role, a.version, a.credit, m.canonical_id, ar.code
+    `select a.id, a.role, a.version, a.variant, a.credit, m.canonical_id, ar.code
      from audio a
      left join music_projects m on m.project_id = a.project_id
      left join artists ar on ar.id = m.artist_id
@@ -469,7 +487,7 @@ export async function missingPeaks(db: Scoped): Promise<{ id: number; label: str
     id: num(r.id),
     label:
       r.role === 'mix'
-        ? `${r.code ?? ''} ${r.canonical_id ?? ''} v${r.version}`.trim()
+        ? `${r.code ?? ''} ${r.canonical_id ?? ''} ${mixLabel(String(r.variant ?? ''), num(r.version))}`.trim()
         : `reference: ${String(r.credit || 'uncredited')}`,
   }));
 }
@@ -477,7 +495,7 @@ export async function missingPeaks(db: Scoped): Promise<{ id: number; label: str
 /** Every audio row in the viewer's own projects still missing its length, for the backfill page. */
 export async function missingDurations(db: Scoped): Promise<{ id: number; label: string }[]> {
   const rows = await db.q(
-    `select a.id, a.role, a.version, a.credit, m.canonical_id, ar.code
+    `select a.id, a.role, a.version, a.variant, a.credit, m.canonical_id, ar.code
      from audio a
      left join music_projects m on m.project_id = a.project_id
      left join artists ar on ar.id = m.artist_id
@@ -488,7 +506,7 @@ export async function missingDurations(db: Scoped): Promise<{ id: number; label:
     id: num(r.id),
     label:
       r.role === 'mix'
-        ? `${r.code ?? ''} ${r.canonical_id ?? ''} v${r.version}`.trim()
+        ? `${r.code ?? ''} ${r.canonical_id ?? ''} ${mixLabel(String(r.variant ?? ''), num(r.version))}`.trim()
         : `reference: ${String(r.credit || 'uncredited')}`,
   }));
 }
@@ -586,7 +604,7 @@ export async function addGenre(db: Scoped, name: string): Promise<string> {
 
 // Assistant proposals (Phase 1) are not shown here until accepted.
 const NOTE_SELECT = `
-  select n.id, n.project_id, n.audio_id, n.author_id, n.body, n.created_at, n.edited_at, n.position_s, a.version
+  select n.id, n.project_id, n.audio_id, n.author_id, n.body, n.created_at, n.edited_at, n.position_s, a.version, a.variant
   from notes n left join audio a on a.id = n.audio_id`;
 
 function toNote(r: Row, who: Map<string, string>): StudioNote {
@@ -595,6 +613,7 @@ function toNote(r: Row, who: Map<string, string>): StudioNote {
     projectId: num(r.project_id),
     trackId: numOrNull(r.audio_id),
     trackVersion: numOrNull(r.version),
+    trackLabel: r.version === null || r.version === undefined ? null : mixLabel(String(r.variant ?? ''), num(r.version)),
     authorId: strOrNull(r.author_id),
     authorName: nameOf(who, strOrNull(r.author_id)),
     body: String(r.body),

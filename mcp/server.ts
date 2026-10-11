@@ -116,6 +116,7 @@ export const handler = createMcpHandler(
           stage: z.string().optional().describe('stage name; the current stage when omitted'),
           from_note: z.number().int().optional().describe('id of the note this card comes from'),
           mix: z.number().int().optional().describe('mix version the card is about, such as 3'),
+          variant: z.string().optional().describe('the mix\'s variant, such as Radio edit; the main mix when omitted'),
           at: z.string().optional().describe('moment in that mix, m:ss'),
         }),
       },

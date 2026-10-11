@@ -64,7 +64,7 @@ export default function PlayerBar({
               {project.canonicalId}
             </Link>
             <span className="truncate">{project.workingName}</span>
-            {project.latest && <span className="text-xs text-muted">v{project.latest.version}</span>}
+            {project.latest && <span className="text-xs text-muted">{project.latest.label}</span>}
           </div>
           <div className="mt-1 flex items-center gap-2 text-xs tabular-nums text-muted">
             <span className="w-10 text-right">{formatDuration(time)}</span>

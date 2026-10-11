@@ -676,8 +676,8 @@ function ProjectRow({
         {p.latest ? (
           <button
             onClick={onPlay}
-            aria-label={playing ? 'Pause' : `Play v${p.latest.version}`}
-            title={`${playing ? 'Pause' : 'Play'} v${p.latest.version}`}
+            aria-label={playing ? 'Pause' : `Play ${p.latest.label}`}
+            title={`${playing ? 'Pause' : 'Play'} ${p.latest.label}`}
             className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs ${
               isCurrent ? 'border-ink bg-ink text-parchment' : 'border-line hover:border-ink'
             }`}
@@ -723,7 +723,7 @@ function ProjectRow({
           onSave={(v) => onPatch({ bpm: v })}
         />
       </td>
-      <td className={`${td} text-xs tabular-nums text-muted`}>{p.latest ? `v${p.latest.version}` : ''}</td>
+      <td className={`${td} text-xs tabular-nums text-muted`}>{p.latest ? p.latest.label : ''}</td>
       <td className={`${td} text-right text-xs tabular-nums text-muted`}>
         {p.latest ? formatDuration(p.latest.durationS) : ''}
       </td>

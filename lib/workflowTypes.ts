@@ -46,8 +46,10 @@ export type WorkflowCard = {
   origin: 'human' | 'assistant';
   sourceNoteId: number | null;
   audioId: number | null;
-  /** The version of audioId, for display ("v3"). */
+  /** The version of audioId. */
   audioVersion: number | null;
+  /** audioId's label for display: "v3", or "Radio edit v1". */
+  audioLabel: string | null;
   positionS: number | null;
   settled: boolean;
   settledReason: string;

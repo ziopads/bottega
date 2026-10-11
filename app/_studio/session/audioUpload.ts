@@ -55,11 +55,16 @@ async function signAndPut(projectId: number, file: File, onProgress: (f: number)
   return { key: signed.data.key, durationS };
 }
 
-export async function uploadMix(projectId: number, file: File, onProgress: (f: number) => void): Promise<StudioTrack> {
+export async function uploadMix(
+  projectId: number,
+  file: File,
+  onProgress: (f: number) => void,
+  variant = '',
+): Promise<StudioTrack> {
   const { key, durationS } = await signAndPut(projectId, file, onProgress);
   const saved = await api<{ track: StudioTrack }>(`/api/projects/${projectId}/tracks`, {
     method: 'POST',
-    body: JSON.stringify({ key, filename: file.name, durationS }),
+    body: JSON.stringify({ key, filename: file.name, durationS, variant }),
   });
   if (!saved.ok) throw new Error(saved.body.error || 'Uploaded, but could not record the version.');
   const peaks = await measureAndStore(saved.data.track.id, await file.arrayBuffer());

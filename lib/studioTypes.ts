@@ -112,6 +112,8 @@ export function parseReleaseTitle(raw: unknown): { value: string } | { error: st
 export type LatestTrack = {
   trackId: number;
   version: number;
+  /** "v3", or "Radio edit v1" for a variant (db/013). */
+  label: string;
   durationS: number | null;
   uploadedAt: string;
   /** How many versions the project has. */
@@ -160,6 +162,10 @@ export type StudioTrack = {
   id: number;
   projectId: number;
   version: number;
+  /** '' for the main mix, else the variant's name ("Radio edit"); versions count within it (db/013). */
+  variant: string;
+  /** "v3", or "Radio edit v1". */
+  label: string;
   originalFilename: string;
   bytes: number | null;
   durationS: number | null;
@@ -179,12 +185,36 @@ export type StudioName = { name: string; setByName: string; setAt: string };
  * The filename a download saves as: "VIG 2026 0926 — Querencia — v3.mp3".
  * Characters that are illegal in macOS or Windows filenames become spaces.
  */
-export function downloadName(project: Pick<StudioProject, 'artist' | 'canonicalId' | 'workingName'>, version: number): string {
+export function downloadName(
+  project: Pick<StudioProject, 'artist' | 'canonicalId' | 'workingName'>,
+  version: number,
+  variant = '',
+): string {
   const parts = [`${project.artist.code} ${project.canonicalId}`];
   if (project.workingName) parts.push(project.workingName);
-  parts.push(`v${version}`);
+  parts.push(mixLabel(variant, version));
   return `${parts.join(' — ')}.mp3`.replace(/[\\/:*?"<>|\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ');
 }
+
+/** How a mix is named everywhere: "v3", or "Radio edit v1" for a variant (db/013). */
+export function mixLabel(variant: string, version: number | null): string {
+  return version === null ? '' : variant ? `${variant} v${version}` : `v${version}`;
+}
+
+export const VARIANT_MAX = 40;
+
+/** A variant's name as typed: '' (or "main") for the main mix. */
+export function parseVariant(raw: unknown): { value: string } | { error: string } {
+  if (raw === undefined || raw === null) return { value: '' };
+  if (typeof raw !== 'string') return { error: 'The variant must be text.' };
+  const value = raw.trim().replace(/\s+/g, ' ');
+  if (value.toLowerCase() === 'main' || value.toLowerCase() === 'main mix') return { value: '' };
+  if (value.length > VARIANT_MAX) return { error: `Keep the variant's name under ${VARIANT_MAX} characters.` };
+  return { value };
+}
+
+/** Suggestions offered at upload; any name may be typed. */
+export const COMMON_VARIANTS = ['Radio edit', 'Extended', 'Instrumental', 'Club', 'Dub', 'Acapella'];
 
 export function formatDuration(seconds: number | null): string {
   if (seconds === null || !Number.isFinite(seconds)) return '';
@@ -204,8 +234,10 @@ export type StudioNote = {
   projectId: number;
   /** null: about the project as a whole, or about a version since deleted. */
   trackId: number | null;
-  /** The version number of trackId, for display ("v3"). */
+  /** The version number of trackId. */
   trackVersion: number | null;
+  /** trackId's label for display: "v3", or "Radio edit v1". */
+  trackLabel: string | null;
   /** The author's account, or null for notes written before accounts existed. */
   authorId: string | null;
   /** The author's display name. */

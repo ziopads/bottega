@@ -24,7 +24,7 @@ export default function HistoryTab({
   const events = useMemo<Event[]>(() => {
     const list: Event[] = [];
     for (const t of tracks)
-      list.push({ at: t.uploadedAt, key: `t${t.id}`, text: `v${t.version} uploaded · ${t.originalFilename}`, who: t.uploadedByName });
+      list.push({ at: t.uploadedAt, key: `t${t.id}`, text: `${t.label} uploaded · ${t.originalFilename}`, who: t.uploadedByName });
     for (const r of references)
       list.push({ at: r.uploadedAt, key: `r${r.id}`, text: `Reference added · ${r.credit || r.originalFilename}`, who: r.uploadedByName });
     for (const [i, n] of names.entries()) list.push({ at: n.setAt, key: `n${i}`, text: `Named “${n.name}”`, who: n.setByName });

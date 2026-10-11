@@ -41,7 +41,7 @@ export async function getSessionTool(db: Scoped, args: { id: number; notes?: num
     done_when: c.doneWhen || null,
     status: c.status,
     written_by: c.origin === 'assistant' ? `Claude, for ${c.createdByName}` : c.createdByName,
-    about: c.audioVersion !== null ? { mix: `v${c.audioVersion}`, at: moment(c.positionS) } : null,
+    about: c.audioLabel !== null ? { mix: c.audioLabel, at: moment(c.positionS) } : null,
     from_note: c.sourceNoteId,
     reopened: c.reopenCount || undefined,
   });
@@ -98,6 +98,8 @@ export async function getSessionTool(db: Scoped, args: { id: number; notes?: num
         }
       : { stage: null, note: 'The workflow has not been started. Someone with edit access starts it on the Workflow tab.' },
     mixes: tracks.map((t) => ({
+      mix: t.label,
+      variant: t.variant || 'main',
       version: t.version,
       file: t.originalFilename,
       length: formatDuration(t.durationS) || null,
@@ -111,8 +113,8 @@ export async function getSessionTool(db: Scoped, args: { id: number; notes?: num
       id: n.id,
       by: n.authorName,
       on: n.createdAt.slice(0, 10),
-      about: n.trackVersion !== null ? `v${n.trackVersion}` : 'the whole session',
-      at: n.trackVersion !== null ? moment(n.positionS) : null,
+      about: n.trackLabel ?? 'the whole session',
+      at: n.trackLabel !== null ? moment(n.positionS) : null,
       text: n.body,
     })),
     notes_total: notes.length,
