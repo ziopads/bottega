@@ -9,6 +9,7 @@ import Player from '@/app/_ui/audio/Player';
 import { DetailGrid, MetaList, Section } from '@/app/_ui/layout';
 import type { StudioName, StudioNote, StudioProject, StudioRelease, StudioShare, StudioTrack } from '@/lib/studioTypes';
 import { formatDuration } from '@/lib/studioTypes';
+import type { Workflow } from '@/lib/workflowTypes';
 
 import { audioUrl, formatDate } from './audioUpload';
 
@@ -31,6 +32,7 @@ export default function OverviewTab({
   onAddGenre,
   onLength,
   onTab,
+  workflow,
 }: {
   project: StudioProject;
   current: StudioTrack | null;
@@ -46,8 +48,15 @@ export default function OverviewTab({
   onAddGenre: (name: string) => Promise<string | null>;
   onLength: (id: number, seconds: number) => void;
   onTab: (key: string) => void;
+  workflow: Workflow;
 }) {
   const latest = notes.slice(0, 4);
+  const stageLabel = workflow.stages.find((x) => x.key === workflow.stage)?.label ?? '';
+  const criteria = workflow.criteria.filter((c) => c.stage === workflow.stage && c.reviewed && !c.rejected);
+  const openCards = workflow.cards.filter(
+    (c) => c.stage === workflow.stage && !c.settled && (c.status === 'accepted' || c.status === 'in progress'),
+  );
+  const proposals = workflow.cards.filter((c) => c.status === 'proposed').length + workflow.criteria.filter((c) => !c.reviewed).length;
   const markers = current
     ? notes
         .filter((n) => n.trackId === current.id && n.positionS !== null)
@@ -92,13 +101,37 @@ export default function OverviewTab({
         )}
       </Section>
 
-      <Section label="Workflow">
-        <p className="t-body text-muted">
-          Stages, exit criteria and cards arrive with the workflow (Phase 2).{' '}
-          <button onClick={() => onTab('workflow')} className="underline hover:text-ink">
-            What is planned
+      <Section
+        label={stageLabel ? `Where it stands · ${stageLabel}` : 'Where it stands'}
+        action={
+          <button onClick={() => onTab('workflow')} className="text-muted hover:text-ink">
+            Workflow →
           </button>
-        </p>
+        }
+      >
+        {workflow.stage ? (
+          <div className="t-body space-y-1">
+            <p>
+              {criteria.length === 0
+                ? 'No exit criteria written for this stage yet.'
+                : `${criteria.filter((c) => c.metAt).length} of ${criteria.length} exit criteria met.`}{' '}
+              {openCards.length} open {openCards.length === 1 ? 'card' : 'cards'}
+              {proposals > 0 ? `, ${proposals} proposed by Claude` : ''}.
+            </p>
+            {criteria.filter((c) => !c.metAt).slice(0, 3).map((c) => (
+              <p key={c.id} className="text-muted">
+                ☐ {c.body}
+              </p>
+            ))}
+          </div>
+        ) : (
+          <p className="t-body text-muted">
+            The workflow has not been started.{' '}
+            <button onClick={() => onTab('workflow')} className="underline hover:text-ink">
+              Start it
+            </button>
+          </p>
+        )}
       </Section>
 
       <Section

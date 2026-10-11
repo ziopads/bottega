@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { DetailGrid, Section, TabBar } from '@/app/_ui/layout';
+import { TabBar } from '@/app/_ui/layout';
 import type {
   StudioArtist,
   StudioName,
@@ -15,19 +15,21 @@ import type {
 } from '@/lib/studioTypes';
 import type { SessionTab } from '@/lib/sessionTabs';
 import { levelAtLeast } from '@/lib/studioTypes';
+import type { Workflow } from '@/lib/workflowTypes';
 
 import { api, InlineEdit, Stars } from './controls';
 import HistoryTab from './session/HistoryTab';
 import MixesTab from './session/MixesTab';
 import NotesTab from './session/NotesTab';
 import OverviewTab from './session/OverviewTab';
+import WorkflowTab from './session/WorkflowTab';
 
 // One session (REQUIREMENTS S-1 to S-13), as tabs over one shared state, so
 // switching tabs keeps what is playing and what was typed:
 //
 //   Overview   the current mix, where it stands, the latest notes; details
 //   Mixes      every version with its waveform, references; notes by moment
-//   Workflow   stages and cards (Phase 2)
+//   Workflow   stages, exit criteria, cards by element, settled decisions
 //   Notes      every note, filterable
 //   History    uploads and name changes
 //
@@ -49,6 +51,7 @@ export default function ProjectDetail({
   viewerId,
   initialShares,
   uploadsEnabled,
+  initialWorkflow,
 }: {
   initialTab: SessionTab;
   initialProject: StudioProject;
@@ -62,6 +65,7 @@ export default function ProjectDetail({
   viewerId: string;
   initialShares: StudioShare[];
   uploadsEnabled: boolean;
+  initialWorkflow: Workflow;
 }) {
   const [tab, setTab] = useState<SessionTab>(initialTab);
   const [project, setProject] = useState(initialProject);
@@ -70,6 +74,7 @@ export default function ProjectDetail({
   const [genres, setGenres] = useState(initialGenres);
   const [notes, setNotes] = useState(initialNotes);
   const [references, setReferences] = useState(initialReferences);
+  const [workflow, setWorkflow] = useState(initialWorkflow);
   const [error, setError] = useState('');
 
   const isOwner = project.level === 'owner';
@@ -189,7 +194,7 @@ export default function ProjectDetail({
           tabs={[
             { key: 'overview', label: 'Overview' },
             { key: 'mixes', label: 'Mixes', count: tracks.length },
-            { key: 'workflow', label: 'Workflow' },
+            { key: 'workflow', label: workflow.stage ? `Workflow · ${workflow.stages.find((x) => x.key === workflow.stage)?.label ?? ''}` : 'Workflow' },
             { key: 'notes', label: 'Notes', count: notes.length },
             { key: 'history', label: 'History' },
           ]}
@@ -214,6 +219,7 @@ export default function ProjectDetail({
           onAddGenre={addGenre}
           onLength={fillLength}
           onTab={selectTab}
+          workflow={workflow}
         />
       )}
       {tab === 'mixes' && (
@@ -238,24 +244,21 @@ export default function ProjectDetail({
         />
       )}
       {tab === 'workflow' && (
-        <DetailGrid
-          main={
-            <Section label="Workflow">
-              <div className="t-body max-w-prose space-y-2 text-muted">
-                <p>The workflow arrives in Phase 2 (REQUIREMENTS W-1 to W-9):</p>
-                <ul className="list-disc space-y-1 pl-5">
-                  <li>stages, from sketch to master, each with exit criteria to tick off;</li>
-                  <li>cards for open work, by element (drums, bass, vocals…);</li>
-                  <li>decisions marked settled, so they are not reopened without reason.</li>
-                </ul>
-                <p>It is being designed with the mentor scenarios, since it is much of what Claude will read about a session.</p>
-              </div>
-            </Section>
-          }
+        <WorkflowTab
+          projectId={project.id}
+          workflow={workflow}
+          setWorkflow={setWorkflow}
+          viewerId={viewerId}
+          canContribute={canContribute}
+          canEdit={canEdit}
+          isOwner={isOwner}
         />
       )}
       {tab === 'notes' && (
         <NotesTab
+          workflow={workflow}
+          setWorkflow={setWorkflow}
+          canEdit={canEdit}
           projectId={project.id}
           tracks={tracks}
           notes={notes}

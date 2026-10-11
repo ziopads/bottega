@@ -342,9 +342,18 @@ Tools arrive by phase. A connector token carries the person it was issued to
 under that person exactly as a page would (§11): same database role, same
 policies. All write tools propose.
 
+Built (11 October 2026): `list_projects` and `get_session`, with the
+authorization server ported from Scriptorium. Tokens live in `oauth_tokens`
+(db/012), keyed by account; the application role cannot read the table and
+goes through security-definer functions that check the account's status on
+every exchange and request, so disabling an account ends its connector at
+once. Each tool builds its query handle from the token's account
+(`mcp/context.ts`). Account › Security lists connected clients and revokes
+them.
+
 | Phase | Tools |
 |---|---|
-| 1 | `search`, `read_pages`, `find_gear`, `get_gear`, `list_projects`, `get_project` |
+| 1 | `search`, `read_pages`, `find_gear`, `get_gear`, `list_projects` ✓, `get_session` ✓ (named `get_project` in earlier drafts) |
 | 2 | `get_board`, `draft_card`, `list_study_notes`, `draft_study_note`, `get_progress` |
 | 3 | `get_analysis`, `compare_to_reference` |
 

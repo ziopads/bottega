@@ -9,11 +9,13 @@ import {
 } from '@/lib/account';
 import { ACCOUNT_TAB_LABEL, ACCOUNT_TABS, type AccountTab } from '@/lib/accountTabs';
 import { requireAccount } from '@/lib/access';
+import { listConnections } from '@/lib/connections';
 import { getAllowance } from '@/lib/documents';
 import { listUnconvertedImages } from '@/lib/gear';
 import { getUsage } from '@/lib/usage';
 
 import ChangePasswordForm from './ChangePasswordForm';
+import ConnectedApps from './ConnectedApps';
 import ConvertImages from './ConvertImages';
 import { ComingSoon } from './parts';
 import PreferencesTab from './PreferencesTab';
@@ -69,7 +71,7 @@ export default async function AccountPage({ searchParams }: Props) {
     const [outgoing, incoming] = await Promise.all([listOutgoingShares(db), listIncomingShares(db)]);
     body = <SharingTab initialOutgoing={outgoing} incoming={incoming} />;
   } else if (tab === 'security') {
-    const activity = await listActivity(db);
+    const [activity, connections] = await Promise.all([listActivity(db), listConnections(db)]);
     body = (
       <DetailGrid
         main={
@@ -98,7 +100,7 @@ export default async function AccountPage({ searchParams }: Props) {
               <ComingSoon>Where your account is signed in, with a way to sign each one out.</ComingSoon>
             </Section>
             <Section label="Connected apps">
-              <ComingSoon>Claude and other connectors you have authorized, with a way to revoke each.</ComingSoon>
+              <ConnectedApps initial={connections} />
             </Section>
           </>
         }

@@ -6,6 +6,7 @@ import { api } from '@/app/_studio/controls';
 import { NoteComposer, NoteItem } from '@/app/_studio/Notes';
 import { DetailGrid, Section } from '@/app/_ui/layout';
 import type { StudioNote, StudioTrack } from '@/lib/studioTypes';
+import type { Workflow } from '@/lib/workflowTypes';
 
 // The Notes tab (REQUIREMENTS S-5, S-11): every note on the session, newest
 // first: on a mix, at a moment, or on the whole session. Filters to the left.
@@ -17,6 +18,9 @@ function localDay(iso: string): string {
 }
 
 export default function NotesTab({
+  workflow,
+  setWorkflow,
+  canEdit,
   projectId,
   tracks,
   notes,
@@ -25,6 +29,9 @@ export default function NotesTab({
   canContribute,
   canDelete,
 }: {
+  workflow: Workflow;
+  setWorkflow: (w: Workflow) => void;
+  canEdit: boolean;
   projectId: number;
   tracks: StudioTrack[];
   notes: StudioNote[];
@@ -38,6 +45,14 @@ export default function NotesTab({
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [error, setError] = useState('');
+  const settledNotes = new Set(workflow.cards.filter((c) => c.settled && c.sourceNoteId !== null).map((c) => c.sourceNoteId));
+
+  async function settle(n: StudioNote) {
+    setError('');
+    const r = await api<{ workflow: Workflow }>(`/api/notes/${n.id}/settle`, { method: 'POST', body: JSON.stringify({}) });
+    if (r.ok) setWorkflow(r.data.workflow);
+    else setError(r.body.error || 'Could not settle the note.');
+  }
 
   const people = useMemo(() => {
     const seen = new Map<string, string>();
@@ -83,6 +98,8 @@ export default function NotesTab({
                   else setError(r.body.error || 'Could not delete the note.');
                 }}
                 onError={setError}
+                settled={settledNotes.has(n.id)}
+                onSettle={canEdit ? () => settle(n) : undefined}
               />
             ))}
           </ul>

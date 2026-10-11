@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.12
+**Version:** 0.13
 **Date:** 2026-10-11
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -9,6 +9,14 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.13** (2026-10-11) — The workflow designed with the mentor scenarios
+  (§7, §11): music stages are sketch, arrange, mix and master, and sound
+  design is a kind of card; elements follow the zones of the studio's Live
+  template; who may do what at each level; settled decisions are cards, and
+  a note becomes one; the Workflow tab's layout (W-11). The connector's first
+  tools read a session's state for Claude (M-5); account holders see and
+  revoke their connected apps. Open decisions 1 and 3 closed.
 
 - **0.12** (2026-10-11) — The session page in tabs (S-13) with a slim player
   that draws the mix's waveform (S-10), notes pinned to a moment in a mix
@@ -326,30 +334,48 @@ there may be lost in the move.
 
 ## 7. Workflow (W)
 
-- **W-1** Stages are defined per kind. Music: sketch, sound design, arrange,
-  mix, master; the order and whether sound design is a stage or a kind of card
-  are open (§15). Collection: select, sequence, master, artwork, release, to
-  be confirmed. Installation and multimedia: to be defined.
+- **W-1** Stages are defined per kind. Music: sketch, arrange, mix, master;
+  sound design is a kind of card (W-6), done in whichever stage needs it.
+  Collection: select, sequence, master, artwork, release, to be confirmed.
+  Installation and multimedia: to be defined.
 - **W-2** Each project is in exactly one stage at a time.
 - **W-3** Entering a stage means writing its exit criteria: the conditions under
   which the stage is finished. Advancing means confirming each one.
 - **W-4** Moving back to an earlier stage requires a reason, which is kept.
-- **W-5** Elements: a tree of the parts of a work (for a track, Low end ›
-  Kick, Bass). One template per kind, copied to each project and editable
-  there. The template comes from the track-components work done separately;
-  it is to be supplied.
+- **W-5** Elements: a tree of the parts of a work, one template per kind,
+  copied to each project when its workflow starts and editable there. For
+  music the top level is the zones of the studio's Live template
+  (`docs/ableton-session-template.md`): TACTUS, BASS, BACKGROUND, LEADS,
+  TEXTURE, VOX, plus STRUCTURE (sections and transitions) and BUS (returns
+  and the master chain) for the work that belongs to no single part. One
+  default for the platform for now; a template per account comes later.
 - **W-6** Cards. A card belongs to a project, one element and one stage, and has
   two required fields: what needs to happen, and how it will be known to be
-  done. Status: proposed, accepted, in progress, done, rejected.
+  done. Kind, optional: sound design, writing, arrangement, mix, fix. Status:
+  proposed (Claude's only), accepted, in progress, done, rejected. A card can
+  name the note it came from and the mix and moment it is about.
 - **W-7** The board: columns by status, swimlanes by element, filtered to the
   current stage.
 - **W-8** Parked cards. A card for a later stage can be written at any time and
   is held out of view until that stage begins.
-- **W-9** Settled decisions. A card or note can be marked settled. Reopening it
-  is an explicit act with a reason, and the count of reopenings is visible.
+- **W-9** Settled decisions. A card can be marked settled, with a reason. A
+  note marked settled becomes a settled card carrying its text, mix and
+  moment, so decisions live in one list. Reopening one is an explicit act
+  with a reason, kept, and the count of reopenings is visible.
 - **W-10** Resume view: on opening a project, the current stage and its exit
   criteria, open cards by element, settled decisions, the latest notes and the
   current mix, on one page.
+- **W-11** The Workflow tab: the stages across the top with the current one
+  marked; Claude's proposals in a band above everything, to accept or reject;
+  in the narrow left column the current stage, its exit criteria as a
+  checklist, the move forward and the move back, and the history of moves;
+  in the main column the open cards by element, the cards parked for later
+  stages, the settled decisions and the element tree.
+- **W-12** Who may do what, by level (AC-5): view reads the workflow;
+  contribute adds cards and changes the cards they wrote; edit starts the
+  workflow, moves the stage, writes exit criteria and elements, changes any
+  card, accepts or rejects Claude's proposals and settles or reopens
+  decisions; only the owner deletes (AC-7).
 
 ## 8. Corpus (K)
 
@@ -454,6 +480,16 @@ travel to the database.
   them in the application. No connector tool edits or deletes.
 - **M-4** Quotations from the corpus in a proposal are checked against the page
   text, as in Scriptorium.
+- **M-5** First tools, to test the mentor scenarios early: `list_projects`
+  (the sessions a person can see, with each one's stage and current mix) and
+  `get_session` (one session's details, stage, exit criteria, open, parked
+  and settled cards, pending proposals, recent moves, elements, mixes,
+  references and latest notes with their moments). The scenarios they serve:
+  returning after a month ("where was I?"), getting unstuck on a passage,
+  being kept in the current stage when reaching ahead, being shown a settled
+  decision before reopening it, turning a collaborator's timed notes into
+  cards, judging whether a stage is finished, and drafting a new stage's exit
+  criteria. The last three need the proposal tools (M-3), which come next.
 
 ## 12. Operations (O)
 
@@ -506,17 +542,18 @@ Recorded so that early decisions do not close them off; none is designed yet.
 | Phase | Delivers | Stories |
 |---|---|---|
 | 0 | Repository, Neon, sign-in, the studio moved across with parity as music projects and collections, plus references, current mix and length | P-1 to P-4, P-7, S-1 to S-9, O-1, O-3 |
-| 1 | Accounts and access first; then gear catalogue, corpus, first connector tools | AC-1 to AC-13, G-1 to G-11, S-10 to S-13, K-1 to K-10, M-1 to M-4, O-2, O-4 to O-7 |
-| 2 | Workflow and board for every kind; study group | P-5, P-6, W-1 to W-10, L-1 to L-6 |
+| 1 | Accounts and access first; then gear catalogue, corpus, first connector tools | AC-1 to AC-13, G-1 to G-11, S-10 to S-13, K-1 to K-10, M-1 to M-5, O-2, O-4 to O-7 |
+| 2 | Workflow and board for every kind; study group | P-5, P-6, W-1 to W-12, L-1 to L-6 |
 | 3 | Analysis | A-1 to A-5 |
 
 ## 15. Open decisions
 
-1. **Stage order for music.** Whether sound design is a stage between sketch
-   and arrange, or a kind of card that can appear in any stage.
+1. ~~**Stage order for music.**~~ Closed 11 October 2026: sound design is a
+   kind of card; the stages are sketch, arrange, mix, master.
 2. **Stages for collections.** Whether select, sequence, master, artwork and
    release is the right list.
-3. **Element template.** To be supplied from the track-components work.
+3. ~~**Element template.**~~ Closed 11 October 2026: the zones of the
+   studio's Live template, with STRUCTURE and BUS added (W-5).
 4. ~~**Gear data in Vivarium.**~~ Closed 10 October 2026: nothing to migrate.
    The gear inventory is in a spreadsheet, imported in Phase 1 (G-1).
 5. ~~**Embedding size.**~~ Closed 10 October 2026: voyage-4 at 1024

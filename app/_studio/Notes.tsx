@@ -30,6 +30,8 @@ export function NoteItem({
   onDelete,
   onError,
   onMoment,
+  onSettle,
+  settled = false,
 }: {
   note: StudioNote;
   tracks: StudioTrack[];
@@ -42,6 +44,10 @@ export function NoteItem({
   onError: (msg: string) => void;
   /** Play the mix from the note's moment. */
   onMoment?: (n: StudioNote) => void;
+  /** Make the note a settled decision (REQUIREMENTS W-9); edit access only. */
+  onSettle?: () => void;
+  /** Already a settled decision. */
+  settled?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(n.body);
@@ -83,7 +89,13 @@ export function NoteItem({
         <span>{formatWhen(n.createdAt)}</span>
         {showVersion && (n.trackVersion !== null ? <span>v{n.trackVersion}</span> : n.trackId !== null && <span>deleted version</span>)}
         {n.editedAt && <span title={formatWhen(n.editedAt)}>edited</span>}
+        {settled && <span className="text-ink">settled</span>}
         <span className="ml-auto flex gap-3">
+          {onSettle && !settled && !editing && (
+            <button onClick={onSettle} className="hover:text-ink" title="Make this note a settled decision on the Workflow tab">
+              Settle
+            </button>
+          )}
           {canEdit && !editing && (
             <button
               onClick={() => {
