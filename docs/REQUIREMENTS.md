@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.14
+**Version:** 0.15
 **Date:** 2026-10-11
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -9,6 +9,13 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.15** (2026-10-11) — Session analysis built (A-6 to A-8): the State
+  tab reads a dropped project folder's saved sets in the browser and shows
+  zone coverage, an arrangement map, maintenance findings and the changes
+  between saves. Files only older saves use are listed apart from unused
+  ones. The person's own read of each element (S-15) and automatic updates
+  (A-9) remain.
 
 - **0.14** (2026-10-11) — Mix variants (S-14): a radio edit or an extended
   mix kept beside the main mix, numbered within its variant; remixes are
@@ -457,19 +464,21 @@ travel to the database.
 - **A-4** Measurements are stamped with the file, its modification date and the
   analyser's version, so a stale reading can be told from a current one.
 - **A-5** Analysis never changes a session file.
-- **A-6 (planned)** Dropping a session's Ableton project folder on its page
+- **A-6** Dropping a session's Ableton project folder on its page
   reads every `.als` file in it in the browser, lists the folder's files by
   name and size without uploading the audio, and stores one snapshot per
   saved set (dated by the file, identified by its contents, so dropping the
   folder again adds only new saves) with a copy of the `.als` for re-reading
   when the parser improves. One parser, in TypeScript, serves the browser
   now and the Mac later.
-- **A-7 (planned)** Maintenance, from the snapshots: plugins and devices with
+- **A-7** Maintenance, from the snapshots: plugins and devices with
   their instances and tracks; samples outside the project folder ("collect
   all and save"); files the set expects in the folder that are missing; files
   in the folder no saved version uses (candidates to purge); frozen tracks,
-  disabled devices, empty and muted tracks.
-- **A-8 (planned)** Session history: the differences between consecutive
+  disabled devices, empty and muted tracks; and files in the folder that only
+  older saves use, which the latest set has moved on from. Several instances
+  of one effect are pointed out as candidates for a shared return.
+- **A-8** Session history: the differences between consecutive
   snapshots (tracks, devices, clips, coverage per element, length) as a log
   of work sessions. Plugin use and sample references are also kept in tables
   of their own, for questions across sessions.

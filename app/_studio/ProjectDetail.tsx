@@ -16,12 +16,14 @@ import type {
 import type { SessionTab } from '@/lib/sessionTabs';
 import { levelAtLeast } from '@/lib/studioTypes';
 import type { Workflow } from '@/lib/workflowTypes';
+import type { SessionState } from '@/lib/als/store';
 
 import { api, InlineEdit, Stars } from './controls';
 import HistoryTab from './session/HistoryTab';
 import MixesTab from './session/MixesTab';
 import NotesTab from './session/NotesTab';
 import OverviewTab from './session/OverviewTab';
+import StateTab from './session/StateTab';
 import WorkflowTab from './session/WorkflowTab';
 
 // One session (REQUIREMENTS S-1 to S-13), as tabs over one shared state, so
@@ -29,6 +31,7 @@ import WorkflowTab from './session/WorkflowTab';
 //
 //   Overview   the current mix, where it stands, the latest notes; details
 //   Mixes      every version with its waveform, references; notes by moment
+//   State      what the saved Live sets show: zones, arrangement, maintenance
 //   Workflow   stages, exit criteria, cards by element, settled decisions
 //   Notes      every note, filterable
 //   History    uploads and name changes
@@ -52,6 +55,7 @@ export default function ProjectDetail({
   initialShares,
   uploadsEnabled,
   initialWorkflow,
+  initialSessionState,
 }: {
   initialTab: SessionTab;
   initialProject: StudioProject;
@@ -66,6 +70,7 @@ export default function ProjectDetail({
   initialShares: StudioShare[];
   uploadsEnabled: boolean;
   initialWorkflow: Workflow;
+  initialSessionState: SessionState;
 }) {
   const [tab, setTab] = useState<SessionTab>(initialTab);
   const [project, setProject] = useState(initialProject);
@@ -194,6 +199,7 @@ export default function ProjectDetail({
           tabs={[
             { key: 'overview', label: 'Overview' },
             { key: 'mixes', label: 'Mixes', count: tracks.length },
+            { key: 'state', label: 'State' },
             { key: 'workflow', label: workflow.stage ? `Workflow · ${workflow.stages.find((x) => x.key === workflow.stage)?.label ?? ''}` : 'Workflow' },
             { key: 'notes', label: 'Notes', count: notes.length },
             { key: 'history', label: 'History' },
@@ -243,6 +249,7 @@ export default function ProjectDetail({
           onLength={fillLength}
         />
       )}
+      {tab === 'state' && <StateTab projectId={project.id} initialState={initialSessionState} canEdit={canEdit} />}
       {tab === 'workflow' && (
         <WorkflowTab
           projectId={project.id}

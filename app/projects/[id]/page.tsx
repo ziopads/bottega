@@ -17,6 +17,7 @@ import {
 } from '@/lib/studio';
 import { audioConfigured } from '@/lib/studioAudio';
 import { getWorkflow } from '@/lib/workflow';
+import { getSessionState } from '@/lib/als/store';
 
 // One music project, as the signed-in person may see it: a project they can
 // neither own nor see is not found (its existence is not disclosed).
@@ -47,7 +48,7 @@ export default async function ProjectPage({ params, searchParams }: Params) {
   const asked = (await searchParams)?.tab;
   const tab: SessionTab = SESSION_TABS.includes(asked as SessionTab) ? (asked as SessionTab) : 'overview';
 
-  const [tracks, names, artists, genres, notes, releases, references, shares, workflow] = await Promise.all([
+  const [tracks, names, artists, genres, notes, releases, references, shares, workflow, sessionState] = await Promise.all([
     listTracks(db, id),
     listNames(db, id),
     listArtists(db),
@@ -57,6 +58,7 @@ export default async function ProjectPage({ params, searchParams }: Params) {
     listReferences(db, id),
     isOwner ? listShares(db, { kind: 'project', id }) : Promise.resolve([]),
     getWorkflow(db, id),
+    getSessionState(db, id),
   ]);
 
   return (
@@ -78,6 +80,7 @@ export default async function ProjectPage({ params, searchParams }: Params) {
         initialShares={shares}
         uploadsEnabled={audioConfigured()}
         initialWorkflow={workflow}
+        initialSessionState={sessionState}
       />
     </div>
   );
