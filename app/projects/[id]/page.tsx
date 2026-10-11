@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import ProjectDetail, { SESSION_TABS, type SessionTab } from '@/app/_studio/ProjectDetail';
+import ProjectDetail from '@/app/_studio/ProjectDetail';
+import { SESSION_TABS, type SessionTab } from '@/lib/sessionTabs';
 import { requireAccount } from '@/lib/access';
 import {
   getProject,

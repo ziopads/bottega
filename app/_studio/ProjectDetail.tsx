@@ -13,6 +13,7 @@ import type {
   StudioShare,
   StudioTrack,
 } from '@/lib/studioTypes';
+import type { SessionTab } from '@/lib/sessionTabs';
 import { levelAtLeast } from '@/lib/studioTypes';
 
 import { api, InlineEdit, Stars } from './controls';
@@ -32,8 +33,6 @@ import OverviewTab from './session/OverviewTab';
 // controls offer follows the viewer's level (AC-5); the routes and the
 // database enforce the same rules.
 
-export const SESSION_TABS = ['overview', 'mixes', 'workflow', 'notes'] as const;
-export type SessionTab = (typeof SESSION_TABS)[number];
 
 export default function ProjectDetail({
   initialTab,
