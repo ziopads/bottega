@@ -39,8 +39,8 @@ export default async function SessionsPage() {
   return (
     <div>
       <div className="mb-6 flex items-baseline justify-between gap-3">
-        <h1 className="font-serif text-2xl sm:text-3xl">Sessions</h1>
-        <p className="text-sm text-muted">
+        <h1 className="t-title">Sessions</h1>
+        <p className="t-body text-muted">
           {own.length} {own.length === 1 ? 'session' : 'sessions'}
         </p>
       </div>
@@ -54,18 +54,18 @@ export default async function SessionsPage() {
 
       {shared.length > 0 && (
         <section className="mt-12">
-          <h2 className="mb-3 text-xs uppercase tracking-wide text-muted">Shared with me</h2>
-          <ul className="divide-y divide-line border-y border-line text-sm">
+          <h2 className="t-label mb-3 border-b border-line pb-1">Shared with me</h2>
+          <ul className="divide-y divide-line border-y border-line t-body">
             {shared.map((p) => (
               <li key={p.id} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 py-2">
                 <Link href={`/projects/${p.id}`} className="min-w-0 flex-1 hover:text-rust">
-                  <span className="font-mono text-xs text-muted">
+                  <span className="font-mono text-[11px] text-muted">
                     {p.artist.code} {p.canonicalId}
                   </span>{' '}
                   {p.workingName || <span className="text-muted">untitled</span>}
                 </Link>
-                <span className="text-xs text-muted">{formatDuration(p.latest?.durationS ?? null)}</span>
-                <span className="text-xs text-muted">
+                <span className="text-[11px] text-muted">{formatDuration(p.latest?.durationS ?? null)}</span>
+                <span className="text-[11px] text-muted">
                   {p.ownerName} · {LEVEL_WORD[p.level]}
                 </span>
               </li>

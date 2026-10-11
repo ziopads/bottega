@@ -84,7 +84,7 @@ export default function PhotoEditor({
     onDeleted();
   }
 
-  const button = 'rounded-md border border-line px-3 py-1 text-sm hover:border-ink disabled:opacity-40';
+  const button = 'rounded border border-line px-3 py-1 t-body hover:border-ink disabled:opacity-40';
 
   return (
     <div
@@ -106,7 +106,7 @@ export default function PhotoEditor({
         />
 
         {isOwner ? (
-          <div className="mt-4 space-y-3 text-sm" style={{ width: box.width }}>
+          <div className="mt-4 space-y-3 t-body" style={{ width: box.width }}>
             <div className="flex flex-wrap items-center gap-2">
               <button onClick={() => turn(-90)} className={button} aria-label="Rotate left">
                 ⟲ Rotate left
@@ -114,7 +114,7 @@ export default function PhotoEditor({
               <button onClick={() => turn(90)} className={button} aria-label="Rotate right">
                 Rotate right ⟳
               </button>
-              <select value={role} onChange={(e) => setRole(e.target.value as GearFileRole)} className="ml-auto rounded-md border border-line bg-card px-2 py-1">
+              <select value={role} onChange={(e) => setRole(e.target.value as GearFileRole)} className="ml-auto rounded border border-line bg-card px-2 py-1">
                 {FILE_ROLES.map((r) => (
                   <option key={r} value={r}>
                     {FILE_ROLE_LABEL[r]}
@@ -126,7 +126,7 @@ export default function PhotoEditor({
               <input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} className="mt-1" />
               <span>
                 Public
-                <span className="block text-xs text-muted">
+                <span className="block text-[11px] text-muted">
                   Shown to people you share this unit with. Leave it off for serial numbers, receipts or condition photos you keep to yourself.
                 </span>
               </span>
@@ -135,11 +135,11 @@ export default function PhotoEditor({
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="Caption"
-              className="w-full rounded-md border border-line bg-card px-2 py-1 outline-none focus:border-rust"
+              className="w-full rounded border border-line bg-card px-2 py-1 outline-none focus:border-rust"
               aria-label="Caption"
             />
             <div className="flex flex-wrap items-center gap-3">
-              <button onClick={save} disabled={!dirty || busy} className="rounded-md bg-rust px-4 py-1.5 text-white disabled:opacity-40">
+              <button onClick={save} disabled={!dirty || busy} className="rounded bg-rust px-4 py-1.5 text-white disabled:opacity-40">
                 {busy ? 'Saving…' : 'Save'}
               </button>
               <button onClick={onClose} className="text-muted hover:text-ink">
@@ -168,7 +168,7 @@ export default function PhotoEditor({
             {error && <p className="text-rust">{error}</p>}
           </div>
         ) : (
-          <div className="mt-3 flex items-baseline gap-3 text-sm" style={{ width: box.width }}>
+          <div className="mt-3 flex items-baseline gap-3 t-body" style={{ width: box.width }}>
             <span className="min-w-0 flex-1 truncate text-muted">{file.caption || file.filename}</span>
             <button onClick={onClose} className="text-muted hover:text-ink">
               Close

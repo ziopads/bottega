@@ -14,10 +14,10 @@ export default async function CollectionsPage() {
   const [releases, artists] = await Promise.all([listReleases(db), listArtists(db)]);
   return (
     <div>
-      <Link href="/" className="text-sm text-muted hover:text-rust">
+      <Link href="/" className="t-body text-muted hover:text-rust">
         ← Sessions
       </Link>
-      <h1 className="mb-6 mt-2 font-serif text-2xl sm:text-3xl">Collections</h1>
+      <h1 className="mb-6 mt-2 t-title">Collections</h1>
       <ReleaseList initialReleases={releases} artists={artists} viewerId={userId} />
     </div>
   );

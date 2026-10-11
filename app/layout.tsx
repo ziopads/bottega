@@ -45,7 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               Bottega
             </Link>
             {user ? (
-              <nav className="flex gap-4 text-sm">
+              <nav className="flex gap-4 t-body">
                 {nav.map((item) => (
                   <Link key={item.href} href={item.href} className="text-muted hover:text-rust">
                     {item.label}
@@ -54,7 +54,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </nav>
             ) : null}
             {user ? (
-              <form action={signOut} className="ml-auto flex items-center gap-4 text-sm">
+              <form action={signOut} className="ml-auto flex items-center gap-4 t-body">
                 <VolumeControl />
                 <Link href="/account" className="text-muted hover:text-rust">
                   {user.name || user.email}

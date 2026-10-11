@@ -13,7 +13,7 @@ import { formatBytes } from '@/lib/studioTypes';
 // the duplicate check (K-8), the allowance (K-10), and the lists by where a
 // document stands. The routes and the database enforce every rule shown.
 
-const field = 'rounded-md border border-line bg-card px-2 py-1 text-sm outline-none focus:border-rust';
+const field = 'rounded border border-line bg-card px-2 py-1 t-body outline-none focus:border-rust';
 
 async function sha256(file: File): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
@@ -70,26 +70,26 @@ function AllowanceLine({ a }: { a: Allowance }) {
       ? `${a.pagesUsed.toLocaleString()} pages processed this month`
       : `${a.pagesUsed.toLocaleString()} of ${a.pagesPerMonth.toLocaleString()} pages processed this month`,
   ];
-  return <p className="text-xs text-muted">{parts.join(' · ')}</p>;
+  return <p className="text-[11px] text-muted">{parts.join(' · ')}</p>;
 }
 
 function Section({ title, docs, empty }: { title: string; docs: StudioDocument[]; empty?: string }) {
   return (
     <section>
-      <h2 className="mb-2 text-sm font-medium uppercase tracking-wide text-muted">{title}</h2>
+      <h2 className="t-label mb-3 border-b border-line pb-1">{title}</h2>
       {docs.length === 0 ? (
-        <p className="text-sm text-muted">{empty}</p>
+        <p className="t-body text-muted">{empty}</p>
       ) : (
         <ul className="divide-y divide-line border-y border-line">
           {docs.map((d) => (
-            <li key={d.id} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 py-2 text-sm">
+            <li key={d.id} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 py-2 t-body">
               <Link href={`/library/${d.id}`} className="font-medium hover:text-rust">
                 {d.title}
               </Link>
               {(d.manufacturer || d.model) && <span className="text-muted">{[d.manufacturer, d.model].filter(Boolean).join(' ')}</span>}
               {d.kind !== 'manual' && <span className="text-muted">{DOCUMENT_KIND_LABEL[d.kind]}</span>}
               {d.library && d.reviewStatus !== 'approved' && <span className="text-rust">{REVIEW_LABEL[d.reviewStatus]}</span>}
-              <span className="ml-auto text-xs text-muted">
+              <span className="ml-auto text-[11px] text-muted">
                 {d.state === 'ready' ? `${d.pageCount ?? 0} pages` : STATE_LABEL[d.state]}
                 {d.picked ? ' · picked' : ''}
                 {!d.library && d.ownerName && d.level !== 'owner' ? ` · ${d.ownerName}` : ''}
@@ -165,10 +165,10 @@ function Upload() {
   }
 
   return (
-    <section className="rounded-md border border-line p-4">
-      <h2 className="mb-3 text-sm font-medium">Add a document</h2>
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <button onClick={() => input.current?.click()} className="rounded-md border border-line px-3 py-1 hover:border-ink">
+    <section className="rounded border border-line p-4">
+      <h2 className="t-label mb-3 border-b border-line pb-1">Add a document</h2>
+      <div className="flex flex-wrap items-center gap-3 t-body">
+        <button onClick={() => input.current?.click()} className="rounded border border-line px-3 py-1 hover:border-ink">
           {file ? 'Choose another PDF' : 'Choose a PDF'}
         </button>
         {file && (
@@ -189,7 +189,7 @@ function Upload() {
       </div>
 
       {file && (
-        <div className="mt-4 space-y-3 text-sm">
+        <div className="mt-4 space-y-3 t-body">
           <fieldset className="flex flex-wrap gap-x-5 gap-y-1">
             <label className="flex items-center gap-1.5">
               <input
@@ -220,14 +220,14 @@ function Upload() {
             </select>
           </div>
           {library && (
-            <p className="text-xs text-muted">
+            <p className="text-[11px] text-muted">
               The library holds manufacturers’ documents: manuals, service manuals and firmware notes. Books and other reference material go in as private documents.
             </p>
           )}
           <button
             onClick={upload}
             disabled={!!busy || !title.trim()}
-            className="rounded-md bg-rust px-4 py-1.5 text-white disabled:opacity-40"
+            className="rounded bg-rust px-4 py-1.5 text-white disabled:opacity-40"
           >
             {busy || 'Upload'}
           </button>
@@ -235,7 +235,7 @@ function Upload() {
       )}
 
       {match && <MatchNote match={match} library={library} />}
-      {error && !match && <p className="mt-3 text-sm text-rust">{error}</p>}
+      {error && !match && <p className="mt-3 t-body text-rust">{error}</p>}
     </section>
   );
 }
@@ -243,7 +243,7 @@ function Upload() {
 function MatchNote({ match, library }: { match: FingerprintMatch; library: boolean }) {
   if (library && match.library) {
     return match.library.visible ? (
-      <p className="mt-3 text-sm">
+      <p className="mt-3 t-body">
         The library already has this file.{' '}
         <Link href={`/library/${match.library.id}`} className="text-rust underline">
           Open it
@@ -251,12 +251,12 @@ function MatchNote({ match, library }: { match: FingerprintMatch; library: boole
         to pick it for your search or link it to your gear.
       </p>
     ) : (
-      <p className="mt-3 text-sm">Someone has already submitted this file to the library. It appears here once it is approved.</p>
+      <p className="mt-3 t-body">Someone has already submitted this file to the library. It appears here once it is approved.</p>
     );
   }
   if (!library && match.own) {
     return (
-      <p className="mt-3 text-sm">
+      <p className="mt-3 t-body">
         You already have this file as{' '}
         <Link href={`/library/${match.own.id}`} className="text-rust underline">
           {match.own.title}

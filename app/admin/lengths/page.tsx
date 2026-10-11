@@ -17,7 +17,7 @@ export default async function LengthsPage() {
   return (
     <div className="max-w-2xl space-y-4 py-4">
       <h1 className="t-title">Lengths and waveforms</h1>
-      <p className="text-sm text-muted">
+      <p className="t-body text-muted">
         {missing.length === 0
           ? 'Every file has its length.'
           : `${missing.length} ${missing.length === 1 ? 'file has' : 'files have'} no length on record.`}

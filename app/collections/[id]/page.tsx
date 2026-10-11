@@ -33,7 +33,7 @@ export default async function CollectionPage({ params }: Params) {
   ]);
   return (
     <div>
-      <Link href="/collections" className="text-sm text-muted hover:text-rust">
+      <Link href="/collections" className="t-body text-muted hover:text-rust">
         ← Collections
       </Link>
       <ReleaseDetail

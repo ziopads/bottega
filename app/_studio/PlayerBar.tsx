@@ -58,15 +58,15 @@ export default function PlayerBar({
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-2 text-sm">
-            <span className="text-xs font-medium tracking-[0.04em] text-muted">{project.artist.code}</span>
+          <div className="flex items-baseline gap-2 t-body">
+            <span className="text-[11px] font-medium tracking-[0.04em] text-muted">{project.artist.code}</span>
             <Link href={`/projects/${project.id}`} className="font-mono hover:underline">
               {project.canonicalId}
             </Link>
             <span className="truncate">{project.workingName}</span>
-            {project.latest && <span className="text-xs text-muted">{project.latest.label}</span>}
+            {project.latest && <span className="text-[11px] text-muted">{project.latest.label}</span>}
           </div>
-          <div className="mt-1 flex items-center gap-2 text-xs tabular-nums text-muted">
+          <div className="mt-1 flex items-center gap-2 text-[11px] tabular-nums text-muted">
             <span className="w-10 text-right">{formatDuration(time)}</span>
             <input
               type="range"
@@ -82,7 +82,7 @@ export default function PlayerBar({
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-xs text-muted">
+        <div className="flex items-center gap-4 text-[11px] text-muted">
           {onRate && (
             <span title="Rate the playing session (1–5, 0 clears)">
               <Stars rating={project.rating} onRate={onRate} />

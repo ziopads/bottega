@@ -24,8 +24,8 @@ export default async function GearPage({ searchParams }: { searchParams: Promise
   return (
     <div>
       <div className="mb-4 flex items-end gap-6 border-b border-line">
-        <h1 className="pb-2 font-serif text-2xl">Gear</h1>
-        <nav className="flex text-sm" aria-label="Gear views">
+        <h1 className="pb-2 t-title">Gear</h1>
+        <nav className="flex t-body" aria-label="Gear views">
           {VIEWS.map((v) => (
             <Link
               key={v.key}

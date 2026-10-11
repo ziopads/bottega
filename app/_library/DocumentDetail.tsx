@@ -1,10 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { api, InlineEdit } from '@/app/_studio/controls';
+import { DetailGrid, MetaList, PageHeader, Section } from '@/app/_ui/layout';
+import { BUTTON, BUTTON_PRIMARY, FIELD, TEXT_ACTION, TEXT_DANGER } from '@/app/_ui/styles';
 import type { StudioDocument } from '@/lib/documentTypes';
 import { DOCUMENT_KIND_LABEL, REVIEW_LABEL, STATE_LABEL } from '@/lib/documentTypes';
 import { formatBytes, levelAtLeast } from '@/lib/studioTypes';
@@ -113,118 +114,139 @@ export default function DocumentDetail({
   const progress = total ? (extracting ? doc.pagesExtracted : doc.pagesDone) / total : 0;
   const processable = canEdit && ['pending', 'processing', 'paused', 'failed'].includes(doc.state);
 
-  return (
-    <div className="max-w-3xl space-y-8">
-      <div>
-        <p className="mb-1 text-sm">
-          <Link href="/library" className="text-muted hover:text-rust">
-            ← Library
-          </Link>
-        </p>
-        <h1 className="font-serif text-2xl sm:text-3xl">
-          {canEdit ? <InlineEdit value={doc.title} placeholder="Title" label="Title" textClass="text-2xl sm:text-3xl" onSave={(v) => patch({ title: v })} /> : doc.title}
-        </h1>
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
-          {canEdit ? (
-            <>
-              <InlineEdit value={doc.manufacturer} placeholder="Manufacturer" label="Manufacturer" onSave={(v) => patch({ manufacturer: v })} />
-              <InlineEdit value={doc.model} placeholder="Model" label="Model" onSave={(v) => patch({ model: v })} />
-            </>
-          ) : (
-            (doc.manufacturer || doc.model) && <span>{[doc.manufacturer, doc.model].filter(Boolean).join(' ')}</span>
+  const main = (
+    <>
+      <Section label="Processing">
+        <div className="t-body">
+          <p>
+            {STATE_LABEL[doc.state]}
+            {doc.stateDetail ? <span className="text-muted"> — {doc.stateDetail}</span> : null}
+          </p>
+          {total > 0 && doc.state !== 'ready' && (
+            <div className="mt-2">
+              <div className="h-1.5 w-full max-w-md overflow-hidden rounded bg-line">
+                <div className="h-full bg-rust transition-all" style={{ width: `${Math.round(progress * 100)}%` }} />
+              </div>
+              <p className="mt-1 text-[11px] text-muted">
+                {extracting ? `Text read from ${doc.pagesExtracted} of ${total} pages` : `${doc.pagesDone} of ${total} pages searchable`}
+              </p>
+            </div>
           )}
-          <span>
-            {DOCUMENT_KIND_LABEL[doc.kind]}
-            {doc.library ? ', in the library' : ''}
-          </span>
-          <span>
-            {doc.filename} · {formatBytes(doc.bytes)}
-            {doc.pageCount !== null ? ` · ${doc.pageCount} pages` : ''}
-          </span>
-          {doc.library && doc.contributorName && <span>contributed by {doc.contributorName}</span>}
-          {!doc.library && doc.level !== 'owner' && <span>{doc.ownerName}’s</span>}
+          {processable && (
+            <div className="mt-3 flex items-center gap-3">
+              {running ? (
+                <button onClick={() => (stop.current = true)} className={BUTTON}>
+                  Pause
+                </button>
+              ) : (
+                <button onClick={process} className={BUTTON_PRIMARY}>
+                  {doc.state === 'pending' ? 'Process' : 'Resume'}
+                </button>
+              )}
+              {running && <span className="text-[11px] text-muted">Keep this page open while it runs.</span>}
+            </div>
+          )}
+          {doc.state === 'needs_ocr' && (
+            <p className="mt-2 text-muted">Scanned documents need text recognition, which Bottega does not do yet. The PDF is stored and can be downloaded.</p>
+          )}
         </div>
-      </div>
+      </Section>
 
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <a href={`/api/documents/${doc.id}/file`} className="rounded-md border border-line px-3 py-1 hover:border-ink">
-          Download the PDF
-        </a>
-        {doc.library && doc.reviewStatus === 'approved' && (
-          <label className="flex items-center gap-1.5">
-            <input type="checkbox" checked={doc.picked} onChange={(e) => patch({ picked: e.target.checked })} />
-            Include in my searches
-          </label>
-        )}
-      </div>
+      {doc.library && <ModelLinks doc={doc} models={models} onLink={link} />}
 
       {doc.library && (doc.reviewStatus !== 'approved' || isAdmin) && (
-        <section className="text-sm">
-          <h2 className="mb-2 font-medium">Review</h2>
-          <p className="text-muted">
-            {REVIEW_LABEL[doc.reviewStatus]}
-            {doc.reviewStatus === 'submitted' && !isAdmin ? '. You can read and process it now; others see it once the administrator approves it.' : ''}
-            {doc.reviewStatus === 'rejected' && !isAdmin ? '. It stays visible to you only.' : ''}
-          </p>
-          {isAdmin && (
-            <div className="mt-2 flex gap-2">
-              {doc.reviewStatus !== 'approved' && (
-                <button onClick={() => patch({ reviewStatus: 'approved' })} className="rounded-md bg-rust px-3 py-1 text-white">
-                  Approve
-                </button>
-              )}
-              {doc.reviewStatus !== 'rejected' && (
-                <button onClick={() => patch({ reviewStatus: 'rejected' })} className="rounded-md border border-line px-3 py-1 hover:border-ink">
-                  Reject
-                </button>
-              )}
-            </div>
-          )}
-        </section>
-      )}
-
-      <section className="text-sm">
-        <h2 className="mb-2 font-medium">Processing</h2>
-        <p>
-          {STATE_LABEL[doc.state]}
-          {doc.stateDetail ? <span className="text-muted"> — {doc.stateDetail}</span> : null}
-        </p>
-        {total > 0 && doc.state !== 'ready' && (
-          <div className="mt-2">
-            <div className="h-1.5 w-full max-w-md overflow-hidden rounded bg-line">
-              <div className="h-full bg-rust transition-all" style={{ width: `${Math.round(progress * 100)}%` }} />
-            </div>
-            <p className="mt-1 text-xs text-muted">
-              {extracting ? `Text read from ${doc.pagesExtracted} of ${total} pages` : `${doc.pagesDone} of ${total} pages searchable`}
+        <Section label="Review">
+          <div className="t-body">
+            <p className="text-muted">
+              {REVIEW_LABEL[doc.reviewStatus]}
+              {doc.reviewStatus === 'submitted' && !isAdmin ? '. You can read and process it now; others see it once the administrator approves it.' : ''}
+              {doc.reviewStatus === 'rejected' && !isAdmin ? '. It stays visible to you only.' : ''}
             </p>
-          </div>
-        )}
-        {processable && (
-          <div className="mt-3 flex items-center gap-3">
-            {running ? (
-              <button onClick={() => (stop.current = true)} className="rounded-md border border-line px-3 py-1 hover:border-ink">
-                Pause
-              </button>
-            ) : (
-              <button onClick={process} className="rounded-md bg-rust px-3 py-1 text-white">
-                {doc.state === 'pending' ? 'Process' : 'Resume'}
-              </button>
+            {isAdmin && (
+              <div className="mt-2 flex gap-2">
+                {doc.reviewStatus !== 'approved' && (
+                  <button onClick={() => patch({ reviewStatus: 'approved' })} className={BUTTON_PRIMARY}>
+                    Approve
+                  </button>
+                )}
+                {doc.reviewStatus !== 'rejected' && (
+                  <button onClick={() => patch({ reviewStatus: 'rejected' })} className={BUTTON}>
+                    Reject
+                  </button>
+                )}
+              </div>
             )}
-            {running && <span className="text-xs text-muted">Keep this page open while it runs.</span>}
           </div>
-        )}
-        {doc.state === 'needs_ocr' && (
-          <p className="mt-2 text-muted">Scanned documents need text recognition, which Bottega does not do yet. The PDF is stored and can be downloaded.</p>
-        )}
-      </section>
-
-      {doc.library && (
-        <ModelLinks doc={doc} models={models} onLink={link} />
+        </Section>
       )}
 
-      {error && <p className="text-sm text-rust">{error}</p>}
-
+      {error && <p className="t-body mb-4 text-rust">{error}</p>}
       {deletable && <Delete onDelete={remove} />}
+    </>
+  );
+
+  const aside = (
+    <Section label="Details">
+      <MetaList
+        rows={[
+          {
+            label: 'Manufacturer',
+            value: canEdit ? (
+              <InlineEdit value={doc.manufacturer} placeholder="—" label="Manufacturer" textClass="t-body" onSave={(v) => patch({ manufacturer: v })} />
+            ) : (
+              doc.manufacturer || '—'
+            ),
+          },
+          {
+            label: 'Model',
+            value: canEdit ? (
+              <InlineEdit value={doc.model} placeholder="—" label="Model" textClass="t-body" onSave={(v) => patch({ model: v })} />
+            ) : (
+              doc.model || '—'
+            ),
+          },
+          { label: 'Kind', value: DOCUMENT_KIND_LABEL[doc.kind] },
+          { label: 'Where', value: doc.library ? 'The library' : doc.level === 'owner' ? 'Yours, private' : `${doc.ownerName}’s, private` },
+          ...(doc.library && doc.contributorName ? [{ label: 'Contributed', value: doc.contributorName }] : []),
+          {
+            label: 'File',
+            value: (
+              <span className="break-all">
+                {doc.filename} <span className="t-num text-muted">· {formatBytes(doc.bytes)}</span>
+              </span>
+            ),
+          },
+          ...(doc.pageCount !== null ? [{ label: 'Pages', value: <span className="t-num">{doc.pageCount}</span> }] : []),
+        ]}
+      />
+    </Section>
+  );
+
+  return (
+    <div>
+      <PageHeader
+        back={{ href: '/library', label: 'Library' }}
+        title={canEdit ? <InlineEdit value={doc.title} placeholder="Title" label="Title" textClass="t-title" onSave={(v) => patch({ title: v })} /> : doc.title}
+        meta={[
+          [doc.manufacturer, doc.model].filter(Boolean).join(' ') || null,
+          DOCUMENT_KIND_LABEL[doc.kind],
+          doc.pageCount !== null ? `${doc.pageCount} pages` : null,
+        ]}
+        actions={
+          <>
+            {doc.library && doc.reviewStatus === 'approved' && (
+              <label className="flex items-center gap-1.5 text-muted">
+                <input type="checkbox" checked={doc.picked} onChange={(e) => patch({ picked: e.target.checked })} />
+                Include in my searches
+              </label>
+            )}
+            <a href={`/api/documents/${doc.id}/file`} className={BUTTON}>
+              Download the PDF
+            </a>
+          </>
+        }
+      />
+      <DetailGrid main={main} aside={aside} />
     </div>
   );
 }
@@ -234,15 +256,15 @@ function ModelLinks({ doc, models, onLink }: { doc: StudioDocument; models: Mode
   const linked = new Set(doc.models.map((m) => m.id));
   const available = models.filter((m) => !linked.has(m.id));
   return (
-    <section className="text-sm">
-      <h2 className="mb-2 font-medium">Gear models</h2>
+    <Section label="Gear models">
+      <div className="t-body">
       <p className="mb-2 text-muted">Every unit of a linked model has this manual.</p>
       {doc.models.length > 0 && (
         <ul className="mb-2 space-y-1">
           {doc.models.map((m) => (
             <li key={m.id} className="flex items-baseline gap-3">
               {m.manufacturer} {m.model}
-              <button onClick={() => onLink(m.id, false)} className="text-xs text-muted hover:text-rust">
+              <button onClick={() => onLink(m.id, false)} className={`text-[11px] ${TEXT_DANGER}`}>
                 Remove
               </button>
             </li>
@@ -251,7 +273,7 @@ function ModelLinks({ doc, models, onLink }: { doc: StudioDocument; models: Mode
       )}
       {available.length > 0 && (
         <div className="flex gap-2">
-          <select value={choice} onChange={(e) => setChoice(e.target.value)} className="rounded-md border border-line bg-card px-2 py-1">
+          <select value={choice} onChange={(e) => setChoice(e.target.value)} className={FIELD}>
             <option value="">Link to a model…</option>
             {available.map((m) => (
               <option key={m.id} value={m.id}>
@@ -265,32 +287,33 @@ function ModelLinks({ doc, models, onLink }: { doc: StudioDocument; models: Mode
               onLink(Number(choice), true);
               setChoice('');
             }}
-            className="rounded-md border border-line px-3 py-1 hover:border-ink disabled:opacity-40"
+            className={BUTTON}
           >
             Link
           </button>
         </div>
       )}
-    </section>
+      </div>
+    </Section>
   );
 }
 
 function Delete({ onDelete }: { onDelete: () => void }) {
   const [armed, setArmed] = useState(false);
   return (
-    <div className="border-t border-line pt-4 text-sm">
+    <div className="t-body mt-10 border-t border-line pt-3">
       {armed ? (
         <span className="flex items-center gap-3">
           Delete this document, its text and its file?
-          <button onClick={onDelete} className="rounded-md bg-rust px-3 py-1 text-white">
+          <button onClick={onDelete} className={BUTTON_PRIMARY}>
             Delete
           </button>
-          <button onClick={() => setArmed(false)} className="text-muted hover:text-ink">
+          <button onClick={() => setArmed(false)} className={TEXT_ACTION}>
             Cancel
           </button>
         </span>
       ) : (
-        <button onClick={() => setArmed(true)} className="text-muted hover:text-rust">
+        <button onClick={() => setArmed(true)} className={TEXT_DANGER}>
           Delete document
         </button>
       )}

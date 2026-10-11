@@ -61,9 +61,9 @@ export default async function AccountsPage() {
   return (
     <div className="space-y-10 py-4">
       <section>
-        <h1 className="mb-4 text-2xl">Accounts</h1>
-        <table className="w-full text-sm">
-          <thead className="text-left text-xs uppercase tracking-wide text-muted">
+        <h1 className="mb-4 t-title">Accounts</h1>
+        <table className="w-full t-body">
+          <thead className="text-left t-label">
             <tr>
               <th className="py-2 pr-4 font-normal">Person</th>
               <th className="py-2 pr-4 font-normal">Status</th>
@@ -76,9 +76,9 @@ export default async function AccountsPage() {
               <tr key={a.user_id} className="align-top">
                 <td className="py-2 pr-4">
                   <div>{a.display_name || <span className="text-muted">no name</span>}</div>
-                  <div className="text-xs text-muted">{a.email}</div>
+                  <div className="text-[11px] text-muted">{a.email}</div>
                   {a.status === 'active' && a.user_id !== admin.userId && (
-                    <Link href={`/admin/accounts/${encodeURIComponent(a.user_id)}`} className="text-xs underline hover:text-rust">
+                    <Link href={`/admin/accounts/${encodeURIComponent(a.user_id)}`} className="text-[11px] underline hover:text-rust">
                       view their work (logged)
                     </Link>
                   )}
@@ -87,11 +87,11 @@ export default async function AccountsPage() {
                   {a.status}
                   {a.is_platform_admin && <span className="text-muted"> · administrator</span>}
                 </td>
-                <td className="py-2 pr-4 text-xs text-muted">{when(a.created_at)}</td>
+                <td className="py-2 pr-4 text-[11px] text-muted">{when(a.created_at)}</td>
                 <td className="py-2">
                   <form action={setAccount} className="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="userId" value={a.user_id} />
-                    <select name="status" defaultValue={a.status} className="rounded-md border border-line bg-card px-2 py-1">
+                    <select name="status" defaultValue={a.status} className="rounded border border-line bg-card px-2 py-1">
                       <option value="pending">pending</option>
                       <option value="active">active</option>
                       <option value="disabled">disabled</option>
@@ -99,7 +99,7 @@ export default async function AccountsPage() {
                     <select
                       name="isAdmin"
                       defaultValue={String(a.is_platform_admin)}
-                      className="rounded-md border border-line bg-card px-2 py-1"
+                      className="rounded border border-line bg-card px-2 py-1"
                     >
                       <option value="false">not administrator</option>
                       <option value="true">administrator</option>
@@ -107,9 +107,9 @@ export default async function AccountsPage() {
                     <input
                       name="reason"
                       placeholder="reason (kept in the log)"
-                      className="w-56 rounded-md border border-line bg-card px-2 py-1"
+                      className="w-56 rounded border border-line bg-card px-2 py-1"
                     />
-                    <button type="submit" className="rounded-md border border-line px-3 py-1 hover:border-ink">
+                    <button type="submit" className="rounded border border-line px-3 py-1 hover:border-ink">
                       Save
                     </button>
                   </form>
@@ -121,24 +121,24 @@ export default async function AccountsPage() {
       </section>
 
       <section>
-        <h2 className="mb-2 text-lg">Access log</h2>
-        <p className="mb-4 text-xs text-muted">The latest 200 entries. Entries cannot be changed or removed.</p>
-        <ul className="divide-y divide-line border-y border-line text-sm">
+        <h2 className="t-label mb-3 border-b border-line pb-1">Access log</h2>
+        <p className="mb-4 text-[11px] text-muted">The latest 200 entries. Entries cannot be changed or removed.</p>
+        <ul className="divide-y divide-line border-y border-line t-body">
           {log.map((e) => (
             <li key={e.id} className="flex flex-wrap gap-x-4 gap-y-1 py-2">
-              <span className="w-44 shrink-0 text-xs text-muted">{when(e.at)}</span>
+              <span className="w-44 shrink-0 text-[11px] text-muted">{when(e.at)}</span>
               <span className="w-40 shrink-0">{who(e.actor)}</span>
-              <span className="font-mono text-xs">{e.action}</span>
+              <span className="font-mono text-[11px]">{e.action}</span>
               {e.subject_id && <span>{who(e.subject_id)}</span>}
               {e.item_kind && (
-                <span className="text-xs text-muted">
+                <span className="text-[11px] text-muted">
                   {e.item_kind} {e.item_id}
                 </span>
               )}
-              <span className="min-w-0 flex-1 truncate text-xs text-muted" title={change(e)}>
+              <span className="min-w-0 flex-1 truncate text-[11px] text-muted" title={change(e)}>
                 {change(e)}
               </span>
-              {e.reason && <span className="text-xs italic">“{e.reason}”</span>}
+              {e.reason && <span className="text-[11px] italic">“{e.reason}”</span>}
             </li>
           ))}
         </ul>

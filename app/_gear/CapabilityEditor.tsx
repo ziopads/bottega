@@ -8,7 +8,7 @@ import type { CapabilityDef, CapabilityValue } from '@/lib/gearTypes';
 // a number, text, one choice, or several. Used for a unit's overrides and for
 // the administrator's model capabilities. The server parses and checks again.
 
-const field = 'rounded-md border border-line bg-card px-2 py-1 text-sm outline-none focus:border-rust';
+const field = 'rounded border border-line bg-card px-2 py-1 t-body outline-none focus:border-rust';
 
 export function CapabilityInput({
   def,
@@ -74,7 +74,7 @@ export function CapabilityInput({
     case 'list': {
       const chosen = new Set(Array.isArray(value) ? value : []);
       return (
-        <span className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+        <span className="flex flex-wrap gap-x-3 gap-y-1 t-body">
           {def.choices.map((c) => (
             <label key={c} className="flex items-center gap-1">
               <input
@@ -121,7 +121,7 @@ export function CapabilityEditor({
           await onSave(draft ?? null);
           setBusy(false);
         }}
-        className="rounded-md border border-line px-2 py-0.5 text-xs hover:border-ink disabled:opacity-40"
+        className="rounded border border-line px-2 py-0.5 text-[11px] hover:border-ink disabled:opacity-40"
       >
         Save
       </button>
@@ -132,7 +132,7 @@ export function CapabilityEditor({
           if (await onSave(null)) setDraft(undefined);
           setBusy(false);
         }}
-        className="text-xs text-muted hover:text-rust"
+        className="text-[11px] text-muted hover:text-rust"
       >
         {clearLabel}
       </button>

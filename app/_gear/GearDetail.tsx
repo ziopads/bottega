@@ -89,16 +89,16 @@ export default function GearDetail({
     <div className="mt-4 space-y-10">
       {/* ── What it is ─────────────────────────────────────────────────── */}
       <div>
-        <h1 className="font-serif text-2xl sm:text-3xl">{unitTitle(unit)}</h1>
-        <p className="mt-1 text-sm text-muted">
+        <h1 className="t-title">{unitTitle(unit)}</h1>
+        <p className="mt-1 t-body text-muted">
           {[unit.model?.category, unit.model?.kind].filter(Boolean).join(' · ')}
           {unit.model?.status === 'suggested' && ' · model awaiting approval'}
           {!unit.model && 'not in the catalogue'}
           {!isOwner && ` · shared by ${unit.ownerName}`}
         </p>
 
-        <dl className="mt-4 grid max-w-2xl grid-cols-[8rem_1fr] gap-x-4 gap-y-2 text-sm">
-          <dt className="text-muted">Nickname</dt>
+        <dl className="mt-4 grid max-w-2xl grid-cols-[8rem_1fr] gap-x-4 gap-y-2 t-body">
+          <dt className="t-label pt-0.5">Nickname</dt>
           <dd>
             {canEdit ? (
               <InlineEdit value={unit.nickname} placeholder="—" label="Nickname" onSave={(v) => patch({ nickname: v })} />
@@ -106,13 +106,13 @@ export default function GearDetail({
               unit.nickname || '—'
             )}
           </dd>
-          <dt className="text-muted">Status</dt>
+          <dt className="t-label pt-0.5">Status</dt>
           <dd>
             {isOwner ? (
               <select
                 value={unit.status}
                 onChange={(e) => patch({ status: e.target.value as GearStatus })}
-                className="rounded-md border border-line bg-card px-2 py-1"
+                className="rounded border border-line bg-card px-2 py-1"
               >
                 {GEAR_STATUSES.map((s) => (
                   <option key={s} value={s}>
@@ -124,7 +124,7 @@ export default function GearDetail({
               GEAR_STATUS_LABEL[unit.status]
             )}
           </dd>
-          <dt className="text-muted">Firmware</dt>
+          <dt className="t-label pt-0.5">Firmware</dt>
           <dd>
             {canEdit ? (
               <InlineEdit value={unit.firmware} placeholder="—" label="Firmware" onSave={(v) => patch({ firmware: v })} />
@@ -132,7 +132,7 @@ export default function GearDetail({
               unit.firmware || '—'
             )}
           </dd>
-          <dt className="text-muted">Notes</dt>
+          <dt className="t-label pt-0.5">Notes</dt>
           <dd>
             {canEdit ? (
               <InlineEdit value={unit.notes} placeholder="—" label="Notes" onSave={(v) => patch({ notes: v })} />
@@ -141,20 +141,20 @@ export default function GearDetail({
             )}
           </dd>
         </dl>
-        {error && <p className="mt-3 text-sm text-rust">{error}</p>}
+        {error && <p className="mt-3 t-body text-rust">{error}</p>}
       </div>
 
       {/* ── Capabilities ────────────────────────────────────────────────── */}
       <section>
-        <div className="mb-3 flex items-baseline gap-4">
-          <h2 className="text-xs uppercase tracking-wide text-muted">Capabilities</h2>
+        <div className="mb-3 flex items-baseline gap-4 border-b border-line pb-1">
+          <h2 className="t-label">Capabilities</h2>
           {canEdit && (
-            <button onClick={() => setEditingCaps((x) => !x)} className="text-xs text-muted underline hover:text-ink">
+            <button onClick={() => setEditingCaps((x) => !x)} className="text-[11px] text-muted underline hover:text-ink">
               {editingCaps ? 'done' : 'where this unit differs from its model…'}
             </button>
           )}
         </div>
-        <table className="w-full max-w-3xl text-sm">
+        <table className="w-full max-w-3xl t-body">
           <tbody className="divide-y divide-line border-y border-line">
             {defs
               .filter((d) => editingCaps || unit.capabilities[d.key])
@@ -177,21 +177,21 @@ export default function GearDetail({
                         c && formatCapability(d, c.value)
                       )}
                     </td>
-                    <td className="w-28 py-1.5 text-right text-xs text-muted">{c?.overridden ? 'this unit' : c ? 'model' : ''}</td>
+                    <td className="w-28 py-1.5 text-right text-[11px] text-muted">{c?.overridden ? 'this unit' : c ? 'model' : ''}</td>
                   </tr>
                 );
               })}
           </tbody>
         </table>
         {!editingCaps && Object.keys(unit.capabilities).length === 0 && (
-          <p className="text-sm text-muted">No capabilities recorded yet.</p>
+          <p className="t-body text-muted">No capabilities recorded yet.</p>
         )}
       </section>
 
       {/* ── Photos ──────────────────────────────────────────────────────── */}
       <section>
-        <h2 className="mb-3 text-xs uppercase tracking-wide text-muted">Photos</h2>
-        {photos.length === 0 && <p className="text-sm text-muted">No photos yet.</p>}
+        <h2 className="t-label mb-3 border-b border-line pb-1">Photos</h2>
+        {photos.length === 0 && <p className="t-body text-muted">No photos yet.</p>}
         <div className="flex flex-wrap gap-3">
           {photos.map((f) => (
             <figure key={f.id} className="w-40">
@@ -207,7 +207,7 @@ export default function GearDetail({
                   </span>
                 )}
               </button>
-              <figcaption className="mt-1 flex items-baseline gap-2 text-xs text-muted">
+              <figcaption className="mt-1 flex items-baseline gap-2 text-[11px] text-muted">
                 <span className="min-w-0 flex-1 truncate">{f.caption || f.filename}</span>
                 {f.role !== 'photo' && <span>{FILE_ROLE_LABEL[f.role]}</span>}
               </figcaption>
@@ -215,7 +215,7 @@ export default function GearDetail({
           ))}
         </div>
         {isOwner && photos.length > 0 && (
-          <p className="mt-2 text-xs text-muted">Click a photo to turn it, make it public or private, or delete it. Private photos are yours alone.</p>
+          <p className="mt-2 text-[11px] text-muted">Click a photo to turn it, make it public or private, or delete it. Private photos are yours alone.</p>
         )}
         {editing && (
           <PhotoEditor
@@ -241,19 +241,19 @@ export default function GearDetail({
       {isOwner && (
         <>
           <section>
-            <h2 className="mb-1 text-xs uppercase tracking-wide text-muted">Receipts and documents</h2>
-            <p className="mb-3 text-xs text-muted">Only you can see these, whoever the unit is shared with.</p>
+            <h2 className="t-label mb-3 border-b border-line pb-1">Receipts and documents</h2>
+            <p className="mb-3 text-[11px] text-muted">Only you can see these, whoever the unit is shared with.</p>
             {privateFiles.length === 0 ? (
-              <p className="text-sm text-muted">None yet. Drop a PDF above to add a receipt or document. Images appear with the photos.</p>
+              <p className="t-body text-muted">None yet. Drop a PDF above to add a receipt or document. Images appear with the photos.</p>
             ) : (
-              <ul className="space-y-1 text-sm">
+              <ul className="space-y-1 t-body">
                 {privateFiles.map((f) => (
                   <li key={f.id} className="flex items-baseline gap-3">
-                    <span className="w-24 text-xs text-muted">{FILE_ROLE_LABEL[f.role]}</span>
+                    <span className="w-24 text-[11px] text-muted">{FILE_ROLE_LABEL[f.role]}</span>
                     <a href={`/api/gear-files/${f.id}?download=1`} className="min-w-0 flex-1 truncate underline hover:text-rust">
                       {f.filename}
                     </a>
-                    <span className="text-xs text-muted">{formatBytes(f.bytes)}</span>
+                    <span className="text-[11px] text-muted">{formatBytes(f.bytes)}</span>
                     <FileDelete file={f} onDeleted={() => setFiles((l) => l.filter((x) => x.id !== f.id))} />
                   </li>
                 ))}
@@ -269,7 +269,7 @@ export default function GearDetail({
             note="A share shows the unit, its capabilities, firmware and photos. Serial, price, location, receipts and licence details stay with you."
           />
 
-          <div className="text-xs">
+          <div className="text-[11px]">
             {armed ? (
               <span className="flex gap-3">
                 <button onClick={remove} className="text-rust underline">
@@ -295,13 +295,13 @@ function FileDelete({ file, onDeleted }: { file: GearFile; onDeleted: () => void
   const [armed, setArmed] = useState(false);
   if (!armed) {
     return (
-      <button onClick={() => setArmed(true)} className="text-xs text-muted hover:text-rust">
+      <button onClick={() => setArmed(true)} className="text-[11px] text-muted hover:text-rust">
         delete
       </button>
     );
   }
   return (
-    <span className="flex gap-2 text-xs">
+    <span className="flex gap-2 text-[11px]">
       <button
         onClick={async () => {
           const r = await api(`/api/gear-files/${file.id}`, { method: 'DELETE' });
@@ -325,7 +325,7 @@ function InsuranceRecord({ gearId, initial, isSoftware }: { gearId: number; init
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const dirty = JSON.stringify(rec) !== JSON.stringify(saved);
-  const field = 'w-full rounded-md border border-line bg-card px-2 py-1 text-sm outline-none focus:border-rust';
+  const field = 'w-full rounded border border-line bg-card px-2 py-1 t-body outline-none focus:border-rust';
   const set = <K extends keyof GearPrivate>(k: K, v: GearPrivate[K]) => setRec((r) => ({ ...r, [k]: v }));
 
   async function save() {
@@ -344,24 +344,24 @@ function InsuranceRecord({ gearId, initial, isSoftware }: { gearId: number; init
 
   const text = (k: keyof GearPrivate, label: string) => (
     <label className="flex flex-col gap-1">
-      <span className="text-xs text-muted">{label}</span>
+      <span className="text-[11px] text-muted">{label}</span>
       <input value={String(rec[k] ?? '')} onChange={(e) => set(k, e.target.value as never)} className={field} />
     </label>
   );
 
   return (
     <section>
-      <h2 className="mb-1 text-xs uppercase tracking-wide text-muted">Insurance record</h2>
-      <p className="mb-3 text-xs text-muted">Only you can see this, whoever the unit is shared with.</p>
+      <h2 className="t-label mb-3 border-b border-line pb-1">Insurance record</h2>
+      <p className="mb-3 text-[11px] text-muted">Only you can see this, whoever the unit is shared with.</p>
       <div className="grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
         {text('serial', 'Serial number')}
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-muted">Purchased</span>
+          <span className="text-[11px] text-muted">Purchased</span>
           <input type="date" value={rec.purchaseDate ?? ''} onChange={(e) => set('purchaseDate', e.target.value || null)} className={field} />
         </label>
         <span className="flex gap-2">
           <label className="flex flex-1 flex-col gap-1">
-            <span className="text-xs text-muted">Price</span>
+            <span className="text-[11px] text-muted">Price</span>
             <input
               inputMode="decimal"
               value={rec.purchasePrice ?? ''}
@@ -370,13 +370,13 @@ function InsuranceRecord({ gearId, initial, isSoftware }: { gearId: number; init
             />
           </label>
           <label className="flex w-20 flex-col gap-1">
-            <span className="text-xs text-muted">Currency</span>
+            <span className="text-[11px] text-muted">Currency</span>
             <input value={rec.currency} onChange={(e) => set('currency', e.target.value.toUpperCase())} className={field} />
           </label>
         </span>
         {text('purchasedFrom', 'Bought from')}
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-muted">Estimated value</span>
+          <span className="text-[11px] text-muted">Estimated value</span>
           <input
             inputMode="decimal"
             value={rec.estimatedValue ?? ''}
@@ -385,13 +385,13 @@ function InsuranceRecord({ gearId, initial, isSoftware }: { gearId: number; init
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-muted">Valued on</span>
+          <span className="text-[11px] text-muted">Valued on</span>
           <input type="date" value={rec.valuedOn ?? ''} onChange={(e) => set('valuedOn', e.target.value || null)} className={field} />
         </label>
         {text('condition', 'Condition')}
         {text('location', 'Location')}
         <label className="flex flex-col gap-1 sm:col-span-3">
-          <span className="text-xs text-muted">Service history</span>
+          <span className="text-[11px] text-muted">Service history</span>
           <textarea
             rows={2}
             value={rec.serviceHistory}
@@ -403,7 +403,7 @@ function InsuranceRecord({ gearId, initial, isSoftware }: { gearId: number; init
           <>
             {text('licenseKey', 'Licence key')}
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-muted">Seats</span>
+              <span className="text-[11px] text-muted">Seats</span>
               <input
                 inputMode="numeric"
                 value={rec.licenseSeats ?? ''}
@@ -413,14 +413,14 @@ function InsuranceRecord({ gearId, initial, isSoftware }: { gearId: number; init
             </label>
             {text('licenseActivation', 'Activation')}
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-muted">Renewal</span>
+              <span className="text-[11px] text-muted">Renewal</span>
               <input type="date" value={rec.licenseRenewal ?? ''} onChange={(e) => set('licenseRenewal', e.target.value || null)} className={field} />
             </label>
           </>
         )}
       </div>
-      <div className="mt-3 flex items-center gap-3 text-sm">
-        <button disabled={!dirty || busy} onClick={save} className="rounded-md bg-rust px-4 py-1.5 text-white disabled:opacity-40">
+      <div className="mt-3 flex items-center gap-3 t-body">
+        <button disabled={!dirty || busy} onClick={save} className="rounded bg-rust px-4 py-1.5 text-white disabled:opacity-40">
           {busy ? 'Saving…' : 'Save record'}
         </button>
         {message && <span className="text-muted">{message}</span>}

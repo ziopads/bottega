@@ -33,19 +33,19 @@ export default function ConvertImages({ images }: { images: { id: number; filena
   }
 
   return (
-    <div className="rounded-md border border-line p-3 text-sm">
+    <div className="rounded border border-line p-3 t-body">
       <p>
         {images.length} older {images.length === 1 ? 'photo is' : 'photos are'} stored at full size. Converting makes the web
         versions here in your browser, removes location data, and deletes the original.
       </p>
       <div className="mt-2 flex items-center gap-3">
-        <button onClick={run} disabled={running} className="rounded-md bg-rust px-3 py-1 text-white disabled:opacity-40">
+        <button onClick={run} disabled={running} className="rounded bg-rust px-3 py-1 text-white disabled:opacity-40">
           {running ? `Converting… ${done} of ${images.length}` : 'Convert them'}
         </button>
-        <span className="text-xs text-muted">Keep this page open while it runs.</span>
+        <span className="text-[11px] text-muted">Keep this page open while it runs.</span>
       </div>
       {failed.length > 0 && (
-        <ul className="mt-2 text-xs text-rust">
+        <ul className="mt-2 text-[11px] text-rust">
           {failed.map((f) => (
             <li key={f}>{f}</li>
           ))}

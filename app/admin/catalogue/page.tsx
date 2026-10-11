@@ -13,7 +13,7 @@ export default async function CataloguePage() {
   const [models, defs] = await Promise.all([listModels(admin.db), listCapabilityDefs(admin.db)]);
   return (
     <div className="py-4">
-      <h1 className="mb-6 text-2xl">Catalogue</h1>
+      <h1 className="mb-6 t-title">Catalogue</h1>
       <CatalogueAdmin initialModels={models} defs={defs} />
     </div>
   );

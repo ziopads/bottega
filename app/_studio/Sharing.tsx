@@ -72,12 +72,12 @@ export default function Sharing({
 
   return (
     <section className={bare ? 't-body' : 'mt-10'}>
-      {!bare && <h2 className="mb-3 text-xs uppercase tracking-wide text-muted">Shared with</h2>}
-      {note && <p className="mb-3 text-xs text-muted">{note}</p>}
+      {!bare && <h2 className="t-label mb-3 border-b border-line pb-1">Shared with</h2>}
+      {note && <p className="mb-3 text-[11px] text-muted">{note}</p>}
       {shares.length === 0 ? (
-        <p className="text-sm text-muted">Only you can see this.</p>
+        <p className="t-body text-muted">Only you can see this.</p>
       ) : (
-        <ul className="space-y-2 text-sm">
+        <ul className="space-y-2 t-body">
           {shares.map((s) => (
             <li key={s.id} className="flex flex-wrap items-center gap-3">
               <span className="min-w-0 flex-1">{s.granteeName}</span>
@@ -85,7 +85,7 @@ export default function Sharing({
                 value={s.level}
                 onChange={(e) => change(s, e.target.value as ShareLevel)}
                 aria-label={`Access for ${s.granteeName}`}
-                className="rounded-md border border-line bg-card px-2 py-1 outline-none focus:border-rust"
+                className="rounded border border-line bg-card px-2 py-1 outline-none focus:border-rust"
               >
                 {SHARE_LEVELS.map((l) => (
                   <option key={l} value={l}>
@@ -93,7 +93,7 @@ export default function Sharing({
                   </option>
                 ))}
               </select>
-              <button onClick={() => revoke(s)} className="text-xs text-muted hover:text-rust">
+              <button onClick={() => revoke(s)} className="text-[11px] text-muted hover:text-rust">
                 Stop sharing
               </button>
             </li>
@@ -101,20 +101,20 @@ export default function Sharing({
         </ul>
       )}
 
-      <form onSubmit={add} className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+      <form onSubmit={add} className="mt-4 flex flex-wrap items-center gap-2 t-body">
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="their@email"
           aria-label="Email of the person to share with"
-          className={`${bare ? 'w-full' : 'w-64'} rounded-md border border-line bg-card px-2 py-1 outline-none focus:border-rust`}
+          className={`${bare ? 'w-full' : 'w-64'} rounded border border-line bg-card px-2 py-1 outline-none focus:border-rust`}
         />
         <select
           value={level}
           onChange={(e) => setLevel(e.target.value as ShareLevel)}
           aria-label="Access to give"
-          className={`${bare ? 'min-w-0 flex-1' : ''} rounded-md border border-line bg-card px-2 py-1 outline-none focus:border-rust`}
+          className={`${bare ? 'min-w-0 flex-1' : ''} rounded border border-line bg-card px-2 py-1 outline-none focus:border-rust`}
         >
           {SHARE_LEVELS.map((l) => (
             <option key={l} value={l}>
@@ -124,12 +124,12 @@ export default function Sharing({
         </select>
         <button
           disabled={busy || !email.trim()}
-          className="rounded-md border border-line px-3 py-1 hover:border-ink disabled:opacity-50"
+          className="rounded border border-line px-3 py-1 hover:border-ink disabled:opacity-50"
         >
           {busy ? 'Sharing…' : 'Share'}
         </button>
       </form>
-      {error && <p className="mt-2 text-sm text-rust">{error}</p>}
+      {error && <p className="mt-2 t-body text-rust">{error}</p>}
     </section>
   );
 }

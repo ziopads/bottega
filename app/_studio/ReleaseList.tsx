@@ -46,11 +46,11 @@ export default function ReleaseList({
     setYear('');
   }
 
-  const field = 'rounded-md border border-line bg-parchment px-2 py-1.5 text-sm outline-none focus:border-rust';
+  const field = 'rounded border border-line bg-parchment px-2 py-1.5 t-body outline-none focus:border-rust';
 
   return (
     <div>
-      <form onSubmit={create} className="flex flex-wrap items-end gap-3 rounded-lg border border-line bg-card p-4 text-sm">
+      <form onSubmit={create} className="flex flex-wrap items-end gap-3 rounded-lg border border-line bg-card p-4 t-body">
         <label className="flex flex-col gap-1">
           <span className="text-muted">Title</span>
           <input required value={title} onChange={(e) => setTitle(e.target.value)} className={`${field} w-64`} />
@@ -80,24 +80,24 @@ export default function ReleaseList({
           <span className="text-muted">Year</span>
           <input value={year} onChange={(e) => setYear(e.target.value)} inputMode="numeric" className={`${field} w-20`} />
         </label>
-        <button disabled={busy || !title.trim()} className="rounded-md bg-rust px-4 py-1.5 text-white disabled:opacity-50">
+        <button disabled={busy || !title.trim()} className="rounded bg-rust px-4 py-1.5 text-white disabled:opacity-50">
           {busy ? 'Creating…' : 'New collection'}
         </button>
       </form>
-      {error && <p className="mt-3 text-sm text-rust">{error}</p>}
+      {error && <p className="mt-3 t-body text-rust">{error}</p>}
 
       {releases.length === 0 ? (
-        <p className="mt-6 text-sm text-muted">No collections yet.</p>
+        <p className="mt-6 t-body text-muted">No collections yet.</p>
       ) : (
         <ul className="mt-6 divide-y divide-line rounded-lg border border-line bg-card">
           {[...releases.filter((r) => r.ownerId === viewerId), ...releases.filter((r) => r.ownerId !== viewerId)].map((r) => (
             <li key={r.id}>
               <Link href={`/collections/${r.id}`} className="flex items-baseline gap-3 px-4 py-3 hover:bg-ink/5">
-                <span className="font-serif text-lg">{r.title}</span>
-                <span className="text-xs text-muted">
+                <span className="t-lead">{r.title}</span>
+                <span className="text-[11px] text-muted">
                   {[RELEASE_KIND_LABEL[r.kind], r.artist?.code, r.year].filter(Boolean).join(' · ')}
                 </span>
-                <span className="ml-auto text-xs text-muted">
+                <span className="ml-auto text-[11px] text-muted">
                   {r.ownerId !== viewerId && `shared by ${r.ownerName} · `}
                   {r.trackCount} {r.trackCount === 1 ? 'track' : 'tracks'}
                 </span>

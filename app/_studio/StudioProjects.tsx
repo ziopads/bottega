@@ -266,7 +266,7 @@ export default function StudioProjects({
   // ── Player ────────────────────────────────────────────────────────────────
   const player = usePlayer(shown, projects, rate);
 
-  const th = 'px-2 py-2 text-left text-xs font-normal uppercase tracking-wide text-muted';
+  const th = 'px-2 py-2 text-left text-[11px] font-normal uppercase tracking-wide text-muted';
   const SortHead = ({ k, children, className = '' }: { k: SortKey; children: React.ReactNode; className?: string }) => (
     <th className={`${th} ${className}`} aria-sort={sort.key === k ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
       <button onClick={() => clickSort(k)} className={`hover:text-ink ${sort.key === k ? 'text-ink' : ''}`}>
@@ -286,19 +286,19 @@ export default function StudioProjects({
           defaultArtistId={defaultArtistId}
           onCreated={(p) => setProjects((list) => [{ ...p, latest: null, releaseIds: [] }, ...list])}
         />
-        <Link href="/collections" className="text-sm text-muted underline hover:text-ink">
+        <Link href="/collections" className="t-body text-muted underline hover:text-ink">
           Releases ({releases.length})
         </Link>
       </div>
 
       {/* ── Filters ─────────────────────────────────────────────────────── */}
-      <div className="mb-3 mt-6 flex flex-wrap items-center gap-4 text-sm">
+      <div className="mb-3 mt-6 flex flex-wrap items-center gap-4 t-body">
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search ID, name, artist, collection…"
-          className="w-full rounded-md border border-line bg-card px-3 py-1.5 outline-none focus:border-rust sm:w-64"
+          className="w-full rounded border border-line bg-card px-3 py-1.5 outline-none focus:border-rust sm:w-64"
         />
         <FilterSelect
           label="Artist"
@@ -339,7 +339,7 @@ export default function StudioProjects({
           <span className="text-muted">With audio</span>
         </label>
         {filtering && (
-          <span className="flex items-baseline gap-2 text-xs text-muted">
+          <span className="flex items-baseline gap-2 text-[11px] text-muted">
             showing {shown.length} of {projects.length}
             <button
               onClick={() => {
@@ -371,15 +371,15 @@ export default function StudioProjects({
         />
       )}
 
-      {error && <p className="mb-3 text-sm text-rust">{error}</p>}
+      {error && <p className="mb-3 t-body text-rust">{error}</p>}
 
       {shown.length === 0 ? (
-        <p className="rounded-lg border border-line bg-card px-4 py-6 text-sm text-muted">
+        <p className="rounded-lg border border-line bg-card px-4 py-6 t-body text-muted">
           {projects.length === 0 ? 'No sessions yet.' : 'No sessions match these filters.'}
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-line bg-card">
-          <table className="w-full min-w-[900px] border-collapse text-sm">
+          <table className="w-full min-w-[900px] border-collapse t-body">
             <thead className="border-b border-line">
               <tr>
                 <th className={`${th} w-8`}>
@@ -442,7 +442,7 @@ export default function StudioProjects({
         />
       )}
 
-      <p className="mt-3 text-xs text-muted">
+      <p className="mt-3 text-[11px] text-muted">
         Click a column heading to sort, again to reverse. Shift-click checkboxes to select a range.
         {shown.some((p) => p.latest) && ' Keys: Space play/pause · N next · P previous · 1–5 rate the playing session · 0 clears.'}
       </p>
@@ -467,7 +467,7 @@ function FilterSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="max-w-[14rem] rounded-md border border-line bg-card px-2 py-1 outline-none focus:border-rust"
+        className="max-w-[14rem] rounded border border-line bg-card px-2 py-1 outline-none focus:border-rust"
       >
         {options.map(([v, l]) => (
           <option key={v} value={v}>
@@ -513,10 +513,10 @@ function BulkBar({
     if (ok) setDone(`${label} set on ${count}.`);
   }
 
-  const sel = 'rounded-md border border-line bg-card px-2 py-1 text-sm outline-none focus:border-rust';
+  const sel = 'rounded border border-line bg-card px-2 py-1 t-body outline-none focus:border-rust';
 
   return (
-    <div className="sticky top-0 z-30 mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-ink/30 bg-parchment px-3 py-2 text-sm shadow-sm">
+    <div className="sticky top-0 z-30 mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-ink/30 bg-parchment px-3 py-2 t-body shadow-sm">
       <span className="font-medium">{count} selected</span>
 
       <label className="flex items-center gap-2">
@@ -544,7 +544,7 @@ function BulkBar({
           placeholder="—"
           className={`${sel} w-16`}
         />
-        <button disabled={busy} className="rounded-md border border-line px-2 py-1 hover:border-ink disabled:opacity-50">
+        <button disabled={busy} className="rounded border border-line px-2 py-1 hover:border-ink disabled:opacity-50">
           Set
         </button>
       </form>
@@ -624,8 +624,8 @@ function BulkBar({
         )}
       </label>
 
-      {done && <span className="text-xs text-muted">{done}</span>}
-      <button onClick={onClear} className="ml-auto text-xs text-muted underline hover:text-ink">
+      {done && <span className="text-[11px] text-muted">{done}</span>}
+      <button onClick={onClear} className="ml-auto text-[11px] text-muted underline hover:text-ink">
         Clear selection
       </button>
     </div>
@@ -678,7 +678,7 @@ function ProjectRow({
             onClick={onPlay}
             aria-label={playing ? 'Pause' : `Play ${p.latest.label}`}
             title={`${playing ? 'Pause' : 'Play'} ${p.latest.label}`}
-            className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs ${
+            className={`flex h-7 w-7 items-center justify-center rounded-full border text-[11px] ${
               isCurrent ? 'border-ink bg-ink text-parchment' : 'border-line hover:border-ink'
             }`}
           >
@@ -689,7 +689,7 @@ function ProjectRow({
       <td className={td}>
         <Stars rating={p.rating} onRate={onRate} />
       </td>
-      <td className={`${td} text-xs font-medium tracking-[0.04em] text-muted`} title={p.artist.name}>
+      <td className={`${td} text-[11px] font-medium tracking-[0.04em] text-muted`} title={p.artist.name}>
         {p.artist.code}
       </td>
       <td className={`${td} whitespace-nowrap`}>
@@ -723,15 +723,15 @@ function ProjectRow({
           onSave={(v) => onPatch({ bpm: v })}
         />
       </td>
-      <td className={`${td} text-xs tabular-nums text-muted`}>{p.latest ? p.latest.label : ''}</td>
-      <td className={`${td} text-right text-xs tabular-nums text-muted`}>
+      <td className={`${td} text-[11px] tabular-nums text-muted`}>{p.latest ? p.latest.label : ''}</td>
+      <td className={`${td} text-right text-[11px] tabular-nums text-muted`}>
         {p.latest ? formatDuration(p.latest.durationS) : ''}
       </td>
-      <td className={`${td} max-w-[10rem] truncate text-xs text-muted`} title={releaseTitles.join(', ')}>
+      <td className={`${td} max-w-[10rem] truncate text-[11px] text-muted`} title={releaseTitles.join(', ')}>
         {releaseTitles.join(', ')}
       </td>
-      <td className={`${td} whitespace-nowrap text-xs text-muted`}>{date(p.createdAt)}</td>
-      <td className={`${td} whitespace-nowrap text-xs text-muted`}>{p.latest ? date(p.latest.uploadedAt) : ''}</td>
+      <td className={`${td} whitespace-nowrap text-[11px] text-muted`}>{date(p.createdAt)}</td>
+      <td className={`${td} whitespace-nowrap text-[11px] text-muted`}>{p.latest ? date(p.latest.uploadedAt) : ''}</td>
     </tr>
   );
 }

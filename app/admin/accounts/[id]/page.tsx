@@ -27,25 +27,25 @@ export default async function AccountViewPage({ params }: { params: Promise<{ id
   return (
     <div className="space-y-8 py-4">
       <div>
-        <Link href="/admin/accounts" className="text-sm text-muted hover:text-rust">
+        <Link href="/admin/accounts" className="t-body text-muted hover:text-rust">
           ← Accounts
         </Link>
-        <h1 className="mt-2 text-2xl">{String(person.display_name || person.email)}</h1>
-        <p className="text-sm text-muted">
+        <h1 className="mt-2 t-title">{String(person.display_name || person.email)}</h1>
+        <p className="t-body text-muted">
           {String(person.email)} · {String(person.status)} · read-only; this visit is in the access log
         </p>
       </div>
 
       <section>
-        <h2 className="mb-2 text-xs uppercase tracking-wide text-muted">Sessions ({theirs.length})</h2>
-        <ul className="divide-y divide-line border-y border-line text-sm">
+        <h2 className="t-label mb-3 border-b border-line pb-1">Sessions ({theirs.length})</h2>
+        <ul className="divide-y divide-line border-y border-line t-body">
           {theirs.map((p) => (
             <li key={p.id} className="flex gap-4 py-2">
-              <span className="w-40 shrink-0 font-mono text-xs text-muted">
+              <span className="w-40 shrink-0 font-mono text-[11px] text-muted">
                 {p.artist.code} {p.canonicalId}
               </span>
               <span className="min-w-0 flex-1">{p.workingName || 'untitled'}</span>
-              <span className="text-xs text-muted">
+              <span className="text-[11px] text-muted">
                 {p.latest ? `${p.latest.count} mixes · ${formatDuration(p.latest.durationS)}` : 'no audio'}
               </span>
             </li>
@@ -54,11 +54,11 @@ export default async function AccountViewPage({ params }: { params: Promise<{ id
       </section>
 
       <section>
-        <h2 className="mb-2 text-xs uppercase tracking-wide text-muted">Collections ({theirReleases.length})</h2>
-        <ul className="divide-y divide-line border-y border-line text-sm">
+        <h2 className="t-label mb-3 border-b border-line pb-1">Collections ({theirReleases.length})</h2>
+        <ul className="divide-y divide-line border-y border-line t-body">
           {theirReleases.map((r) => (
             <li key={r.id} className="py-2">
-              {r.title} <span className="text-xs text-muted">· {r.trackCount} tracks</span>
+              {r.title} <span className="text-[11px] text-muted">· {r.trackCount} tracks</span>
             </li>
           ))}
         </ul>

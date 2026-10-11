@@ -57,11 +57,11 @@ export default function LengthBackfill({ items }: { items: Item[] }) {
   const failed = items.filter((i) => done[i.id] === 'failed');
 
   return (
-    <div className="space-y-3 text-sm">
+    <div className="space-y-3 t-body">
       <button
         onClick={run}
         disabled={running}
-        className="rounded-md border border-line px-3 py-1 hover:border-ink disabled:opacity-50"
+        className="rounded border border-line px-3 py-1 hover:border-ink disabled:opacity-50"
       >
         {running ? `Measuring… ${Object.keys(done).length} of ${items.length}` : 'Measure and save'}
       </button>

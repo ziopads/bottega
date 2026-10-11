@@ -43,7 +43,7 @@ export default async function GearUnitPage({ params }: Params) {
 
   return (
     <div>
-      <Link href="/gear" className="text-sm text-muted hover:text-rust">
+      <Link href="/gear" className="t-body text-muted hover:text-rust">
         ← Gear
       </Link>
       <GearDetail

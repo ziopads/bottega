@@ -786,6 +786,13 @@ so pages differ in content and never in how they are built.
   uppercase, grey: labels and metadata). Medium weight is the only
   emphasis. Numbers that line up (codes, times, dates, BPM) add `t-num` for
   even-width digits; no monospace face.
+- **Headers and controls.** Every page opens with `PageHeader` (the way
+  back, the title, one line of facts joined by middle dots, the page's
+  actions on the right). Buttons, text actions and fields take their classes
+  from `app/_ui/styles.ts` (`BUTTON`, `BUTTON_PRIMARY`, `TEXT_ACTION`,
+  `TEXT_DANGER`, `FIELD`), so a control looks the same on every page. No
+  Tailwind type sizes (`text-sm`, `text-2xl`) and no serif outside the type
+  scale; 11px (`text-[11px]`) is the size for secondary lines.
 - **Sections.** A `t-label` heading over a hairline rule (`Section`), no
   boxes. Label and value pairs in an aside are a `MetaList`.
 - **Tabs.** `TabBar`: links when each tab is its own page (gear's Map and

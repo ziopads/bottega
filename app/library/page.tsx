@@ -11,7 +11,7 @@ export default async function LibraryPage() {
   const [documents, allowance] = await Promise.all([listDocuments(db), getAllowance(db)]);
   return (
     <div className="max-w-4xl">
-      <h1 className="mb-6 font-serif text-2xl sm:text-3xl">Library</h1>
+      <h1 className="mb-6 t-title">Library</h1>
       <Library documents={documents} allowance={allowance} viewerId={userId} isAdmin={isPlatformAdmin} />
     </div>
   );

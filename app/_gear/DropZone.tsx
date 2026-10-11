@@ -67,7 +67,7 @@ export default function DropZone({
   }
 
   return (
-    <div className="mt-4 text-sm">
+    <div className="mt-4 t-body">
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -88,7 +88,7 @@ export default function DropZone({
         }`}
       >
         <span>{busy ? 'Uploading…' : 'Drop photos here, or click to choose'}</span>
-        <span className="text-xs text-muted">
+        <span className="text-[11px] text-muted">
           {isOwner ? 'Images and PDFs, several at once. ' : 'Images, several at once. '}
           Photos are resized here before they upload; location data is removed.
         </span>
@@ -105,9 +105,9 @@ export default function DropZone({
         }}
       />
       {isOwner && (
-        <label className="mt-2 flex items-center gap-2 text-xs text-muted">
+        <label className="mt-2 flex items-center gap-2 text-[11px] text-muted">
           Add as
-          <select value={role} onChange={(e) => setRole(e.target.value as GearFileRole)} className="rounded-md border border-line bg-card px-2 py-0.5">
+          <select value={role} onChange={(e) => setRole(e.target.value as GearFileRole)} className="rounded border border-line bg-card px-2 py-0.5">
             {FILE_ROLES.map((r) => (
               <option key={r} value={r}>
                 {FILE_ROLE_LABEL[r]}
@@ -118,7 +118,7 @@ export default function DropZone({
         </label>
       )}
       {items.length > 0 && (
-        <ul className="mt-2 space-y-0.5 text-xs">
+        <ul className="mt-2 space-y-0.5 text-[11px]">
           {items.map((i) => (
             <li key={i.key} className="flex gap-3">
               <span className="min-w-0 flex-1 truncate">{i.name}</span>

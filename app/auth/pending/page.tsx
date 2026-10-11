@@ -19,23 +19,23 @@ export default async function PendingPage() {
     <div className="max-w-sm space-y-4 py-12">
       {account.status === 'disabled' ? (
         <>
-          <h1 className="text-2xl">Account disabled</h1>
-          <p className="text-sm">
+          <h1 className="t-title">Account disabled</h1>
+          <p className="t-body">
             The account for {account.email} has been disabled. Ask the person who runs Bottega if you think this is a
             mistake.
           </p>
         </>
       ) : (
         <>
-          <h1 className="text-2xl">Awaiting approval</h1>
-          <p className="text-sm">
+          <h1 className="t-title">Awaiting approval</h1>
+          <p className="t-body">
             Your account ({account.email}) has been created and is waiting to be approved. Once it is, signing in
             brings you to your own sessions and gear.
           </p>
         </>
       )}
       <form action={signOut}>
-        <button type="submit" className="text-sm text-rust underline-offset-2 hover:underline">
+        <button type="submit" className="t-body text-rust underline-offset-2 hover:underline">
           Sign out
         </button>
       </form>

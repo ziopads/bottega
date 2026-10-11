@@ -23,7 +23,7 @@ export function InlineEdit({
   onSave,
   inputMode,
   align = 'left',
-  textClass = 'text-sm',
+  textClass = 't-body',
 }: {
   value: string;
   placeholder: string;
@@ -31,7 +31,7 @@ export function InlineEdit({
   onSave: (v: string) => Promise<boolean>;
   inputMode?: 'text' | 'decimal';
   align?: 'left' | 'right';
-  /** Type size for both states, e.g. 'text-2xl' for a page heading. */
+  /** Type size for both states, e.g. 't-title' for a page heading. */
   textClass?: string;
 }) {
   const [editing, setEditing] = useState(false);
@@ -77,7 +77,7 @@ export function InlineEdit({
           }
         }}
         placeholder={placeholder}
-        className={`w-full rounded-md border border-line bg-parchment px-2 py-1 ${textClass} text-ink outline-none focus:border-rust ${alignClass}`}
+        className={`w-full rounded border border-line bg-parchment px-2 py-1 ${textClass} text-ink outline-none focus:border-rust ${alignClass}`}
       />
     );
   }
@@ -117,7 +117,7 @@ export function Stars({ rating, onRate }: { rating: number; onRate: (n: number) 
           onClick={() => onRate(n === rating ? 0 : n)}
           aria-label={n === rating ? `Clear rating (${n})` : `Rate ${n} of ${RATING_MAX}`}
           title={n === rating ? 'Clear rating' : `${n} of ${RATING_MAX}`}
-          className={`px-px text-base leading-none ${n <= shown ? 'text-ink' : 'text-muted/40'}`}
+          className={`px-px t-lead leading-none ${n <= shown ? 'text-ink' : 'text-muted/40'}`}
         >
           {n <= shown ? '★' : '☆'}
         </button>
@@ -166,7 +166,7 @@ export function GenreSelect({
     }
   }
 
-  const base = `rounded-md border border-line bg-card px-2 py-1 text-sm outline-none focus:border-rust ${className}`;
+  const base = `rounded border border-line bg-card px-2 py-1 t-body outline-none focus:border-rust ${className}`;
 
   if (adding) {
     return (

@@ -55,7 +55,7 @@ export default function NewProject({
 
   if (!open) {
     return (
-      <button onClick={start} className="rounded-md bg-rust px-4 py-2 text-sm text-white">
+      <button onClick={start} className="rounded bg-rust px-4 py-2 t-body text-white">
         New session
       </button>
     );
@@ -64,13 +64,13 @@ export default function NewProject({
   return (
     <form onSubmit={submit} className="rounded-lg border border-line bg-card p-4">
       <div className="grid gap-3 sm:grid-cols-[auto_auto_1fr]">
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-1 t-body">
           <span className="text-muted">Artist</span>
           <select
             required
             value={artistId}
             onChange={(e) => setArtistId(e.target.value === '' ? '' : Number(e.target.value))}
-            className="rounded-md border border-line bg-parchment px-2 py-2 outline-none focus:border-rust"
+            className="rounded border border-line bg-parchment px-2 py-2 outline-none focus:border-rust"
           >
             <option value="" disabled>
               Choose…
@@ -82,33 +82,33 @@ export default function NewProject({
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-1 t-body">
           <span className="text-muted">Canonical ID</span>
           <input
             required
             value={canonicalId}
             onChange={(e) => setCanonicalId(e.target.value)}
-            className="w-36 rounded-md border border-line bg-parchment px-2 py-2 font-mono outline-none focus:border-rust"
+            className="w-36 rounded border border-line bg-parchment px-2 py-2 font-mono outline-none focus:border-rust"
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-1 t-body">
           <span className="text-muted">Working name</span>
           <input
             value={workingName}
             onChange={(e) => setWorkingName(e.target.value)}
             placeholder="optional"
-            className="rounded-md border border-line bg-parchment px-2 py-2 outline-none focus:border-rust"
+            className="rounded border border-line bg-parchment px-2 py-2 outline-none focus:border-rust"
           />
         </label>
       </div>
 
-      <p className="mt-2 text-xs text-muted">
+      <p className="mt-2 text-[11px] text-muted">
         The canonical ID must match the project&rsquo;s Ableton folder name. It cannot be changed after the project is
         created.
       </p>
 
       {error && (
-        <p className="mt-3 text-sm text-rust">
+        <p className="mt-3 t-body text-rust">
           {error}{' '}
           {suggestion && (
             <button
@@ -127,10 +127,10 @@ export default function NewProject({
       )}
 
       <div className="mt-4 flex gap-2">
-        <button disabled={busy} className="rounded-md bg-rust px-4 py-2 text-sm text-white disabled:opacity-50">
+        <button disabled={busy} className="rounded bg-rust px-4 py-2 t-body text-white disabled:opacity-50">
           {busy ? 'Creating…' : 'Create session'}
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="px-3 py-2 text-sm text-muted hover:text-ink">
+        <button type="button" onClick={() => setOpen(false)} className="px-3 py-2 t-body text-muted hover:text-ink">
           Cancel
         </button>
       </div>

@@ -3,6 +3,7 @@ import Link from 'next/link';
 // The app's layout pieces (ARCHITECTURE §13): the same few, used on every
 // page, so pages differ in content and never in how they are put together.
 //
+//   PageHeader   the way back, the title, one line of facts, the page's actions
 //   DetailGrid   twelve columns: main 8, aside 4, the aside on the right or
 //                the left (side); one column below lg, main first
 //   Section      a small grey label over a hairline rule, then the content
@@ -12,6 +13,45 @@ import Link from 'next/link';
 // Type has four sizes, as utilities in globals.css: t-title (18px, page
 // titles only), t-lead (15px, the main thing in a block), t-body (13px,
 // everything else) and t-label (11px uppercase, labels and metadata).
+
+export function PageHeader({
+  back,
+  title,
+  meta,
+  actions,
+}: {
+  back?: { href: string; label: string };
+  /** A string, or an inline editor at t-title size. */
+  title: React.ReactNode;
+  /** Short facts, joined by a middle dot: maker, kind, size, owner. */
+  meta?: React.ReactNode[];
+  actions?: React.ReactNode;
+}) {
+  const facts = (meta ?? []).filter((m) => m !== null && m !== undefined && m !== false && m !== '');
+  return (
+    <header className="mb-6 mt-3">
+      {back && (
+        <Link href={back.href} className="t-body text-muted hover:text-ink">
+          ← {back.label}
+        </Link>
+      )}
+      <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-2">
+        <h1 className="t-title min-w-0">{title}</h1>
+        {actions && <div className="t-body ml-auto flex flex-wrap items-center gap-3">{actions}</div>}
+      </div>
+      {facts.length > 0 && (
+        <p className="t-body mt-1 flex flex-wrap items-baseline gap-x-2 text-muted">
+          {facts.map((f, i) => (
+            <span key={i} className="flex items-baseline gap-x-2">
+              {i > 0 && <span aria-hidden>·</span>}
+              {f}
+            </span>
+          ))}
+        </p>
+      )}
+    </header>
+  );
+}
 
 export function DetailGrid({
   main,

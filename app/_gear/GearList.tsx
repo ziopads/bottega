@@ -149,7 +149,7 @@ export default function GearList({
 
       {shared.length > 0 && (
         <section className="mt-10">
-          <h2 className="mb-1 text-[11px] uppercase tracking-wide text-muted">Shared with me</h2>
+          <h2 className="t-label mb-3 border-b border-line pb-1">Shared with me</h2>
           <UnitTable units={shared} defByKey={defByKey} showOwner />
         </section>
       )}
@@ -276,17 +276,17 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
     onAdded(r.data.unit);
   }
 
-  const field = 'rounded-md border border-line bg-parchment px-2 py-1.5 text-sm outline-none focus:border-rust';
+  const field = 'rounded border border-line bg-parchment px-2 py-1.5 t-body outline-none focus:border-rust';
 
   return (
-    <form onSubmit={save} className="mb-6 space-y-3 rounded-lg border border-line bg-card p-4 text-sm">
+    <form onSubmit={save} className="mb-6 space-y-3 rounded-lg border border-line bg-card p-4 t-body">
       {model ? (
         <p>
           <span className="font-medium">
             {model.manufacturer} {model.model}
           </span>{' '}
           <span className="text-muted">· {model.category}</span>{' '}
-          <button type="button" onClick={() => setModel(null)} className="text-xs text-muted underline hover:text-ink">
+          <button type="button" onClick={() => setModel(null)} className="text-[11px] text-muted underline hover:text-ink">
             change
           </button>
         </p>
@@ -327,7 +327,7 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
               </select>
             </>
           )}
-          <button type="button" onClick={() => setManual(false)} className="text-xs text-muted underline hover:text-ink">
+          <button type="button" onClick={() => setManual(false)} className="text-[11px] text-muted underline hover:text-ink">
             search the catalogue instead
           </button>
         </div>
@@ -341,14 +341,14 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
             placeholder="Search the catalogue: manufacturer or model…"
             className={`${field} w-full sm:w-96`}
           />
-          <ul className="mt-2 divide-y divide-line rounded-md border border-line sm:w-96">
+          <ul className="mt-2 divide-y divide-line rounded border border-line sm:w-96">
             {results.map((m) => (
               <li key={m.id}>
                 <button type="button" onClick={() => setModel(m)} className="flex w-full gap-2 px-3 py-1.5 text-left hover:bg-ink/5">
                   <span>
                     {m.manufacturer} {m.model}
                   </span>
-                  <span className="ml-auto text-xs text-muted">
+                  <span className="ml-auto text-[11px] text-muted">
                     {m.status === 'suggested' ? 'your suggestion' : m.category}
                   </span>
                 </button>
@@ -380,7 +380,7 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
             <option value="owned">Owned</option>
             <option value="wishlist">Wishlist</option>
           </select>
-          <button disabled={busy} className="rounded-md bg-rust px-4 py-1.5 text-white disabled:opacity-50">
+          <button disabled={busy} className="rounded bg-rust px-4 py-1.5 text-white disabled:opacity-50">
             {busy ? 'Adding…' : 'Add'}
           </button>
         </div>
