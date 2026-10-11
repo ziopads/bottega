@@ -1,14 +1,15 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 import Sharing from '@/app/_studio/Sharing';
 import { api, InlineEdit } from '@/app/_studio/controls';
-import type { CapabilityDef, CapabilityValue, GearFile, GearFileRole, GearPrivate, GearStatus, GearUnit } from '@/lib/gearTypes';
-import { FILE_ROLE_LABEL, FILE_ROLES, GEAR_STATUS_LABEL, GEAR_STATUSES, formatCapability, unitTitle } from '@/lib/gearTypes';
+import type { CapabilityDef, CapabilityValue, GearFile, GearPrivate, GearStatus, GearUnit } from '@/lib/gearTypes';
+import { FILE_ROLE_LABEL, GEAR_STATUS_LABEL, GEAR_STATUSES, formatCapability, unitTitle } from '@/lib/gearTypes';
 import { formatBytes, levelAtLeast, type StudioShare } from '@/lib/studioTypes';
 import { CapabilityEditor } from './CapabilityEditor';
+import DropZone from './DropZone';
 import PhotoEditor from './PhotoEditor';
 import RotatedImage from './RotatedImage';
 
@@ -16,19 +17,6 @@ import RotatedImage from './RotatedImage';
 // overrides), its photos, and for its owner the insurance record, the private
 // files and who it is shared with (REQUIREMENTS G-1 to G-7). Controls follow
 // the viewer's level; the routes and the database enforce the same rules.
-
-const ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,application/pdf';
-
-function putFile(url: string, file: File, contentType: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('PUT', url);
-    xhr.setRequestHeader('Content-Type', contentType);
-    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Storage refused the upload (${xhr.status}).`)));
-    xhr.onerror = () => reject(new Error('The upload could not reach storage (network or CORS).'));
-    xhr.send(file);
-  });
-}
 
 export default function GearDetail({
   initialUnit,
@@ -212,7 +200,7 @@ export default function GearDetail({
                 className="relative block rounded focus:outline-none focus:ring-2 focus:ring-rust"
                 aria-label={isOwner ? `Edit ${f.caption || f.filename}` : `View ${f.caption || f.filename}`}
               >
-                <RotatedImage src={`/api/gear-files/${f.id}`} alt={f.caption || f.filename} rotation={f.rotation} width={160} height={128} className="rounded" />
+                <RotatedImage src={f.urls?.thumb ?? `/api/gear-files/${f.id}`} alt={f.caption || f.filename} rotation={f.rotation} width={160} height={128} className="rounded" />
                 {isOwner && !f.isPublic && (
                   <span className="absolute left-1 top-1 rounded bg-ink/75 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-parchment">
                     Private
@@ -245,7 +233,7 @@ export default function GearDetail({
           />
         )}
         {canContribute && uploadsEnabled && (
-          <Upload gearId={unit.id} roles={isOwner ? [...FILE_ROLES] : ['photo']} onUploaded={(f) => setFiles((l) => [...l, f])} />
+          <DropZone gearId={unit.id} isOwner={isOwner} onUploaded={(f) => setFiles((l) => [...l, f])} />
         )}
       </section>
 
@@ -256,7 +244,7 @@ export default function GearDetail({
             <h2 className="mb-1 text-xs uppercase tracking-wide text-muted">Receipts and documents</h2>
             <p className="mb-3 text-xs text-muted">Only you can see these, whoever the unit is shared with.</p>
             {privateFiles.length === 0 ? (
-              <p className="text-sm text-muted">None yet. Upload above, choosing receipt, serial plate or document. Images appear with the photos.</p>
+              <p className="text-sm text-muted">None yet. Drop a PDF above to add a receipt or document. Images appear with the photos.</p>
             ) : (
               <ul className="space-y-1 text-sm">
                 {privateFiles.map((f) => (
@@ -299,71 +287,6 @@ export default function GearDetail({
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-function Upload({ gearId, roles, onUploaded }: { gearId: number; roles: GearFileRole[]; onUploaded: (f: GearFile) => void }) {
-  const [role, setRole] = useState<GearFileRole>(roles[0]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const input = useRef<HTMLInputElement>(null);
-
-  async function upload(file: File) {
-    setBusy(true);
-    setError('');
-    try {
-      const contentType = file.type;
-      const signed = await api<{ url: string; key: string }>(`/api/gear/${gearId}/files/upload`, {
-        method: 'POST',
-        body: JSON.stringify({ filename: file.name, contentType, bytes: file.size, role }),
-      });
-      if (!signed.ok) throw new Error(signed.body.error || 'Could not start the upload.');
-      await putFile(signed.data.url, file, contentType);
-      const saved = await api<{ file: GearFile }>(`/api/gear/${gearId}/files`, {
-        method: 'POST',
-        body: JSON.stringify({ key: signed.data.key, filename: file.name, role }),
-      });
-      if (!saved.ok) throw new Error(saved.body.error || 'Uploaded, but could not record the file.');
-      onUploaded(saved.data.file);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-      {roles.length > 1 && (
-        <select value={role} onChange={(e) => setRole(e.target.value as GearFileRole)} className="rounded-md border border-line bg-card px-2 py-1">
-          {roles.map((r) => (
-            <option key={r} value={r}>
-              {FILE_ROLE_LABEL[r]}
-            </option>
-          ))}
-        </select>
-      )}
-      <button
-        onClick={() => input.current?.click()}
-        disabled={busy}
-        className="rounded-md border border-line px-3 py-1 hover:border-ink disabled:opacity-50"
-      >
-        {busy ? 'Uploading…' : role === 'photo' ? 'Add a photo' : 'Upload a file'}
-      </button>
-      <span className="text-xs text-muted">JPEG, PNG, WebP, HEIC or PDF, up to 50 MB</span>
-      <input
-        ref={input}
-        type="file"
-        accept={role === 'photo' ? 'image/jpeg,image/png,image/webp,image/heic' : ACCEPT}
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) upload(f);
-          e.target.value = '';
-        }}
-      />
-      {error && <span className="text-rust">{error}</span>}
     </div>
   );
 }

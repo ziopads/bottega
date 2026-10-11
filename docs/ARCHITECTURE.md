@@ -696,12 +696,27 @@ is the database's job.
 
 ### Keys
 
-    a/<owner account id>/gear/<gear id>/<uuid>.<ext>
+    a/<owner account id>/gear/<gear id>/<uuid>/thumb.webp, view.webp, full.webp
+    a/<owner account id>/gear/<gear id>/<uuid>.pdf
     a/<owner account id>/audio/<project id>/<uuid>.mp3
     a/<owner account id>/projects/<project id>/<uuid>.<ext>
     a/<owner account id>/documents/<uuid>.pdf
     library/<uuid>.pdf
 
+- An image is a folder of web versions made in the browser (REQUIREMENTS
+  G-10, migration 007): 480, 1600 and 2560 pixels on the long edge, WebP
+  (JPEG where the browser cannot write WebP), with no metadata. The original
+  is not kept. `gear_files.r2_key` is the folder and `variants` names its
+  files; `bytes` is their total. Images from before 007 are single files
+  until the owner converts them from the account page.
+- Pages sign each image's links while they render (`lib/images.ts`), so the
+  browser fetches from R2 directly, with no request to the app per image.
+  Links are signed as of the start of the hour and valid for two, so an
+  image keeps the same link for the hour and the browser cache serves
+  repeat views; the response carries a matching `Cache-Control`. Thumbnails
+  load lazily.
+- An upload is checked against the storage room of the item's owner
+  (`storage_room()`), since files count against the owner whoever uploads.
 - The account id is Neon Auth's opaque id. Keys hold no email, filename,
   serial or model name; the original filename is in the database and applied
   as `Content-Disposition` on download.

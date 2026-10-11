@@ -30,6 +30,8 @@ export default function RotatedImage({
       <img
         src={src}
         alt={alt}
+        loading="lazy"
+        decoding="async"
         className="absolute left-1/2 top-1/2 max-w-none"
         style={{
           width: quarter ? height : width,

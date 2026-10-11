@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { apiAccount, gearRefusal } from '@/lib/access';
 import { deleteGear, getGear, getModel, updateGear, type GearPatch } from '@/lib/gear';
 import { GEAR_STATUSES, parseShortText, type GearStatus } from '@/lib/gearTypes';
-import { deleteFile } from '@/lib/files';
+import { deleteGearObjects } from '@/lib/images';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,14 +97,14 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
   const refusal = await gearRefusal(db, id, 'owner');
   if (refusal) return refusal;
-  const keys = await deleteGear(db, id);
+  const objects = await deleteGear(db, id);
   // Rows first, then objects: a failed object delete leaves a harmless orphan
   // under the owner's prefix, never a row pointing at nothing.
-  for (const key of keys) {
+  for (const o of objects) {
     try {
-      await deleteFile(key);
+      await deleteGearObjects(o.key, o.variants);
     } catch (err) {
-      console.error('gear file delete failed', key, err);
+      console.error('gear file delete failed', o.key, err);
     }
   }
   return NextResponse.json({ ok: true });

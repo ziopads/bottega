@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.9
+**Version:** 0.10
 **Date:** 2026-10-11
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -10,6 +10,10 @@ built is in `ARCHITECTURE.md`.
 
 ## Changelog
 
+- **0.10** (2026-10-11) — Images are stored as web versions made in the
+  browser, without the original or its location data, and uploaded by
+  dropping several at once (G-10). The account page shows storage and
+  processing against the allowances (O-7). Plans are recorded under Later.
 - **0.9** (2026-10-11) — Gear files are public or private (G-9), replacing
   the rule that photos follow a share and everything else is private; images
   can be turned. A public showcase page is recorded under Later.
@@ -217,6 +221,13 @@ place they left.
   photos start public; receipts, serial plates and documents start private.
   An image can be turned by quarter turns from its edit screen; the stored
   file is never rewritten.
+- **G-10** Images are stored for the web. The browser makes three sizes of
+  each image before upload (a thumbnail, a view size, and a full size of
+  2560 pixels on the long edge), applies the camera's orientation, and drops
+  all metadata, location included. The original is not kept; the full size
+  is enough to read a serial plate. Several images, and PDFs, can be dropped
+  onto a unit at once. Images uploaded before this are converted from the
+  account page.
 
 ## 5. Projects (P)
 
@@ -426,11 +437,20 @@ travel to the database.
 - **O-6** Bottega has its own accounts with outside services, its embedding
   service included, so that its use and costs are never mixed with another
   project's.
+- **O-7** The account page shows what the account stores against its storage
+  allowance, broken down by kind (audio, gear photos, gear documents,
+  private documents, library submissions awaiting review) with file counts,
+  and the pages processed this month against the monthly allowance.
 
 ## 13. Later
 
 Recorded so that early decisions do not close them off; none is designed yet.
 
+- **Plans.** Named sets of allowances (storage, pages a month, longest
+  document, keeping originals) that an account is on, with
+  `account_limits` still overriding one account. Storage on R2 costs little
+  (about 1.5 cents per GB a month); what grows with use is embedding and the
+  corpus in the database, so plans would price pages processed first.
 - **A showcase page.** A page anyone can open without signing in, showing
   the units an owner chooses and their public files (G-9). It needs a
   public flag on units, links that work without a session, and an exception
@@ -447,7 +467,7 @@ Recorded so that early decisions do not close them off; none is designed yet.
 | Phase | Delivers | Stories |
 |---|---|---|
 | 0 | Repository, Neon, sign-in, the studio moved across with parity as music projects and collections, plus references, current mix and length | P-1 to P-4, P-7, S-1 to S-9, O-1, O-3 |
-| 1 | Accounts and access first; then gear catalogue, corpus, first connector tools | AC-1 to AC-12, G-1 to G-5, K-1 to K-10, M-1 to M-4, O-2, O-4 to O-6 |
+| 1 | Accounts and access first; then gear catalogue, corpus, first connector tools | AC-1 to AC-12, G-1 to G-10, K-1 to K-10, M-1 to M-4, O-2, O-4 to O-7 |
 | 2 | Workflow and board for every kind; study group | P-5, P-6, W-1 to W-10, L-1 to L-6 |
 | 3 | Analysis | A-1 to A-5 |
 

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 
 import { apiAccount, gearRefusal } from '@/lib/access';
-import { deleteFile, filesConfigured, signFileGet } from '@/lib/files';
+import { filesConfigured, signFileGet } from '@/lib/files';
+import { deleteGearObjects, imageDownloadUrl } from '@/lib/images';
 import { deleteGearFileRow, getGearFileWithKey, updateGearFile, type GearFilePatch } from '@/lib/gear';
 import { FILE_ROLES, ROTATIONS, type GearFileRole, type Rotation } from '@/lib/gearTypes';
 
@@ -24,11 +25,16 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
   const found = await getGearFileWithKey(account.db, id);
   if (!found) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
-  const url = await signFileGet(found.key, {
-    filename: found.file.filename,
-    contentType: found.file.contentType,
-    download: !!new URL(req.url).searchParams.get('download'),
-  });
+  const download = !!new URL(req.url).searchParams.get('download');
+  // An image folder: the view size to look at, the full size to download.
+  // Pages link to the signed variants directly; this route serves older
+  // images and downloads.
+  const url = found.variants.length
+    ? download
+      ? await imageDownloadUrl(found.key, found.variants, found.file.filename)
+      : found.file.urls?.view
+    : await signFileGet(found.key, { filename: found.file.filename, contentType: found.file.contentType, download });
+  if (!url) return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   const res = NextResponse.redirect(url, 302);
   res.headers.set('Cache-Control', 'private, no-store');
   return res;
@@ -91,7 +97,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   if (refusal) return refusal;
   await deleteGearFileRow(db, id);
   try {
-    await deleteFile(found.key);
+    await deleteGearObjects(found.key, found.variants);
   } catch (err) {
     console.error('gear file delete failed', found.key, err);
   }

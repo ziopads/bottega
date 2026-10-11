@@ -13,6 +13,7 @@ import type {
   GearUnit,
   Rotation,
 } from '@/lib/gearTypes';
+import { imageUrls } from '@/lib/images';
 import { accountNames, nameOf } from '@/lib/names';
 import type { AccessLevel } from '@/lib/studioTypes';
 
@@ -200,13 +201,13 @@ const UNIT_SELECT = `
   select g.id, g.owner_id, gear_level(g.id) as level, g.manufacturer, g.name, g.nickname, g.status, g.firmware,
          g.notes, g.created_at, m.id as model_id, m.kind as model_kind, m.category as model_category,
          m.manufacturer as model_manufacturer, m.model as model_model, m.status as model_status,
-         p.id as photo_id, p.rotation as photo_rotation
+         p.id as photo_id, p.rotation as photo_rotation, p.r2_key as photo_key, p.variants as photo_variants
   from gear g
   left join gear_models m on m.id = g.model_id
   -- The list's picture: the first photo the viewer may see (row-level
   -- security decides which), public ones first.
   left join lateral (
-    select f.id, f.rotation from gear_files f
+    select f.id, f.rotation, f.r2_key, f.variants from gear_files f
     where f.gear_id = g.id and f.role = 'photo'
     order by f.public desc, f.uploaded_at limit 1
   ) p on true`;
@@ -228,6 +229,16 @@ async function toUnits(db: Scoped, rows: Row[]): Promise<GearUnit[]> {
     map[String(c.capability)] = { value: c.value as CapabilityValue, overridden: c.overridden === true };
     byUnit.set(id, map);
   }
+  // Thumbnails for the list, signed here so the page links straight to R2.
+  const thumbs = new Map<number, string>();
+  await Promise.all(
+    rows
+      .filter((r) => r.photo_key && ((r.photo_variants as string[]) ?? []).length)
+      .map(async (r) => {
+        const urls = await imageUrls(String(r.photo_key), r.photo_variants as string[]);
+        if (urls) thumbs.set(num(r.id), urls.thumb);
+      }),
+  );
   return rows.map((r) => ({
     id: num(r.id),
     ownerId: String(r.owner_id),
@@ -254,6 +265,7 @@ async function toUnits(db: Scoped, rows: Row[]): Promise<GearUnit[]> {
     capabilities: byUnit.get(num(r.id)) ?? {},
     photoId: numOrNull(r.photo_id),
     photoRotation: (numOrNull(r.photo_rotation) ?? 0) as Rotation,
+    photoUrl: thumbs.get(num(r.id)) ?? (r.photo_id ? `/api/gear-files/${num(r.photo_id)}` : null),
   }));
 }
 
@@ -307,10 +319,11 @@ export async function updateGear(db: Scoped, id: number, patch: GearPatch): Prom
 }
 
 /** Deletes the unit and returns the storage keys of its files, for the route to remove from R2. */
-export async function deleteGear(db: Scoped, id: number): Promise<string[]> {
-  const files = await db.q('select r2_key from gear_files where gear_id = $1', [id]);
+/** Deletes the unit; returns its files' storage objects for the caller to delete. */
+export async function deleteGear(db: Scoped, id: number): Promise<{ key: string; variants: string[] }[]> {
+  const files = await db.q('select r2_key, variants from gear_files where gear_id = $1', [id]);
   await db.q('delete from gear where id = $1', [id]);
-  return files.map((f) => String(f.r2_key));
+  return files.map((f) => ({ key: String(f.r2_key), variants: (f.variants as string[]) ?? [] }));
 }
 
 export async function setGearCapability(db: Scoped, gearId: number, key: string, value: CapabilityValue | null): Promise<void> {
@@ -386,11 +399,18 @@ export async function updateGearPrivate(db: Scoped, gearId: number, patch: Parti
 
 // ── Files ───────────────────────────────────────────────────────────────────
 
-const FILE_COLUMNS = 'id, gear_id, role, filename, content_type, bytes, caption, public, rotation, uploaded_by_id, uploaded_at';
+const FILE_COLUMNS =
+  'id, gear_id, role, filename, content_type, bytes, caption, public, rotation, r2_key, variants, width, height, uploaded_by_id, uploaded_at';
 
+// The storage key never leaves the server; an image's links are signed here
+// (lib/images.ts), and an older image without web versions is served through
+// /api/gear-files/:id until its owner's browser converts it.
 async function toFiles(db: Scoped, rows: Row[]): Promise<GearFile[]> {
-  const who = await accountNames(db, rows.map((r) => (r.uploaded_by_id ? String(r.uploaded_by_id) : null)));
-  return rows.map((r) => ({
+  const [who, urls] = await Promise.all([
+    accountNames(db, rows.map((r) => (r.uploaded_by_id ? String(r.uploaded_by_id) : null))),
+    Promise.all(rows.map((r) => imageUrls(String(r.r2_key), (r.variants as string[]) ?? []))),
+  ]);
+  return rows.map((r, i) => ({
     id: num(r.id),
     gearId: num(r.gear_id),
     role: String(r.role) as GearFileRole,
@@ -400,6 +420,10 @@ async function toFiles(db: Scoped, rows: Row[]): Promise<GearFile[]> {
     caption: str(r.caption),
     isPublic: r.public === true,
     rotation: num(r.rotation) as Rotation,
+    urls: urls[i],
+    needsConversion: str(r.content_type).startsWith('image/') && !((r.variants as string[]) ?? []).length,
+    width: numOrNull(r.width),
+    height: numOrNull(r.height),
     uploadedByName: nameOf(who, r.uploaded_by_id ? String(r.uploaded_by_id) : null),
     uploadedAt: iso(r.uploaded_at),
   }));
@@ -411,10 +435,37 @@ export async function listGearFiles(db: Scoped, gearId: number): Promise<GearFil
   return toFiles(db, rows);
 }
 
-export async function getGearFileWithKey(db: Scoped, id: number): Promise<{ file: GearFile; key: string } | null> {
-  const rows = await db.q(`select ${FILE_COLUMNS}, r2_key from gear_files where id = $1`, [id]);
+export async function getGearFileWithKey(
+  db: Scoped,
+  id: number,
+): Promise<{ file: GearFile; key: string; variants: string[] } | null> {
+  const rows = await db.q(`select ${FILE_COLUMNS} from gear_files where id = $1`, [id]);
   if (!rows.length) return null;
-  return { file: (await toFiles(db, rows))[0], key: String(rows[0].r2_key) };
+  return { file: (await toFiles(db, rows))[0], key: String(rows[0].r2_key), variants: (rows[0].variants as string[]) ?? [] };
+}
+
+/** The owner's images still stored as originals, for the account page's converter. */
+export async function listUnconvertedImages(db: Scoped): Promise<{ id: number; gearId: number; filename: string }[]> {
+  const rows = await db.q(
+    `select f.id, f.gear_id, f.filename from gear_files f join gear g on g.id = f.gear_id
+     where g.owner_id = app_user() and f.content_type like 'image/%' and cardinality(f.variants) = 0
+     order by f.id`,
+  );
+  return rows.map((r) => ({ id: num(r.id), gearId: num(r.gear_id), filename: String(r.filename) }));
+}
+
+/** Points an older image at its new folder of web versions. The caller deletes the original afterwards. */
+export async function convertGearFile(
+  db: Scoped,
+  id: number,
+  input: { folder: string; variants: string[]; bytes: number; contentType: string; width: number; height: number },
+): Promise<GearFile | null> {
+  const rows = await db.q(
+    `update gear_files set r2_key = $2, variants = $3, bytes = $4, content_type = $5, width = $6, height = $7
+     where id = $1 and cardinality(variants) = 0 returning id`,
+    [id, input.folder, input.variants, input.bytes, input.contentType, input.width, input.height],
+  );
+  return rows.length ? ((await getGearFileWithKey(db, id))?.file ?? null) : null;
 }
 
 export async function addGearFile(
@@ -427,12 +478,19 @@ export async function addGearFile(
     contentType: string;
     bytes: number;
     isPublic: boolean;
+    /** For an image folder: its files, and the full version's size. */
+    variants?: string[];
+    width?: number | null;
+    height?: number | null;
   },
 ): Promise<GearFile> {
   const rows = await db.q(
-    `insert into gear_files (gear_id, role, r2_key, filename, content_type, bytes, public)
-     values ($1, $2, $3, $4, $5, $6, $7) returning ${FILE_COLUMNS}`,
-    [input.gearId, input.role, input.key, input.filename, input.contentType, input.bytes, input.isPublic],
+    `insert into gear_files (gear_id, role, r2_key, filename, content_type, bytes, public, variants, width, height)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning ${FILE_COLUMNS}`,
+    [
+      input.gearId, input.role, input.key, input.filename, input.contentType, input.bytes, input.isPublic,
+      input.variants ?? [], input.width ?? null, input.height ?? null,
+    ],
   );
   return (await toFiles(db, rows))[0];
 }

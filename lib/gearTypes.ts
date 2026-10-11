@@ -2,6 +2,7 @@
 // ARCHITECTURE §4 "Gear"). No imports from the database layer, so client
 // components can use them.
 
+import type { ImageUrls } from '@/lib/imageTypes';
 import type { AccessLevel } from '@/lib/studioTypes';
 
 export const GEAR_KINDS = ['hardware', 'software', 'book', 'cable', 'other'] as const;
@@ -93,6 +94,8 @@ export type GearUnit = {
   /** The first photo the viewer may see, for the list, and how it is turned. */
   photoId: number | null;
   photoRotation: Rotation;
+  /** Its thumbnail's signed link (or the app route for an older image). */
+  photoUrl: string | null;
 };
 
 /** The owner-only insurance record (db/003 gear_private). */
@@ -125,6 +128,12 @@ export type GearFile = {
   /** Shown to everyone the unit is shared with; otherwise the owner's alone (db/006). */
   isPublic: boolean;
   rotation: Rotation;
+  /** Signed links to each web version (db/007); null for a document or an image not yet converted. */
+  urls: ImageUrls | null;
+  /** An image stored as its original, from before web versions; its owner's browser converts it. */
+  needsConversion: boolean;
+  width: number | null;
+  height: number | null;
   uploadedByName: string;
   uploadedAt: string;
 };

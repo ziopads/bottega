@@ -96,7 +96,7 @@ export default function PhotoEditor({
     >
       <div className="max-h-full overflow-auto rounded-lg bg-card p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <RotatedImage
-          src={`/api/gear-files/${file.id}`}
+          src={file.urls?.view ?? `/api/gear-files/${file.id}`}
           alt={file.caption || file.filename}
           rotation={rotation}
           width={box.width}
@@ -146,7 +146,7 @@ export default function PhotoEditor({
                 Cancel
               </button>
               <a href={`/api/gear-files/${file.id}?download=1`} className="text-muted hover:text-ink">
-                Download original
+                {file.urls ? 'Download full size' : 'Download original'}
               </a>
               <span className="ml-auto">
                 {armed ? (
