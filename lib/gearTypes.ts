@@ -8,10 +8,10 @@ import type { AccessLevel } from '@/lib/studioTypes';
 export const GEAR_KINDS = ['hardware', 'software', 'book', 'cable', 'other'] as const;
 export type GearKind = (typeof GEAR_KINDS)[number];
 
-// gear_models.category (db/003, widened in db/005), a closed list so a query can name it.
+// gear_models.category (db/003, widened in db/005 and db/008), a closed list so a query can name it.
 export const GEAR_CATEGORIES = [
   'synthesizer', 'drum machine', 'sampler', 'groovebox', 'instrument', 'sequencer',
-  'effect', 'mixer', 'interface', 'controller', 'monitor', 'microphone',
+  'effect', 'processor', 'mixer', 'interface', 'controller', 'monitor', 'microphone',
   'preamp', 'amplifier', 'recorder', 'patchbay', 'midi utility', 'utility', 'test equipment',
   'instrument plugin', 'effect plugin', 'host', 'sample library',
   'book', 'cable', 'power', 'other',

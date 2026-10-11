@@ -207,7 +207,10 @@ The names `tracks` and `trackId` for mixes are carried over from Vivarium.
 
 ### Gear (Phase 1)
 
-Migrations 003 and 005. REQUIREMENTS G-1 to G-8.
+Migrations 003, 005 to 008. REQUIREMENTS G-1 to G-11. The studio groups on
+the gear map are fixed in code (`lib/gearGroups.ts`), one per catalogue
+category; 008 adds the `processor` category and moves effect models whose
+effect types are all processing (filter, compressor, limiter, gate, EQ).
 
 - `gear_models` — the platform catalogue: kind, category (a closed list, so
   `is_sound_source(category)` can answer "sound sources"), manufacturer,

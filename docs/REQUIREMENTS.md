@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.10
+**Version:** 0.11
 **Date:** 2026-10-11
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -10,6 +10,9 @@ built is in `ARCHITECTURE.md`.
 
 ## Changelog
 
+- **0.11** (2026-10-11) — The gear page has a map of the studio by group,
+  beside the filterable list (G-11); signal processors are a catalogue
+  category of their own.
 - **0.10** (2026-10-11) — Images are stored as web versions made in the
   browser, without the original or its location data, and uploaded by
   dropping several at once (G-10). The account page shows storage and
@@ -228,6 +231,14 @@ place they left.
   is enough to read a serial plate. Several images, and PDFs, can be dropped
   onto a unit at once. Images uploaded before this are converted from the
   account page.
+- **G-11** The gear page lays the studio out by group: Audio, Sound modules,
+  Controllers and sequencers, Signal processors, Effects, Mics, Misc and
+  Software. A unit's group follows from its model's category, so gear is
+  never filed twice; signal processors (filters, dynamics, EQ, preamps) are
+  a category apart from effects (reverb, delay, slicers, loopers). Two views,
+  as tabs: the map, every group as a column with its units beneath and the
+  wishlist after them; and the list, filterable by status, group and
+  capability, with photos.
 
 ## 5. Projects (P)
 
@@ -467,7 +478,7 @@ Recorded so that early decisions do not close them off; none is designed yet.
 | Phase | Delivers | Stories |
 |---|---|---|
 | 0 | Repository, Neon, sign-in, the studio moved across with parity as music projects and collections, plus references, current mix and length | P-1 to P-4, P-7, S-1 to S-9, O-1, O-3 |
-| 1 | Accounts and access first; then gear catalogue, corpus, first connector tools | AC-1 to AC-12, G-1 to G-10, K-1 to K-10, M-1 to M-4, O-2, O-4 to O-7 |
+| 1 | Accounts and access first; then gear catalogue, corpus, first connector tools | AC-1 to AC-12, G-1 to G-11, K-1 to K-10, M-1 to M-4, O-2, O-4 to O-7 |
 | 2 | Workflow and board for every kind; study group | P-5, P-6, W-1 to W-10, L-1 to L-6 |
 | 3 | Analysis | A-1 to A-5 |
 

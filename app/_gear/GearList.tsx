@@ -11,11 +11,10 @@ import {
   GEAR_STATUS_LABEL,
   GEAR_STATUSES,
   formatCapability,
-  isSoundSource,
-  unitTitle,
   type GearCategory,
   type GearKind,
 } from '@/lib/gearTypes';
+import { GEAR_GROUPS, groupLabel, groupOf, type GearGroup } from '@/lib/gearGroups';
 import { CapabilityInput } from './CapabilityEditor';
 import RotatedImage from './RotatedImage';
 
@@ -54,7 +53,7 @@ export default function GearList({
 }) {
   const [units, setUnits] = useState(initialUnits);
   const [status, setStatus] = useState<GearStatus>('owned');
-  const [soundOnly, setSoundOnly] = useState(false);
+  const [group, setGroup] = useState<GearGroup | ''>('');
   const [capKey, setCapKey] = useState('');
   const [capValue, setCapValue] = useState<CapabilityValue | undefined>(undefined);
   const [adding, setAdding] = useState(false);
@@ -66,32 +65,36 @@ export default function GearList({
   const shared = units.filter((u) => u.ownerId !== viewerId);
   const shown = own.filter((u) => {
     if (u.status !== status) return false;
-    if (soundOnly && !isSoundSource(u)) return false;
+    if (group && groupOf(u) !== group) return false;
     if (capDef && capValue !== undefined && !matches(capDef, u.capabilities[capDef.key]?.value, capValue)) return false;
     return true;
   });
   const counts = Object.fromEntries(GEAR_STATUSES.map((s) => [s, own.filter((u) => u.status === s).length]));
 
-  const sel = 'rounded-md border border-line bg-card px-2 py-1 text-sm outline-none focus:border-rust';
+  const sel = 'rounded border border-line bg-card px-1.5 py-0.5 text-[13px] outline-none focus:border-rust';
 
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap items-center gap-4 text-sm">
-        <span className="flex gap-1">
+    <div className="text-[13px]">
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line pb-3">
+        <span className="flex gap-3">
           {GEAR_STATUSES.map((s) => (
             <button
               key={s}
               onClick={() => setStatus(s)}
-              className={`rounded-md px-3 py-1 ${status === s ? 'bg-ink text-parchment' : 'border border-line hover:border-ink'}`}
+              className={status === s ? 'font-medium text-ink underline underline-offset-4' : 'text-muted hover:text-ink'}
             >
-              {GEAR_STATUS_LABEL[s]} ({counts[s]})
+              {GEAR_STATUS_LABEL[s]} <span className="text-muted">{counts[s]}</span>
             </button>
           ))}
         </span>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={soundOnly} onChange={(e) => setSoundOnly(e.target.checked)} />
-          Sound sources only
-        </label>
+        <select value={group} onChange={(e) => setGroup(e.target.value as GearGroup | '')} className={sel} aria-label="Filter by group">
+          <option value="">All groups</option>
+          {GEAR_GROUPS.map((g) => (
+            <option key={g.key} value={g.key}>
+              {g.label}
+            </option>
+          ))}
+        </select>
         <span className="flex flex-wrap items-center gap-2">
           <select
             value={capKey}
@@ -111,10 +114,10 @@ export default function GearList({
           </select>
           {capDef && <CapabilityInput def={capDef} value={capValue} onChange={setCapValue} />}
           {capDef && (capDef.valueType === 'integer' || capDef.valueType === 'number') && (
-            <span className="text-xs text-muted">or more</span>
+            <span className="text-[11px] text-muted">or more</span>
           )}
         </span>
-        <button onClick={() => setAdding((a) => !a)} className="ml-auto rounded-md bg-rust px-4 py-1.5 text-white">
+        <button onClick={() => setAdding((a) => !a)} className="ml-auto rounded bg-rust px-3 py-1 text-white">
           {adding ? 'Close' : 'Add gear'}
         </button>
       </div>
@@ -130,7 +133,7 @@ export default function GearList({
       )}
 
       {shown.length === 0 ? (
-        <p className="rounded-lg border border-line bg-card px-4 py-6 text-sm text-muted">
+        <p className="py-6 text-muted">
           {own.length === 0 ? 'No gear yet. Add your first piece above.' : 'Nothing here matches.'}
         </p>
       ) : (
@@ -145,8 +148,8 @@ export default function GearList({
       )}
 
       {shared.length > 0 && (
-        <section className="mt-12">
-          <h2 className="mb-3 text-xs uppercase tracking-wide text-muted">Shared with me</h2>
+        <section className="mt-10">
+          <h2 className="mb-1 text-[11px] uppercase tracking-wide text-muted">Shared with me</h2>
           <UnitTable units={shared} defByKey={defByKey} showOwner />
         </section>
       )}
@@ -173,38 +176,37 @@ function UnitTable({
   onMove?: (u: GearUnit, to: GearStatus) => void;
 }) {
   return (
-    <ul className="divide-y divide-line rounded-lg border border-line bg-card">
+    <ul className="divide-y divide-line border-y border-line">
       {units.map((u) => (
-        <li key={u.id} className="flex items-center hover:bg-ink/5">
-          <Link href={`/gear/${u.id}`} className="flex min-w-0 flex-1 items-center gap-4 px-4 py-2">
+        <li key={u.id} className="group flex items-center hover:bg-ink/5">
+          <Link href={`/gear/${u.id}`} className="flex min-w-0 flex-1 items-center gap-3 py-1 pr-2">
             {u.photoUrl ? (
-              <RotatedImage src={u.photoUrl} alt="" rotation={u.photoRotation} width={40} height={40} className="rounded" />
+              <RotatedImage src={u.photoUrl} alt="" rotation={u.photoRotation} width={28} height={28} className="rounded-sm" />
             ) : (
-              <span className="h-10 w-10 shrink-0 rounded bg-line/60" />
+              <span className="h-7 w-7 shrink-0 rounded-sm bg-line/60" />
             )}
-            <span className="min-w-0 flex-1">
-              <span className="block truncate">
-                {unitTitle(u)}
-                {u.nickname && <span className="text-muted"> · {u.nickname}</span>}
-              </span>
-              <span className="block truncate text-xs text-muted">
-                {[
-                  u.model?.category,
-                  ...SUMMARY_KEYS.filter((k) => u.capabilities[k]).map(
-                    (k) => `${defByKey.get(k)?.label ?? k}: ${formatCapability(defByKey.get(k), u.capabilities[k].value)}`,
-                  ),
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </span>
+            <span className="w-44 shrink-0 truncate sm:w-60">
+              <span className="text-muted">{u.model?.manufacturer ?? u.manufacturer}</span> {u.model?.model ?? u.name}
+              {u.nickname && <span className="text-muted"> · {u.nickname}</span>}
             </span>
-            {u.model?.status === 'suggested' && <span className="text-xs text-muted">model awaiting approval</span>}
-            {showOwner && <span className="text-xs text-muted">{u.ownerName}</span>}
+            <span className="hidden w-32 shrink-0 truncate text-muted md:block">{groupLabel(groupOf(u))}</span>
+            <span className="hidden min-w-0 flex-1 truncate text-[12px] text-muted lg:block">
+              {[
+                u.model?.category,
+                ...SUMMARY_KEYS.filter((k) => u.capabilities[k]).map(
+                  (k) => `${defByKey.get(k)?.label ?? k}: ${formatCapability(defByKey.get(k), u.capabilities[k].value)}`,
+                ),
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+            {u.model?.status === 'suggested' && <span className="text-[11px] text-muted">model awaiting approval</span>}
+            {showOwner && <span className="text-[12px] text-muted">{u.ownerName}</span>}
           </Link>
           {onMove && MOVE[u.status] && (
             <button
               onClick={() => onMove(u, MOVE[u.status]!.to)}
-              className="mr-4 shrink-0 rounded-md border border-line px-2 py-0.5 text-xs text-muted hover:border-ink hover:text-ink"
+              className="mr-1 shrink-0 rounded border border-line px-1.5 py-0 text-[11px] text-muted opacity-60 hover:border-ink hover:text-ink group-hover:opacity-100"
             >
               {MOVE[u.status]!.label}
             </button>
