@@ -60,7 +60,7 @@ export type Tab = { key: string; label: string; count?: number; href?: string };
 
 export function TabBar({ tabs, current, onSelect }: { tabs: Tab[]; current: string; onSelect?: (key: string) => void }) {
   return (
-    <nav className="t-body -mb-px flex gap-1" aria-label="Views">
+    <nav className="t-body -mb-px flex flex-wrap gap-1" aria-label="Views">
       {tabs.map((t) => {
         const active = t.key === current;
         const cls = `border px-3 py-1.5 ${

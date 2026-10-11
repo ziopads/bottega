@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import StudioProjects from '@/app/_studio/StudioProjects';
+import { getPreferences } from '@/lib/account';
 import { requireAccount } from '@/lib/access';
 import { listArtists, listGenres, listProjects, listReleases } from '@/lib/studio';
 import { formatDuration, type AccessLevel } from '@/lib/studioTypes';
@@ -21,15 +22,18 @@ const LEVEL_WORD: Record<AccessLevel, string> = {
 export default async function SessionsPage() {
   const { db, userId } = await requireAccount();
 
-  const [projects, artists, genres, releases] = await Promise.all([
+  const [projects, artists, genres, releases, preferences] = await Promise.all([
     listProjects(db),
     listArtists(db),
     listGenres(db),
     listReleases(db),
+    getPreferences(db),
   ]);
   const own = projects.filter((p) => p.ownerId === userId);
   const shared = projects.filter((p) => p.ownerId !== userId);
   const myArtists = artists.filter((a) => a.mine);
+  // The artist chosen under Account › Preferences, else the first by code.
+  const defaultArtist = myArtists.find((a) => a.id === preferences.defaultArtistId) ?? myArtists[0] ?? null;
   const myReleases = releases.filter((r) => r.ownerId === userId);
 
   return (
@@ -45,7 +49,7 @@ export default async function SessionsPage() {
         artists={myArtists}
         initialGenres={genres}
         initialReleases={myReleases}
-        defaultArtistId={myArtists[0]?.id ?? null}
+        defaultArtistId={defaultArtist?.id ?? null}
       />
 
       {shared.length > 0 && (

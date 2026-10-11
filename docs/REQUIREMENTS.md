@@ -52,7 +52,7 @@ built is in `ARCHITECTURE.md`.
   view, contribute or edit. New sign-ups wait for approval. Only an owner
   deletes. Every change to accounts and access is logged. Access is enforced
   in the database as well as in the application. §2 rewritten with stories
-  AC-1 to AC-12; §1, S-1, M-1, M-2, §14 and §15 follow. The access layer
+  AC-1 to AC-13; §1, S-1, M-1, M-2, §14 and §15 follow. The access layer
   opens Phase 1. Decisions 7 to 9 closed: genres and the capability list are
   platform-wide; manuals live in one platform library that accounts pick from
   for their gear (G-4, K-4, K-6, K-7); study groups are forum-like spaces with
@@ -165,6 +165,12 @@ place they left.
   reason. Entries cannot be edited or deleted.
 - **AC-12** Owners see the log entries that concern their own items and
   account; the platform administrator sees all of it.
+- **AC-13** A person manages their own account from the account page: the
+  display name others see (the change is logged), their artists (add,
+  rename, delete one nothing is credited to), every share they have granted
+  in one list to change or revoke, what is shared with them, their recent
+  activity from the access log (AC-12), and preferences, starting with the
+  artist new sessions are credited to.
 
 ## 3. Layers
 
@@ -471,7 +477,8 @@ travel to the database.
 - **O-7** The account page shows what the account stores against its storage
   allowance, broken down by kind (audio, gear photos, gear documents,
   private documents, library submissions awaiting review) with file counts,
-  and the pages processed this month against the monthly allowance.
+  and the pages processed this month against the monthly allowance. Each
+  kind opens to its largest files, linked to where they live.
 
 ## 13. Later
 
@@ -498,7 +505,7 @@ Recorded so that early decisions do not close them off; none is designed yet.
 | Phase | Delivers | Stories |
 |---|---|---|
 | 0 | Repository, Neon, sign-in, the studio moved across with parity as music projects and collections, plus references, current mix and length | P-1 to P-4, P-7, S-1 to S-9, O-1, O-3 |
-| 1 | Accounts and access first; then gear catalogue, corpus, first connector tools | AC-1 to AC-12, G-1 to G-11, S-10 to S-13, K-1 to K-10, M-1 to M-4, O-2, O-4 to O-7 |
+| 1 | Accounts and access first; then gear catalogue, corpus, first connector tools | AC-1 to AC-13, G-1 to G-11, S-10 to S-13, K-1 to K-10, M-1 to M-4, O-2, O-4 to O-7 |
 | 2 | Workflow and board for every kind; study group | P-5, P-6, W-1 to W-10, L-1 to L-6 |
 | 3 | Analysis | A-1 to A-5 |
 

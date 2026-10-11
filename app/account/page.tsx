@@ -1,96 +1,157 @@
+import { DetailGrid, Section, TabBar } from '@/app/_ui/layout';
+import {
+  getPreferences,
+  getProfile,
+  listActivity,
+  listIncomingShares,
+  listMyArtists,
+  listOutgoingShares,
+} from '@/lib/account';
+import { ACCOUNT_TAB_LABEL, ACCOUNT_TABS, type AccountTab } from '@/lib/accountTabs';
 import { requireAccount } from '@/lib/access';
 import { getAllowance } from '@/lib/documents';
 import { listUnconvertedImages } from '@/lib/gear';
-import { formatBytes } from '@/lib/studioTypes';
-import { getUsage, USAGE_LABEL } from '@/lib/usage';
+import { getUsage } from '@/lib/usage';
 
 import ChangePasswordForm from './ChangePasswordForm';
 import ConvertImages from './ConvertImages';
+import { ComingSoon } from './parts';
+import PreferencesTab from './PreferencesTab';
+import ProfileTab from './ProfileTab';
+import SharingTab from './SharingTab';
+import UsageTab from './UsageTab';
+import When from './When';
 
 export const metadata = { title: 'Account · Bottega' };
 
-// The account: what it stores and processes against its allowances
-// (REQUIREMENTS K-10, O-7), and its password.
+// The account, in tabs (REQUIREMENTS O-7, AC-12, AC-13). Each tab is its own
+// address (?tab=) and loads only its own data.
+//
+//   Profile      the name others see, email, the account's artists
+//   Usage        storage by kind, largest files under each; pages processed
+//   Sharing      every share granted, to change or revoke; what is shared in
+//   Security     password, recent activity from the access log
+//   Preferences  the artist new sessions start with
+//   Billing      coming with plans
+//   Data         coming: export and account deletion
 
-function Meter({ used, limit }: { used: number; limit: number | null }) {
-  if (limit === null) return null;
-  const share = limit > 0 ? Math.min(1, used / limit) : 1;
-  return (
-    <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-line" aria-hidden>
-      <div className={`h-full ${share > 0.9 ? 'bg-rust' : 'bg-ink/70'}`} style={{ width: `${Math.round(share * 100)}%` }} />
-    </div>
-  );
-}
+type Props = { searchParams?: Promise<{ tab?: string }> };
 
-export default async function AccountPage() {
+export default async function AccountPage({ searchParams }: Props) {
   const user = await requireAccount();
-  const [usage, allowance, unconverted] = await Promise.all([
-    getUsage(user.db),
-    getAllowance(user.db),
-    listUnconvertedImages(user.db),
-  ]);
-  const totalFiles = usage.reduce((n, u) => n + u.files, 0);
-  const stored = allowance?.storageUsed ?? usage.reduce((n, u) => n + u.bytes, 0);
+  const asked = (await searchParams)?.tab;
+  const tab: AccountTab = ACCOUNT_TABS.includes(asked as AccountTab) ? (asked as AccountTab) : 'profile';
+  const { db } = user;
+
+  let body: React.ReactNode;
+  if (tab === 'profile') {
+    const [profile, artists] = await Promise.all([getProfile(db), listMyArtists(db)]);
+    body = (
+      <ProfileTab
+        initialName={profile?.displayName ?? ''}
+        email={profile?.email ?? user.email}
+        since={profile?.createdAt ?? null}
+        initialArtists={artists}
+      />
+    );
+  } else if (tab === 'usage') {
+    const [usage, allowance, unconverted] = await Promise.all([getUsage(db), getAllowance(db), listUnconvertedImages(db)]);
+    body = (
+      <UsageTab usage={usage} allowance={allowance}>
+        {unconverted.length > 0 && (
+          <Section label="Older photos">
+            <ConvertImages images={unconverted} />
+          </Section>
+        )}
+      </UsageTab>
+    );
+  } else if (tab === 'sharing') {
+    const [outgoing, incoming] = await Promise.all([listOutgoingShares(db), listIncomingShares(db)]);
+    body = <SharingTab initialOutgoing={outgoing} incoming={incoming} />;
+  } else if (tab === 'security') {
+    const activity = await listActivity(db);
+    body = (
+      <DetailGrid
+        main={
+          <>
+            <Section label="Recent activity">
+              {activity.length === 0 ? (
+                <p className="t-body text-muted">Nothing yet.</p>
+              ) : (
+                <ul className="t-body divide-y divide-line">
+                  {activity.map((a) => (
+                    <li key={a.id} className="flex items-baseline gap-3 py-1.5">
+                      <span className="min-w-0 flex-1">{a.text}</span>
+                      <span className="shrink-0 text-[11px] text-muted">
+                        {a.mine ? '' : `${a.actorName} · `}
+                        <When iso={a.at} />
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-2 text-[11px] text-muted">
+                The latest 50 entries about your account and your items. Entries are permanent.
+              </p>
+            </Section>
+            <Section label="Signed-in devices">
+              <ComingSoon>Where your account is signed in, with a way to sign each one out.</ComingSoon>
+            </Section>
+            <Section label="Connected apps">
+              <ComingSoon>Claude and other connectors you have authorized, with a way to revoke each.</ComingSoon>
+            </Section>
+          </>
+        }
+        aside={
+          <Section label="Change password">
+            <ChangePasswordForm />
+          </Section>
+        }
+      />
+    );
+  } else if (tab === 'preferences') {
+    const [artists, preferences] = await Promise.all([listMyArtists(db), getPreferences(db)]);
+    body = <PreferencesTab artists={artists} initialDefaultArtistId={preferences.defaultArtistId} />;
+  } else if (tab === 'billing') {
+    body = (
+      <DetailGrid
+        main={
+          <Section label="Billing">
+            <ComingSoon>Plans, invoices and payment details arrive with plans. Until then nothing is charged.</ComingSoon>
+          </Section>
+        }
+      />
+    );
+  } else {
+    body = (
+      <DetailGrid
+        main={
+          <Section label="Your data">
+            <ComingSoon>
+              An export of everything the account holds (sessions, audio, gear, documents and notes), and closing the
+              account.
+            </ComingSoon>
+          </Section>
+        }
+      />
+    );
+  }
 
   return (
-    <div className="max-w-2xl space-y-10 py-4">
-      <div>
-        <h1 className="text-2xl">Account</h1>
-        <p className="mt-1 text-sm text-muted">{user.email}</p>
+    <div className="mt-3">
+      <h1 className="t-title">Account</h1>
+      <p className="t-body mt-1 text-muted">{user.email}</p>
+      <div className="mb-6 mt-3 border-b border-line">
+        <TabBar
+          current={tab}
+          tabs={ACCOUNT_TABS.map((key) => ({
+            key,
+            label: ACCOUNT_TAB_LABEL[key],
+            href: key === 'profile' ? '/account' : `/account?tab=${key}`,
+          }))}
+        />
       </div>
-
-      <section className="space-y-4">
-        <h2 className="text-lg">Usage</h2>
-
-        <div className="text-sm">
-          <div className="flex items-baseline justify-between">
-            <span>Storage</span>
-            <span className="text-muted">
-              {formatBytes(stored) || '0 KB'}
-              {allowance?.storageBytes != null ? ` of ${formatBytes(allowance.storageBytes)}` : ' (no limit)'} · {totalFiles}{' '}
-              {totalFiles === 1 ? 'file' : 'files'}
-            </span>
-          </div>
-          <Meter used={stored} limit={allowance?.storageBytes ?? null} />
-        </div>
-
-        <table className="w-full text-sm">
-          <tbody className="divide-y divide-line">
-            {usage.map((u) => (
-              <tr key={u.kind}>
-                <td className="py-1.5">{USAGE_LABEL[u.kind]}</td>
-                <td className="py-1.5 text-right text-muted">
-                  {u.files} {u.files === 1 ? 'file' : 'files'}
-                </td>
-                <td className="w-28 py-1.5 text-right">{u.bytes ? formatBytes(u.bytes) : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {allowance && (
-          <div className="text-sm">
-            <div className="flex items-baseline justify-between">
-              <span>Pages processed this month</span>
-              <span className="text-muted">
-                {allowance.pagesUsed.toLocaleString()}
-                {allowance.pagesPerMonth !== null ? ` of ${allowance.pagesPerMonth.toLocaleString()}` : ' (no limit)'}
-              </span>
-            </div>
-            <Meter used={allowance.pagesUsed} limit={allowance.pagesPerMonth} />
-            {allowance.maxDocumentPages !== null && (
-              <p className="mt-1 text-xs text-muted">Documents can be up to {allowance.maxDocumentPages.toLocaleString()} pages.</p>
-            )}
-          </div>
-        )}
-
-        {unconverted.length > 0 && <ConvertImages images={unconverted} />}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg">Change password</h2>
-        <ChangePasswordForm />
-      </section>
+      {body}
     </div>
   );
 }

@@ -48,16 +48,20 @@ export const getAccount = cache(async (): Promise<Account | null> => {
   if (!user?.id || !user.email) return null;
 
   const scoped = forPerson({ userId: user.id });
-  const rows = await scoped.q('select status, is_platform_admin from register_session($1, $2)', [
-    user.email,
-    user.name ?? '',
-  ]);
+  // The name is the one chosen on the account page (db/010), else the sign-up
+  // name. A brand-new account's row is not yet visible to this statement, so
+  // the join is a left join and the sign-up name stands in.
+  const rows = await scoped.q(
+    `select r.status, r.is_platform_admin, a.display_name
+       from register_session($1, $2) r left join accounts a on a.user_id = app_user()`,
+    [user.email, user.name ?? ''],
+  );
   const row = rows[0];
   if (!row) return null;
   return {
     userId: user.id,
     email: user.email.toLowerCase(),
-    name: user.name ?? '',
+    name: (typeof row.display_name === 'string' && row.display_name) || user.name || '',
     status: row.status as AccountStatus,
     isPlatformAdmin: row.is_platform_admin === true,
     db: scoped,
