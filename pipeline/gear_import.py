@@ -102,8 +102,11 @@ def main() -> None:
 
     rows = read(args.csv)
     with connect() as conn, conn.cursor() as cur:
-        run(cur, rows, args.owner.strip().lower())
-        if args.apply:
+        added = run(cur, rows, args.owner.strip().lower())
+        if args.apply and added == 0:
+            conn.rollback()
+            print("\nNothing to add; nothing was changed.")
+        elif args.apply:
             conn.commit()
             print("\nApplied.")
         else:
@@ -111,7 +114,16 @@ def main() -> None:
             print("\nDry run: nothing was kept. Add --apply to keep it.")
 
 
-def run(cur, rows: list[dict], owner_email: str) -> None:
+def run(cur, rows: list[dict], owner_email: str) -> int:
+    # The format needs migration 005 (manufacturer, production years, estimated value).
+    cur.execute(
+        """select count(*) from information_schema.columns
+           where (table_name, column_name) in (('gear_models', 'manufacturer'), ('gear_models', 'year_introduced'),
+                                               ('gear_private', 'estimated_value'))"""
+    )
+    if cur.fetchone()[0] != 3:
+        sys.exit("This database does not have migration 005 yet. Apply db/005-gear-fit.sql first.")
+
     cur.execute("select user_id, status from accounts where email = %s", (owner_email,))
     found = cur.fetchone()
     if not found:
@@ -230,6 +242,7 @@ def run(cur, rows: list[dict], owner_email: str) -> None:
         print(f"\nnot imported ({len(problems)}):")
         for p in problems:
             print(f"  {p}")
+    return created_models + filled_models + added_caps + added_units
 
 
 if __name__ == "__main__":
