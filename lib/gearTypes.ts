@@ -36,6 +36,15 @@ export const FILE_ROLE_LABEL: Record<GearFileRole, string> = {
   other: 'Other',
 };
 
+/** Quarter turns clockwise, applied when an image is shown (db/006). */
+export type Rotation = 0 | 90 | 180 | 270;
+export const ROTATIONS: Rotation[] = [0, 90, 180, 270];
+
+/** New files: photos start public, everything else private. */
+export function defaultPublic(role: GearFileRole): boolean {
+  return role === 'photo';
+}
+
 export type CapabilityType = 'boolean' | 'integer' | 'number' | 'text' | 'enum' | 'list';
 export type CapabilityValue = boolean | number | string | string[];
 
@@ -81,8 +90,9 @@ export type GearUnit = {
   createdAt: string;
   /** Effective capabilities: the unit's own where set, else its model's. */
   capabilities: Record<string, { value: CapabilityValue; overridden: boolean }>;
-  /** The first photo, for the list. */
+  /** The first photo the viewer may see, for the list, and how it is turned. */
   photoId: number | null;
+  photoRotation: Rotation;
 };
 
 /** The owner-only insurance record (db/003 gear_private). */
@@ -112,6 +122,9 @@ export type GearFile = {
   contentType: string;
   bytes: number | null;
   caption: string;
+  /** Shown to everyone the unit is shared with; otherwise the owner's alone (db/006). */
+  isPublic: boolean;
+  rotation: Rotation;
   uploadedByName: string;
   uploadedAt: string;
 };

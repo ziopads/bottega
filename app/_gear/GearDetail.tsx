@@ -9,6 +9,8 @@ import type { CapabilityDef, CapabilityValue, GearFile, GearFileRole, GearPrivat
 import { FILE_ROLE_LABEL, FILE_ROLES, GEAR_STATUS_LABEL, GEAR_STATUSES, formatCapability, unitTitle } from '@/lib/gearTypes';
 import { formatBytes, levelAtLeast, type StudioShare } from '@/lib/studioTypes';
 import { CapabilityEditor } from './CapabilityEditor';
+import PhotoEditor from './PhotoEditor';
+import RotatedImage from './RotatedImage';
 
 // One unit: what it is, its capabilities (the model's, with this unit's
 // overrides), its photos, and for its owner the insurance record, the private
@@ -50,6 +52,7 @@ export default function GearDetail({
   const [error, setError] = useState('');
   const [editingCaps, setEditingCaps] = useState(false);
   const [armed, setArmed] = useState(false);
+  const [editing, setEditing] = useState<GearFile | null>(null);
   const isOwner = unit.level === 'owner';
   const canEdit = levelAtLeast(unit.level, 'edit');
   const canContribute = levelAtLeast(unit.level, 'contribute');
@@ -88,8 +91,11 @@ export default function GearDetail({
     router.push('/gear');
   }
 
-  const photos = files.filter((f) => f.role === 'photo');
-  const privateFiles = files.filter((f) => f.role !== 'photo');
+  // Images in the gallery, whatever their role (a serial plate is a photo
+  // too); everything else in the owner's list. What a grantee sees is
+  // decided by each file's public flag, in the database (db/006).
+  const photos = files.filter((f) => f.contentType.startsWith('image/'));
+  const privateFiles = files.filter((f) => !f.contentType.startsWith('image/'));
 
   return (
     <div className="mt-4 space-y-10">
@@ -201,17 +207,43 @@ export default function GearDetail({
         <div className="flex flex-wrap gap-3">
           {photos.map((f) => (
             <figure key={f.id} className="w-40">
-              <a href={`/api/gear-files/${f.id}`} target="_blank" rel="noreferrer">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/api/gear-files/${f.id}`} alt={f.caption || f.filename} className="h-32 w-40 rounded object-cover" />
-              </a>
+              <button
+                onClick={() => setEditing(f)}
+                className="relative block rounded focus:outline-none focus:ring-2 focus:ring-rust"
+                aria-label={isOwner ? `Edit ${f.caption || f.filename}` : `View ${f.caption || f.filename}`}
+              >
+                <RotatedImage src={`/api/gear-files/${f.id}`} alt={f.caption || f.filename} rotation={f.rotation} width={160} height={128} className="rounded" />
+                {isOwner && !f.isPublic && (
+                  <span className="absolute left-1 top-1 rounded bg-ink/75 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-parchment">
+                    Private
+                  </span>
+                )}
+              </button>
               <figcaption className="mt-1 flex items-baseline gap-2 text-xs text-muted">
                 <span className="min-w-0 flex-1 truncate">{f.caption || f.filename}</span>
-                {isOwner && <FileDelete file={f} onDeleted={() => setFiles((l) => l.filter((x) => x.id !== f.id))} />}
+                {f.role !== 'photo' && <span>{FILE_ROLE_LABEL[f.role]}</span>}
               </figcaption>
             </figure>
           ))}
         </div>
+        {isOwner && photos.length > 0 && (
+          <p className="mt-2 text-xs text-muted">Click a photo to turn it, make it public or private, or delete it. Private photos are yours alone.</p>
+        )}
+        {editing && (
+          <PhotoEditor
+            file={editing}
+            isOwner={isOwner}
+            onClose={() => setEditing(null)}
+            onSaved={(f) => {
+              setFiles((l) => l.map((x) => (x.id === f.id ? f : x)));
+              setEditing(null);
+            }}
+            onDeleted={() => {
+              setFiles((l) => l.filter((x) => x.id !== editing.id));
+              setEditing(null);
+            }}
+          />
+        )}
         {canContribute && uploadsEnabled && (
           <Upload gearId={unit.id} roles={isOwner ? [...FILE_ROLES] : ['photo']} onUploaded={(f) => setFiles((l) => [...l, f])} />
         )}
@@ -224,7 +256,7 @@ export default function GearDetail({
             <h2 className="mb-1 text-xs uppercase tracking-wide text-muted">Receipts and documents</h2>
             <p className="mb-3 text-xs text-muted">Only you can see these, whoever the unit is shared with.</p>
             {privateFiles.length === 0 ? (
-              <p className="text-sm text-muted">None yet. Upload above, choosing receipt, serial plate or document.</p>
+              <p className="text-sm text-muted">None yet. Upload above, choosing receipt, serial plate or document. Images appear with the photos.</p>
             ) : (
               <ul className="space-y-1 text-sm">
                 {privateFiles.map((f) => (

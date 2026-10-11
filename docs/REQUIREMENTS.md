@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.8
+**Version:** 0.9
 **Date:** 2026-10-11
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -10,6 +10,9 @@ built is in `ARCHITECTURE.md`.
 
 ## Changelog
 
+- **0.9** (2026-10-11) — Gear files are public or private (G-9), replacing
+  the rule that photos follow a share and everything else is private; images
+  can be turned. A public showcase page is recorded under Later.
 - **0.8** (2026-10-11) — Gear fitted to the subject before importing James's
   hardware list: models name their manufacturer and the years they were made;
   more categories; power, rack units and effect types as capabilities; an
@@ -201,13 +204,19 @@ place they left.
   administrator approves it and keeps its facts. A suggestion is visible to
   whoever made it until then.
 - **G-7** A unit is shared like a project (AC-5). A share shows the unit's
-  model, capabilities, firmware and photos; contribute adds photos; edit
-  changes nickname, firmware and capability overrides. The insurance record,
-  receipts, serial plates and documents stay with the owner at every level,
+  model, capabilities, firmware and public photos (G-9); contribute adds
+  photos; edit changes nickname, firmware and capability overrides. The
+  insurance record and every private file stay with the owner at every level,
   and the platform administrator's read-only view does not reach them.
 - **G-8** An account's gear can be imported from a spreadsheet: one row per
   unit, in a documented format, checked by the database in a dry run before
   anything is kept. The first import is James's hardware list.
+- **G-9** Each file on a unit is public or private, set by its owner. Public
+  files are shown to everyone the unit is shared with, and later on the
+  owner's showcase page (§13); private files are the owner's alone. New
+  photos start public; receipts, serial plates and documents start private.
+  An image can be turned by quarter turns from its edit screen; the stored
+  file is never rewritten.
 
 ## 5. Projects (P)
 
@@ -422,6 +431,10 @@ travel to the database.
 
 Recorded so that early decisions do not close them off; none is designed yet.
 
+- **A showcase page.** A page anyone can open without signing in, showing
+  the units an owner chooses and their public files (G-9). It needs a
+  public flag on units, links that work without a session, and an exception
+  to O-4, which keeps every file private today.
 - Installation and multimedia projects in depth: their fields, stages and
   element templates.
 - Residency and grant applications: deadlines, requirements, materials,

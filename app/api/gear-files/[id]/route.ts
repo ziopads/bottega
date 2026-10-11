@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 
 import { apiAccount, gearRefusal } from '@/lib/access';
 import { deleteFile, filesConfigured, signFileGet } from '@/lib/files';
-import { deleteGearFileRow, getGearFileWithKey, updateGearFile } from '@/lib/gear';
-import { FILE_ROLES, type GearFileRole } from '@/lib/gearTypes';
+import { deleteGearFileRow, getGearFileWithKey, updateGearFile, type GearFilePatch } from '@/lib/gear';
+import { FILE_ROLES, ROTATIONS, type GearFileRole, type Rotation } from '@/lib/gearTypes';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +34,9 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   return res;
 }
 
-// PATCH /api/gear-files/:id   { caption?, role? } — the owner only.
+// PATCH /api/gear-files/:id   { caption?, role?, isPublic?, rotation? } — the owner only.
+// isPublic decides whether people the unit is shared with see the file;
+// rotation (0, 90, 180, 270) turns an image when it is shown (db/006).
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const account = await apiAccount();
   if (account instanceof NextResponse) return account;
@@ -52,7 +54,15 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   } catch {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
-  const patch: { caption?: string; role?: GearFileRole } = {};
+  const patch: GearFilePatch = {};
+  if ('isPublic' in body) {
+    if (typeof body.isPublic !== 'boolean') return NextResponse.json({ error: 'Invalid visibility' }, { status: 400 });
+    patch.isPublic = body.isPublic;
+  }
+  if ('rotation' in body) {
+    if (!ROTATIONS.includes(body.rotation as Rotation)) return NextResponse.json({ error: 'Rotation is 0, 90, 180 or 270.' }, { status: 400 });
+    patch.rotation = body.rotation as Rotation;
+  }
   if ('caption' in body) {
     if (typeof body.caption !== 'string') return NextResponse.json({ error: 'Invalid caption' }, { status: 400 });
     patch.caption = body.caption.trim().slice(0, 500);

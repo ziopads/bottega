@@ -17,6 +17,7 @@ import {
   type GearKind,
 } from '@/lib/gearTypes';
 import { CapabilityInput } from './CapabilityEditor';
+import RotatedImage from './RotatedImage';
 
 // The viewer's gear: their own units by status, with a filter by capability
 // ("which of my sound sources can hold a non-equal-tempered scale?" is: sound
@@ -177,8 +178,7 @@ function UnitTable({
         <li key={u.id} className="flex items-center hover:bg-ink/5">
           <Link href={`/gear/${u.id}`} className="flex min-w-0 flex-1 items-center gap-4 px-4 py-2">
             {u.photoId ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={`/api/gear-files/${u.photoId}`} alt="" className="h-10 w-10 shrink-0 rounded object-cover" />
+              <RotatedImage src={`/api/gear-files/${u.photoId}`} alt="" rotation={u.photoRotation} width={40} height={40} className="rounded" />
             ) : (
               <span className="h-10 w-10 shrink-0 rounded bg-line/60" />
             )}

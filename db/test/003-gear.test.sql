@@ -90,9 +90,9 @@ update gear_models set status = 'approved' where model = 'MPC Live II';
 select tst.expect((select status from gear_models where model = 'MPC Live II') = 'approved', 'the administrator approves a model');
 
 -- Sharing a unit shows the unit and photos, never the insurance record -------------
-insert into gear_files (gear_id, role, r2_key, filename) values
-  ((select id from gear where nickname = 'P6'), 'photo', 'g/1', 'front.jpg'),
-  ((select id from gear where nickname = 'P6'), 'receipt', 'g/2', 'receipt.pdf');
+insert into gear_files (gear_id, role, r2_key, filename, public) values
+  ((select id from gear where nickname = 'P6'), 'photo', 'g/1', 'front.jpg', true),
+  ((select id from gear where nickname = 'P6'), 'receipt', 'g/2', 'receipt.pdf', false);
 insert into shares (gear_id, grantee_id, level) values ((select id from gear where nickname = 'P6'), 'C', 'view');
 
 select set_config('app.user_id', 'C', false);
@@ -103,7 +103,7 @@ select tst.expect(gear_level((select id from gear where nickname = 'P6')) = 'vie
 update gear set nickname = 'mine now' where nickname = 'P6';
 delete from gear where nickname = 'P6';
 do $$ begin
-  insert into gear_files (gear_id, role, r2_key, filename) values ((select id from gear where nickname = 'P6'), 'photo', 'g/3', 'x.jpg');
+  insert into gear_files (gear_id, role, r2_key, filename, public) values ((select id from gear where nickname = 'P6'), 'photo', 'g/3', 'x.jpg', true);
   raise exception 'FAILED: viewer added a photo';
 exception when insufficient_privilege then raise notice 'ok: a viewer cannot add photos';
 end $$;
@@ -115,9 +115,9 @@ set role bottega_app;
 select set_config('app.user_id', 'J', false);
 update shares set level = 'contribute' where grantee_id = 'C';
 select set_config('app.user_id', 'C', false);
-insert into gear_files (gear_id, role, r2_key, filename) values ((select id from gear where nickname = 'P6'), 'photo', 'g/4', 'side.jpg');
+insert into gear_files (gear_id, role, r2_key, filename, public) values ((select id from gear where nickname = 'P6'), 'photo', 'g/4', 'side.jpg', true);
 do $$ begin
-  insert into gear_files (gear_id, role, r2_key, filename) values ((select id from gear where nickname = 'P6'), 'receipt', 'g/5', 'r.pdf');
+  insert into gear_files (gear_id, role, r2_key, filename, public) values ((select id from gear where nickname = 'P6'), 'receipt', 'g/5', 'r.pdf', false);
   raise exception 'FAILED: contributor added a receipt';
 exception when insufficient_privilege then raise notice 'ok: contributors add photos only';
 end $$;

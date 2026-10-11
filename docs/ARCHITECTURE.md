@@ -235,6 +235,9 @@ Migrations 003 and 005. REQUIREMENTS G-1 to G-8.
   unit's capabilities, its own where set, else its model's, with `overridden`.
 - `gear_files` — unit, role (`photo`, `receipt`, `serial_plate`, `document`,
   `other`), R2 key in the private gear bucket, filename, type, bytes, caption.
+  Migration 006 adds `public` (shown to grantees; photos default public,
+  other roles private) and `rotation` (0, 90, 180, 270, applied when shown;
+  the file is never rewritten).
 
 Importing an account's gear (G-8): `pipeline/gear_clean.py` turns a
 spreadsheet into the import format (one row per unit; its docstring lists the
@@ -615,7 +618,7 @@ minted after authorization, so a key's prefix carries no access meaning.
 | `gear` | own, or shared | insert: own; update: `edit` or `owner` | `owner` |
 | `gear_private` | `owner` only, at every share level and in the administrator's view | `owner` | with the unit |
 | `gear_capabilities` | as the unit | `edit` or `owner` | `edit` or `owner` |
-| `gear_files` | photos as the unit; other roles `owner` only | photos from `contribute`; other roles `owner` | `owner` |
+| `gear_files` | public files as the unit; private files `owner` only (006) | photos from `contribute`, public; any file `owner`; public flag and rotation `owner` | `owner` |
 
 003 also redefines `app_admin_viewing()` to answer false rather than null
 where `app.admin_view` was never set, which scripts and tests rely on.

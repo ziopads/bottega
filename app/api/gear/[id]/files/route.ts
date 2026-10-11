@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { apiAccount, gearRefusal } from '@/lib/access';
 import { FILE_MAX_BYTES, FILE_TYPES, fileObject, filesConfigured, isAccountFileKey } from '@/lib/files';
 import { addGearFile, getGear, listGearFiles } from '@/lib/gear';
-import { FILE_ROLES, type GearFileRole } from '@/lib/gearTypes';
+import { defaultPublic, FILE_ROLES, type GearFileRole } from '@/lib/gearTypes';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,6 +70,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     filename,
     contentType: stored.contentType,
     bytes: stored.bytes,
+    // A contributor's photo is public, or they could not see it (db/006);
+    // the owner's follows the default for its role and is changed later.
+    isPublic: unit.level === 'owner' ? defaultPublic(role) : true,
   });
   return NextResponse.json({ file }, { status: 201 });
 }

@@ -11,6 +11,7 @@ import type {
   GearPrivate,
   GearStatus,
   GearUnit,
+  Rotation,
 } from '@/lib/gearTypes';
 import { accountNames, nameOf } from '@/lib/names';
 import type { AccessLevel } from '@/lib/studioTypes';
@@ -199,10 +200,16 @@ const UNIT_SELECT = `
   select g.id, g.owner_id, gear_level(g.id) as level, g.manufacturer, g.name, g.nickname, g.status, g.firmware,
          g.notes, g.created_at, m.id as model_id, m.kind as model_kind, m.category as model_category,
          m.manufacturer as model_manufacturer, m.model as model_model, m.status as model_status,
-         (select f.id from gear_files f where f.gear_id = g.id and f.role = 'photo'
-          order by f.uploaded_at limit 1) as photo_id
+         p.id as photo_id, p.rotation as photo_rotation
   from gear g
-  left join gear_models m on m.id = g.model_id`;
+  left join gear_models m on m.id = g.model_id
+  -- The list's picture: the first photo the viewer may see (row-level
+  -- security decides which), public ones first.
+  left join lateral (
+    select f.id, f.rotation from gear_files f
+    where f.gear_id = g.id and f.role = 'photo'
+    order by f.public desc, f.uploaded_at limit 1
+  ) p on true`;
 
 // Repeats row-level security in SQL, as lib/studio.ts does for projects.
 const UNIT_VISIBLE = 'gear_level(g.id) is not null';
@@ -246,6 +253,7 @@ async function toUnits(db: Scoped, rows: Row[]): Promise<GearUnit[]> {
     createdAt: iso(r.created_at),
     capabilities: byUnit.get(num(r.id)) ?? {},
     photoId: numOrNull(r.photo_id),
+    photoRotation: (numOrNull(r.photo_rotation) ?? 0) as Rotation,
   }));
 }
 
@@ -378,7 +386,7 @@ export async function updateGearPrivate(db: Scoped, gearId: number, patch: Parti
 
 // ── Files ───────────────────────────────────────────────────────────────────
 
-const FILE_COLUMNS = 'id, gear_id, role, filename, content_type, bytes, caption, uploaded_by_id, uploaded_at';
+const FILE_COLUMNS = 'id, gear_id, role, filename, content_type, bytes, caption, public, rotation, uploaded_by_id, uploaded_at';
 
 async function toFiles(db: Scoped, rows: Row[]): Promise<GearFile[]> {
   const who = await accountNames(db, rows.map((r) => (r.uploaded_by_id ? String(r.uploaded_by_id) : null)));
@@ -390,12 +398,14 @@ async function toFiles(db: Scoped, rows: Row[]): Promise<GearFile[]> {
     contentType: str(r.content_type),
     bytes: numOrNull(r.bytes),
     caption: str(r.caption),
+    isPublic: r.public === true,
+    rotation: num(r.rotation) as Rotation,
     uploadedByName: nameOf(who, r.uploaded_by_id ? String(r.uploaded_by_id) : null),
     uploadedAt: iso(r.uploaded_at),
   }));
 }
 
-/** The files the viewer may see: photos on any unit they can see, everything on their own. */
+/** The files the viewer may see: public ones on any unit they can see, every file on their own (db/006). */
 export async function listGearFiles(db: Scoped, gearId: number): Promise<GearFile[]> {
   const rows = await db.q(`select ${FILE_COLUMNS} from gear_files where gear_id = $1 order by role, uploaded_at`, [gearId]);
   return toFiles(db, rows);
@@ -409,21 +419,33 @@ export async function getGearFileWithKey(db: Scoped, id: number): Promise<{ file
 
 export async function addGearFile(
   db: Scoped,
-  input: { gearId: number; role: GearFileRole; key: string; filename: string; contentType: string; bytes: number },
+  input: {
+    gearId: number;
+    role: GearFileRole;
+    key: string;
+    filename: string;
+    contentType: string;
+    bytes: number;
+    isPublic: boolean;
+  },
 ): Promise<GearFile> {
   const rows = await db.q(
-    `insert into gear_files (gear_id, role, r2_key, filename, content_type, bytes)
-     values ($1, $2, $3, $4, $5, $6) returning ${FILE_COLUMNS}`,
-    [input.gearId, input.role, input.key, input.filename, input.contentType, input.bytes],
+    `insert into gear_files (gear_id, role, r2_key, filename, content_type, bytes, public)
+     values ($1, $2, $3, $4, $5, $6, $7) returning ${FILE_COLUMNS}`,
+    [input.gearId, input.role, input.key, input.filename, input.contentType, input.bytes, input.isPublic],
   );
   return (await toFiles(db, rows))[0];
 }
 
-export async function updateGearFile(db: Scoped, id: number, patch: { caption?: string; role?: GearFileRole }): Promise<GearFile | null> {
+export type GearFilePatch = { caption?: string; role?: GearFileRole; isPublic?: boolean; rotation?: Rotation };
+
+export async function updateGearFile(db: Scoped, id: number, patch: GearFilePatch): Promise<GearFile | null> {
   const set: string[] = [];
   const params: unknown[] = [];
   if (patch.caption !== undefined) set.push(`caption = $${params.push(patch.caption)}`);
   if (patch.role !== undefined) set.push(`role = $${params.push(patch.role)}`);
+  if (patch.isPublic !== undefined) set.push(`public = $${params.push(patch.isPublic)}`);
+  if (patch.rotation !== undefined) set.push(`rotation = $${params.push(patch.rotation)}`);
   if (set.length) await db.q(`update gear_files set ${set.join(', ')} where id = $${params.push(id)}`, params);
   return (await getGearFileWithKey(db, id))?.file ?? null;
 }
