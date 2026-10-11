@@ -41,7 +41,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="flex min-h-full flex-col font-sans">
         <header className="border-b border-line">
           <div className="mx-auto flex max-w-7xl items-baseline gap-6 px-5 py-2.5">
-            <Link href="/" className="text-lg font-medium">
+            <Link href="/" className="text-[20px] font-semibold tracking-tight">
               Bottega
             </Link>
             {user ? (

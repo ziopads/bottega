@@ -39,7 +39,7 @@ body {
    these and nothing else for text size; medium weight is the only emphasis.
    Numbers that line up (codes, times, dates, BPM) add t-num. */
 @utility t-title {
-  font-size: 22px;
+  font-size: 18px;
   line-height: 1.25;
   font-weight: 500;
   letter-spacing: -0.01em;

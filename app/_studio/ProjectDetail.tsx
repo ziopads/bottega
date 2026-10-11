@@ -136,9 +136,14 @@ export default function ProjectDetail({
 
   return (
     <div className="mt-3">
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="t-body flex flex-wrap items-center gap-x-3 gap-y-1 text-muted">
-        <span className="t-num text-ink" title="Canonical ID: matches the Ableton folder; permanent">
+      {/* ── Header: one line, the name first ─────────────────────────────── */}
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        {canEdit ? (
+          <InlineEdit value={project.workingName} placeholder="untitled" label="Working name" textClass="t-title" onSave={(v) => patch({ workingName: v })} />
+        ) : (
+          <h1 className="t-title">{project.workingName || 'untitled'}</h1>
+        )}
+        <span className="t-num t-body text-muted" title="Canonical ID: matches the Ableton folder; permanent">
           {project.canonicalId}
         </span>
         {isOwner && artists.length > 0 ? (
@@ -147,7 +152,7 @@ export default function ProjectDetail({
             onChange={(e) => patch({ artistId: Number(e.target.value) })}
             title="Artist"
             aria-label="Artist"
-            className="rounded border border-line bg-card px-1 py-0 text-[12px] outline-none focus:border-rust"
+            className="t-body rounded border border-line bg-card px-1 py-0 text-muted outline-none focus:border-rust"
           >
             {artists.map((a) => (
               <option key={a.id} value={a.id}>
@@ -156,25 +161,24 @@ export default function ProjectDetail({
             ))}
           </select>
         ) : (
-          <span title={project.artist.name}>{project.artist.code}</span>
-        )}
-        {canEdit ? (
-          <Stars rating={project.rating} onRate={(n) => patch({ rating: n })} />
-        ) : (
-          <span title="Rating">{project.rating ? '★'.repeat(project.rating) : 'unrated'}</span>
-        )}
-        {!isOwner && (
-          <span>
-            · shared by {project.ownerName}; you can{' '}
-            {project.level === 'edit' ? 'edit' : project.level === 'contribute' ? 'contribute' : 'listen'}
+          <span className="t-body text-muted" title={project.artist.name}>
+            {project.artist.code}
           </span>
         )}
-      </div>
-      <div className="mt-1">
-        {canEdit ? (
-          <InlineEdit value={project.workingName} placeholder="untitled" label="Working name" textClass="t-title" onSave={(v) => patch({ workingName: v })} />
-        ) : (
-          <h1 className="t-title">{project.workingName || 'untitled'}</h1>
+        <span className="t-body">
+          {canEdit ? (
+            <Stars rating={project.rating} onRate={(n) => patch({ rating: n })} />
+          ) : (
+            <span className="text-muted" title="Rating">
+              {project.rating ? '★'.repeat(project.rating) : 'unrated'}
+            </span>
+          )}
+        </span>
+        {!isOwner && (
+          <span className="t-body text-muted">
+            shared by {project.ownerName}; you can{' '}
+            {project.level === 'edit' ? 'edit' : project.level === 'contribute' ? 'contribute' : 'listen'}
+          </span>
         )}
       </div>
 

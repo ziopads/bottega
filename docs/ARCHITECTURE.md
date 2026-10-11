@@ -771,7 +771,7 @@ so pages differ in content and never in how they are built.
   breakpoint the aside follows the main column. Overview pages (the gear
   map) use all twelve. `DetailGrid` does this; pages do not lay out columns
   of their own.
-- **Type.** Four sizes, as utilities in `globals.css`: `t-title` (22px, the
+- **Type.** Four sizes, as utilities in `globals.css`: `t-title` (18px, below the 20px app name in the header; the
   page title only), `t-lead` (15px, the main thing in a block, such as a
   mix's version), `t-body` (13px, everything else) and `t-label` (11px,
   uppercase, grey: labels and metadata). Medium weight is the only

@@ -9,7 +9,7 @@ import Link from 'next/link';
 //   MetaList     label / value rows, for an aside
 //   TabBar       tabs as links (a page per tab) or as buttons (one page)
 //
-// Type has four sizes, as utilities in globals.css: t-title (22px, page
+// Type has four sizes, as utilities in globals.css: t-title (18px, page
 // titles only), t-lead (15px, the main thing in a block), t-body (13px,
 // everything else) and t-label (11px uppercase, labels and metadata).
 

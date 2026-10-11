@@ -315,13 +315,14 @@ there may be lost in the move.
   waveform, and plays the mix from there when clicked.
 - **S-12** One volume for the whole app, set from the header or any player,
   kept between visits in the browser.
-- **S-13** The session page has four tabs. Overview: the current mix, where
-  the session stands, the latest notes, and its details beside them. Mixes:
-  every version and reference with its waveform, and beside them the notes
-  on the selected version, ordered by moment. Workflow: stages and cards
-  (§7). Notes: every note and event on the session (versions and references
-  uploaded, names changed), newest first, filterable by kind, person,
-  version and date.
+- **S-13** The session page has five tabs, under a one-line header (working
+  name, canonical ID, artist, rating). Overview: its details and sharing in
+  the narrow column on the left; the current mix, where the session stands
+  and the latest notes beside them. Mixes: every version and reference with
+  its waveform, and on the right the notes on the selected version, ordered
+  by moment. Workflow: stages and cards (§7). Notes: every note, filterable
+  by person, version and date from the left. History: versions and
+  references uploaded and names changed, newest first.
 
 ## 7. Workflow (W)
 
