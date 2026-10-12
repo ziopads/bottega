@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 
 import { apiAccount } from '@/lib/access';
 import {
+  addNote,
   addTopic,
+  createSession,
   getGroup,
   invite,
   leaveGroup,
@@ -11,7 +13,18 @@ import {
   updateGroup,
   withdrawInvitation,
 } from '@/lib/study';
-import { parseGroupDescription, parseGroupName, parseTopicSummary, parseTopicTitle } from '@/lib/studyInput';
+import {
+  parseGroupDescription,
+  parseGroupName,
+  parseIdList,
+  parseMinutes,
+  parseNoteBody,
+  parseSessionKind,
+  parseSessionSummary,
+  parseStartedAt,
+  parseTopicSummary,
+  parseTopicTitle,
+} from '@/lib/studyInput';
 import { answer, bad, parsePositiveId, readBody } from '@/lib/studyRoutes';
 import { parseOptionalId } from '@/lib/workflowInput';
 
@@ -67,6 +80,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 // POST /api/study/groups/:id
 //   { op: 'invite', email } | { op: 'withdraw', invitationId } | { op: 'remove', accountId } | { op: 'leave' }
 //   | { op: 'topic', title, summary?, modelId? }
+//   | { op: 'session', startedAt?, minutes?, kind?, summary?, private?, topicIds? }   the person's own, published
+//   | { op: 'note', body, sessionId?, topicId?, lessonId?, exerciseId?, private? }     the person's own
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const got = await load(ctx);
   if ('response' in got) return got.response;
@@ -101,6 +116,58 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       const model = parseOptionalId(body.modelId);
       if ('error' in model) return bad(model.error);
       return answer(db, id, () => addTopic(db, id, { title: title.value, summary: summary.value, modelId: model.value }, 'human'));
+    }
+    case 'session': {
+      const startedAt = parseStartedAt(body.startedAt);
+      if ('error' in startedAt) return bad(startedAt.error);
+      const minutes = parseMinutes(body.minutes);
+      if ('error' in minutes) return bad(minutes.error);
+      const kind = parseSessionKind(body.kind);
+      if ('error' in kind) return bad(kind.error);
+      const summary = parseSessionSummary(body.summary);
+      if ('error' in summary) return bad(summary.error);
+      const topics = parseIdList(body.topicIds);
+      if ('error' in topics) return bad(topics.error);
+      return answer(db, id, () =>
+        createSession(
+          db,
+          id,
+          {
+            startedAt: startedAt.value,
+            minutes: minutes.value,
+            kind: kind.value,
+            summary: summary.value,
+            private: body.private === true,
+            topicIds: topics.value,
+          },
+          'human',
+        ),
+      );
+    }
+    case 'note': {
+      const text = parseNoteBody(body.body);
+      if ('error' in text) return bad(text.error);
+      const ids: Record<string, number | null> = {};
+      for (const key of ['sessionId', 'topicId', 'lessonId', 'exerciseId']) {
+        const v = parseOptionalId(body[key]);
+        if ('error' in v) return bad(v.error);
+        ids[key] = v.value;
+      }
+      return answer(db, id, () =>
+        addNote(
+          db,
+          id,
+          {
+            body: text.value,
+            sessionId: ids.sessionId,
+            topicId: ids.topicId,
+            lessonId: ids.lessonId,
+            exerciseId: ids.exerciseId,
+            private: body.private === true,
+          },
+          'human',
+        ),
+      );
     }
     default:
       return bad('Unknown operation');

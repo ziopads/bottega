@@ -5,12 +5,21 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import Exercise, { type Call } from '@/app/_learning/Exercise';
+import { NotesTab, ProgressTab, SessionsTab } from '@/app/_learning/Journal';
 import LessonBody, { titlesOf } from '@/app/_learning/LessonBody';
 import { api, InlineEdit } from '@/app/_studio/controls';
 import { formatWhen } from '@/app/_studio/Notes';
-import { DetailGrid, PageHeader, Section } from '@/app/_ui/layout';
+import { DetailGrid, PageHeader, Section, TabBar } from '@/app/_ui/layout';
 import { BUTTON, FIELD, TEXT_ACTION, TEXT_DANGER } from '@/app/_ui/styles';
-import { lessonHref, type StudyGroup, type StudyModel, type StudyTopic } from '@/lib/studyTypes';
+import {
+  GROUP_TAB_LABEL,
+  GROUP_TABS,
+  lessonHref,
+  type GroupTab,
+  type StudyGroup,
+  type StudyModel,
+  type StudyTopic,
+} from '@/lib/studyTypes';
 
 // One study group (REQUIREMENTS L-2, L-5, L-7 to L-10, db/016):
 //
@@ -23,10 +32,36 @@ import { lessonHref, type StudyGroup, type StudyModel, type StudyTopic } from '@
 //
 // Members read everything and keep their own progress; the custodian writes
 // and orders the syllabus. Every change answers with the whole group.
+//
+// Tabs, as on the session page (the chosen one in the address as ?tab=, kept
+// with history.replaceState so switching does not reload): Syllabus, Sessions
+// and Notes (Journal.tsx), Resources (next build), Progress. The aside is the
+// same on every tab, with the syllabus's contents on the Syllabus tab.
 
-export default function GroupView({ initial, viewerId, models }: { initial: StudyGroup; viewerId: string; models: StudyModel[] }) {
+export default function GroupView({
+  initial,
+  viewerId,
+  models,
+  initialTab,
+}: {
+  initial: StudyGroup;
+  viewerId: string;
+  models: StudyModel[];
+  initialTab: GroupTab;
+}) {
   const router = useRouter();
   const [g, setG] = useState(initial);
+  const [tab, setTab] = useState<GroupTab>(initialTab);
+
+  function selectTab(key: string) {
+    const next = key as GroupTab;
+    setTab(next);
+    const url = new URL(window.location.href);
+    if (next === 'syllabus') url.searchParams.delete('tab');
+    else url.searchParams.set('tab', next);
+    url.hash = '';
+    window.history.replaceState(null, '', url);
+  }
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -121,8 +156,14 @@ export default function GroupView({ initial, viewerId, models }: { initial: Stud
     </div>
   );
 
+  const drafts = g.sessions.filter((x) => !x.published && x.authorId === viewerId).length;
+  const tabCount: Partial<Record<GroupTab, number>> = {
+    sessions: g.sessions.filter((x) => x.published).length,
+    notes: g.notes.filter((n) => n.published || n.authorId === viewerId).length,
+  };
+
   // ── Main column: the syllabus ───────────────────────────────────────────────
-  const main = (
+  const syllabus = (
     <>
       {review}
       {accepted.length === 0 ? (
@@ -140,6 +181,22 @@ export default function GroupView({ initial, viewerId, models }: { initial: Stud
         ))
       )}
       {custodian && <AddTopic groupId={g.id} models={models} busy={busy} call={call} />}
+    </>
+  );
+
+  const main = (
+    <>
+      {tab === 'syllabus' && syllabus}
+      {tab === 'sessions' && <SessionsTab g={g} viewerId={viewerId} titles={titles} call={call} busy={busy} />}
+      {tab === 'notes' && <NotesTab g={g} viewerId={viewerId} titles={titles} call={call} busy={busy} />}
+      {tab === 'resources' && (
+        <Section label="Resources">
+          <p className="t-body max-w-prose text-muted">
+            Coming next: videos, articles and pages any member adds, filed under topics, with notes pointing at moments in a video.
+          </p>
+        </Section>
+      )}
+      {tab === 'progress' && <ProgressTab g={g} />}
       {error && <p className="t-body mt-4 text-rust">{error}</p>}
     </>
   );
@@ -147,13 +204,15 @@ export default function GroupView({ initial, viewerId, models }: { initial: Stud
   // ── Aside: members and documents ────────────────────────────────────────────
   const aside = (
     <>
+      {tab === 'syllabus' && accepted.length > 0 && <Contents g={g} viewerId={viewerId} />}
       <Members g={g} viewerId={viewerId} custodian={custodian} busy={busy} call={call} />
       <Documents g={g} isCustodian={isCustodian} busy={busy} setError={setError} reload={reload} />
       <Section label="With Claude">
         <p className="t-body text-muted">
-          Through the Bottega connector, Claude can read this group with get_study_group and propose topics, lessons and exercises
-          (draft_topic, draft_lesson, draft_exercise). Lessons cite pages as [document:pPage], checked against the page text; proposals
-          wait above until the custodian accepts them.
+          Through the Bottega connector, Claude reads this group (get_study_group, list_study_notes, get_study_history), proposes
+          topics, lessons and exercises for the custodian to accept (draft_topic, draft_lesson, draft_exercise), and documents a study
+          session with its notes when you ask (record_study_session), as a draft only you see until you publish it. Citations are
+          written [document:pPage] and checked against the page text.
         </p>
       </Section>
     </>
@@ -198,8 +257,62 @@ export default function GroupView({ initial, viewerId, models }: { initial: Stud
           )}
         </div>
       )}
+      <div className="mb-6 border-b border-line">
+        <TabBar
+          current={tab}
+          onSelect={selectTab}
+          tabs={GROUP_TABS.map((key) => ({
+            key,
+            label: key === 'sessions' && drafts ? `Sessions · ${drafts} draft${drafts === 1 ? '' : 's'}` : GROUP_TAB_LABEL[key],
+            count: tabCount[key],
+          }))}
+        />
+      </div>
       <DetailGrid main={main} aside={aside} />
     </div>
+  );
+}
+
+/** The syllabus at a glance, beside it: topics and their lessons, with the viewer's exercises done. */
+function Contents({ g, viewerId }: { g: StudyGroup; viewerId: string }) {
+  const topics = g.topics.filter((t) => t.review === 'accepted');
+  return (
+    <Section label="Contents">
+      <ol className="t-body space-y-2">
+        {topics.map((t, i) => {
+          const lessons = g.lessons.filter((l) => l.topicId === t.id && l.review === 'accepted');
+          const exercises = g.exercises.filter((e) => e.topicId === t.id && e.review === 'accepted');
+          const done = exercises.filter((e) => e.progress.some((p) => p.accountId === viewerId && p.status === 'done')).length;
+          return (
+            <li key={t.id}>
+              <a href={`#topic-${t.id}`} className="flex items-baseline gap-2 hover:text-rust">
+                <span className="t-num w-5 shrink-0 text-muted">{i + 1}</span>
+                <span className="min-w-0 flex-1">{t.title}</span>
+                {exercises.length > 0 && (
+                  <span className={`t-num text-[11px] ${done === exercises.length ? 'text-moss' : 'text-muted'}`}>
+                    {done}/{exercises.length}
+                  </span>
+                )}
+              </a>
+              {lessons.length > 0 && (
+                <ol className="ml-7 mt-0.5 space-y-0.5 text-[12px]">
+                  {lessons.map((l, j) => (
+                    <li key={l.id}>
+                      <Link href={lessonHref(g.id, l.id)} className="flex gap-2 text-muted hover:text-rust">
+                        <span className="t-num w-6 shrink-0">
+                          {i + 1}.{j + 1}
+                        </span>
+                        <span className="min-w-0">{l.title}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </Section>
   );
 }
 
@@ -272,7 +385,7 @@ function Topic({
   const lessonTitle = (id: number | null) => (id === null ? null : lessons.find((l) => l.id === id)?.title ?? null);
 
   return (
-    <section className="mb-10">
+    <section id={`topic-${t.id}`} className="mb-10 scroll-mt-4">
       <div className="mb-2 flex items-baseline gap-3 border-b border-line pb-1">
         <span className="t-num t-label">{n}</span>
         <h2 className="t-lead min-w-0 flex-1 font-semibold">

@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 
 import Exercise, { type Call } from '@/app/_learning/Exercise';
 import { LessonForm } from '@/app/_learning/GroupView';
+import { NoteForm, NoteItem } from '@/app/_learning/Journal';
 import LessonBody, { titlesOf } from '@/app/_learning/LessonBody';
 import { api, InlineEdit } from '@/app/_studio/controls';
 import { formatWhen } from '@/app/_studio/Notes';
@@ -99,18 +100,32 @@ export default function LessonView({ initial, lessonId, viewerId }: { initial: S
     </>
   );
 
+  const notes = g.notes.filter((n) => n.lessonId === lesson.id && (n.published || n.authorId === viewerId));
+
   const aside = (
-    <Section label="Exercises">
-      {exercises.length === 0 ? (
-        <p className="t-body text-muted">None for this lesson.</p>
-      ) : (
-        <ul className="t-body divide-y divide-line">
-          {exercises.map((e) => (
-            <Exercise key={e.id} exercise={e} viewerId={viewerId} canProgress={open} custodian={custodian} call={call} busy={busy} />
-          ))}
-        </ul>
-      )}
-    </Section>
+    <>
+      <Section label="Exercises">
+        {exercises.length === 0 ? (
+          <p className="t-body text-muted">None for this lesson.</p>
+        ) : (
+          <ul className="t-body divide-y divide-line">
+            {exercises.map((e) => (
+              <Exercise key={e.id} exercise={e} viewerId={viewerId} canProgress={open} custodian={custodian} call={call} busy={busy} />
+            ))}
+          </ul>
+        )}
+      </Section>
+      <Section label="Notes on this lesson">
+        {notes.length > 0 && (
+          <ul className="mb-3 divide-y divide-line">
+            {notes.map((n) => (
+              <NoteItem key={n.id} n={n} g={g} viewerId={viewerId} titles={titles} call={call} busy={busy} showContext={false} />
+            ))}
+          </ul>
+        )}
+        {open && <NoteForm g={g} call={call} busy={busy} fixed={{ lessonId: lesson.id, topicId: lesson.topicId }} />}
+      </Section>
+    </>
   );
 
   return (

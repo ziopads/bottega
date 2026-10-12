@@ -11,7 +11,10 @@ import type {
   StudyInvitation,
   StudyLesson,
   StudyMember,
+  SessionKind,
+  StudyNote,
   StudyProgressStatus,
+  StudySession,
   StudyTopic,
 } from '@/lib/studyTypes';
 
@@ -33,7 +36,7 @@ const iso = (v: unknown): string => (v instanceof Date ? v.toISOString() : Strin
 export class StudyError extends Error {}
 
 const READABLE =
-  /custodian|already|no approved account|not a member|no invitation of yours|has already been answered|group is closed|accept its topic first|same topic|stays|only a proposal|open or closed|not shared; they are visible|cannot leave/;
+  /publishes it|stays published|session's topics belong|note's (session|topic|lesson|exercise)|stays with its group|custodian|already|no approved account|not a member|no invitation of yours|has already been answered|group is closed|accept its topic first|same topic|stays|only a proposal|open or closed|not shared; they are visible|cannot leave/;
 
 async function run<T>(fn: () => Promise<T>): Promise<T> {
   try {
@@ -102,7 +105,7 @@ export async function listMyGroups(db: Scoped): Promise<{ groups: StudyGroupSumm
 
 /** One group with its whole syllabus, or null when the person is not a member. */
 export async function getGroup(db: Scoped, groupId: number): Promise<StudyGroup | null> {
-  const [groupRows, memberRows, inviteRows, topicRows, lessonRows, exerciseRows, progressRows, sharedRows] = await db.tx([
+  const [groupRows, memberRows, inviteRows, topicRows, lessonRows, exerciseRows, progressRows, sharedRows, sessionRows, noteRows] = await db.tx([
     {
       text: `select id, name, description, status, custodian_id, created_at from study_groups where id = $1 and study_member(id)`,
       params: [groupId],
@@ -139,6 +142,17 @@ export async function getGroup(db: Scoped, groupId: number): Promise<StudyGroup 
       params: [groupId],
     },
     { text: 'select document_id from study_group_documents where group_id = $1', params: [groupId] },
+    {
+      text: `select s.id, s.author_id, s.started_at, s.minutes, s.kind, s.summary, s.private, s.origin, s.published, s.created_at,
+                    coalesce((select array_agg(st.topic_id order by st.topic_id) from study_session_topics st where st.session_id = s.id), '{}') as topic_ids
+               from study_sessions s where s.group_id = $1 order by s.started_at desc, s.id desc`,
+      params: [groupId],
+    },
+    {
+      text: `select id, author_id, session_id, topic_id, lesson_id, exercise_id, body, private, origin, published, created_at, updated_at
+               from study_notes where group_id = $1 order by created_at desc, id desc`,
+      params: [groupId],
+    },
   ]);
   if (!groupRows.length) return null;
   const g = groupRows[0];
@@ -150,6 +164,8 @@ export async function getGroup(db: Scoped, groupId: number): Promise<StudyGroup 
     ...lessonRows.map((r) => str(r.created_by)),
     ...exerciseRows.map((r) => str(r.created_by)),
     ...progressRows.map((r) => str(r.account_id)),
+    ...sessionRows.map((r) => str(r.author_id)),
+    ...noteRows.map((r) => str(r.author_id)),
   ]);
 
   const members: StudyMember[] = memberRows.map((r) => ({
@@ -213,6 +229,36 @@ export async function getGroup(db: Scoped, groupId: number): Promise<StudyGroup 
     progress: progressBy.get(num(r.id)) ?? [],
   }));
 
+  const sessions: StudySession[] = sessionRows.map((r) => ({
+    id: num(r.id),
+    authorId: str(r.author_id),
+    authorName: nameOf(who, str(r.author_id)),
+    startedAt: iso(r.started_at),
+    minutes: numOrNull(r.minutes),
+    kind: str(r.kind) as SessionKind,
+    summary: str(r.summary),
+    private: r.private === true,
+    origin: r.origin === 'assistant' ? 'assistant' : 'human',
+    published: r.published === true,
+    topicIds: ((r.topic_ids as unknown[]) ?? []).map(num),
+    createdAt: iso(r.created_at),
+  }));
+  const notes: StudyNote[] = noteRows.map((r) => ({
+    id: num(r.id),
+    authorId: str(r.author_id),
+    authorName: nameOf(who, str(r.author_id)),
+    sessionId: numOrNull(r.session_id),
+    topicId: numOrNull(r.topic_id),
+    lessonId: numOrNull(r.lesson_id),
+    exerciseId: numOrNull(r.exercise_id),
+    body: str(r.body),
+    private: r.private === true,
+    origin: r.origin === 'assistant' ? 'assistant' : 'human',
+    published: r.published === true,
+    createdAt: iso(r.created_at),
+    updatedAt: iso(r.updated_at),
+  }));
+
   // Documents: those the lessons cite (proposals included, for their titles)
   // and those shared with the group.
   const shared = new Set(sharedRows.map((r) => num(r.document_id)));
@@ -227,6 +273,9 @@ export async function getGroup(db: Scoped, groupId: number): Promise<StudyGroup 
       set.add(l.id);
       citedBy.set(c.documentId, set);
     }
+  }
+  for (const text of [...sessions.map((x) => x.summary), ...notes.map((x) => x.body)]) {
+    for (const c of parseCitations(text)) mentioned.add(c.documentId);
   }
   const docIds = Array.from(new Set([...shared, ...mentioned]));
   const docRows = docIds.length
@@ -260,16 +309,20 @@ export async function getGroup(db: Scoped, groupId: number): Promise<StudyGroup 
     lessons,
     exercises,
     documents,
+    sessions,
+    notes,
   };
 }
 
 /** The group a topic, lesson or exercise belongs to, or null when the person cannot see it. */
-export async function groupOf(db: Scoped, kind: 'topic' | 'lesson' | 'exercise' | 'invitation', id: number): Promise<number | null> {
+export async function groupOf(db: Scoped, kind: 'topic' | 'lesson' | 'exercise' | 'invitation' | 'session' | 'note', id: number): Promise<number | null> {
   const sql = {
     topic: 'select group_id from study_topics where id = $1',
     lesson: 'select t.group_id from study_lessons l join study_topics t on t.id = l.topic_id where l.id = $1',
     exercise: 'select t.group_id from study_exercises e join study_topics t on t.id = e.topic_id where e.id = $1',
     invitation: 'select group_id from study_group_invitations where id = $1',
+    session: 'select group_id from study_sessions where id = $1',
+    note: 'select group_id from study_notes where id = $1',
   }[kind];
   const rows = await db.q(sql, [id]);
   return rows.length ? num(rows[0].group_id) : null;
@@ -506,4 +559,125 @@ export async function unshareFromGroup(db: Scoped, documentId: number, groupId: 
     db.q('delete from study_group_documents where group_id = $1 and document_id = $2 returning group_id', [groupId, documentId]),
   );
   if (!rows.length) throw new StudyError('Only the document’s owner stops sharing it.');
+}
+
+// ── Sessions and notes (db/017) ──────────────────────────────────────────────
+
+export interface NoteInput {
+  body: string;
+  topicId?: number | null;
+  lessonId?: number | null;
+  exerciseId?: number | null;
+  private?: boolean;
+}
+
+export interface SessionInput {
+  startedAt: string | null;
+  minutes: number | null;
+  kind: SessionKind;
+  summary: string;
+  private: boolean;
+  topicIds: number[];
+}
+
+const SESSION_ID = `currval(pg_get_serial_sequence('study_sessions', 'id'))`;
+
+/**
+ * Stores a session with its topics and, optionally, its notes, in one
+ * transaction. Origin 'assistant' (the connector) makes it a draft that only
+ * its author sees until they publish it. Citations in the summary and the
+ * notes are checked first. Returns the session's id.
+ */
+export async function createSession(db: Scoped, groupId: number, s: SessionInput, origin: Origin, notes: NoteInput[] = []): Promise<number> {
+  for (const text of [s.summary, ...notes.map((n) => n.body)]) await citationsOk(db, text);
+  const results = await run(() =>
+    db.tx([
+      {
+        text: `insert into study_sessions (group_id, started_at, minutes, kind, summary, private, origin)
+               values ($1, coalesce($2::timestamptz, now()), $3, $4, $5, $6, $7) returning id`,
+        params: [groupId, s.startedAt, s.minutes, s.kind, s.summary, s.private, origin],
+      },
+      {
+        text: `insert into study_session_topics (session_id, topic_id) select ${SESSION_ID}, t from unnest($1::bigint[]) as t`,
+        params: [Array.from(new Set(s.topicIds))],
+      },
+      ...notes.map((n) => ({
+        text: `insert into study_notes (group_id, session_id, topic_id, lesson_id, exercise_id, body, private, origin)
+               values ($1, ${SESSION_ID}, $2, $3, $4, $5, $6, $7)`,
+        params: [groupId, n.topicId ?? null, n.lessonId ?? null, n.exerciseId ?? null, n.body, n.private ?? false, origin],
+      })),
+    ]),
+  );
+  return num(results[0][0].id);
+}
+
+export async function updateSession(db: Scoped, id: number, patch: Partial<SessionInput>): Promise<void> {
+  if (typeof patch.summary === 'string') await citationsOk(db, patch.summary);
+  const cols: Record<string, string> = { startedAt: 'started_at', minutes: 'minutes', kind: 'kind', summary: 'summary', private: 'private' };
+  const sets: string[] = [];
+  const params: unknown[] = [id];
+  for (const [key, col] of Object.entries(cols)) {
+    const v = (patch as Record<string, unknown>)[key];
+    if (v === undefined) continue;
+    params.push(v);
+    sets.push(`${col} = $${params.length}`);
+  }
+  const statements = [
+    { text: `update study_sessions set ${sets.length ? sets.join(', ') : 'summary = summary'} where id = $1 returning id`, params },
+  ];
+  if (patch.topicIds) {
+    statements.push(
+      { text: 'delete from study_session_topics where session_id = $1 returning session_id', params: [id] },
+      {
+        text: 'insert into study_session_topics (session_id, topic_id) select $1, t from unnest($2::bigint[]) as t returning session_id',
+        params: [id, Array.from(new Set(patch.topicIds))],
+      },
+    );
+  }
+  const results = await run(() => db.tx(statements));
+  if (!results[0].length) throw new StudyError('Only the session’s author changes it, and only while the group is open.');
+}
+
+export async function publishSession(db: Scoped, id: number): Promise<void> {
+  await run(() => db.q('select study_session_publish($1)', [id]));
+}
+
+/** Discards one of the person's own drafts, with its notes. */
+export async function discardSession(db: Scoped, id: number): Promise<void> {
+  const rows = await run(() => db.q('delete from study_sessions where id = $1 returning id', [id]));
+  if (!rows.length) throw new StudyError('Only a draft can be discarded, by its author.');
+}
+
+export async function addNote(db: Scoped, groupId: number, n: NoteInput & { sessionId?: number | null }, origin: Origin): Promise<number> {
+  await citationsOk(db, n.body);
+  const rows = await run(() =>
+    db.q(
+      `insert into study_notes (group_id, session_id, topic_id, lesson_id, exercise_id, body, private, origin)
+       values ($1, $2, $3, $4, $5, $6, $7, $8) returning id`,
+      [groupId, n.sessionId ?? null, n.topicId ?? null, n.lessonId ?? null, n.exerciseId ?? null, n.body, n.private ?? false, origin],
+    ),
+  );
+  return num(rows[0].id);
+}
+
+export async function updateNote(db: Scoped, id: number, patch: Partial<NoteInput>): Promise<void> {
+  if (typeof patch.body === 'string') await citationsOk(db, patch.body);
+  const cols: Record<string, string> = { body: 'body', topicId: 'topic_id', lessonId: 'lesson_id', exerciseId: 'exercise_id', private: 'private' };
+  const sets: string[] = [];
+  const params: unknown[] = [id];
+  for (const [key, col] of Object.entries(cols)) {
+    const v = (patch as Record<string, unknown>)[key];
+    if (v === undefined) continue;
+    params.push(v);
+    sets.push(`${col} = $${params.length}`);
+  }
+  if (!sets.length) return;
+  const rows = await run(() => db.q(`update study_notes set ${sets.join(', ')} where id = $1 returning id`, params));
+  if (!rows.length) throw new StudyError('Only the note’s author changes it, and only while the group is open.');
+}
+
+/** Discards one of the person's own draft notes. */
+export async function discardNote(db: Scoped, id: number): Promise<void> {
+  const rows = await run(() => db.q('delete from study_notes where id = $1 returning id', [id]));
+  if (!rows.length) throw new StudyError('Only a draft note can be discarded, by its author.');
 }

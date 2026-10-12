@@ -5,8 +5,12 @@ import {
   GROUP_NAME_MAX,
   LESSON_BODY_MAX,
   LESSON_TITLE_MAX,
+  NOTE_BODY_MAX,
   PROGRESS_NOTE_MAX,
+  SESSION_KINDS,
+  SESSION_SUMMARY_MAX,
   STUDY_PROGRESS,
+  type SessionKind,
   TOPIC_SUMMARY_MAX,
   TOPIC_TITLE_MAX,
   type StudyProgressStatus,
@@ -38,4 +42,48 @@ export function parseProgressStatus(raw: unknown): Parsed<StudyProgressStatus> {
   return (STUDY_PROGRESS as readonly string[]).includes(raw as string)
     ? { value: raw as StudyProgressStatus }
     : { error: `The progress is one of: ${STUDY_PROGRESS.join(', ')}.` };
+}
+
+/** Multi-line text that keeps its line breaks. */
+function longText(raw: unknown, label: string, max: number, required: boolean): Parsed<string> {
+  if (raw === undefined || raw === null || (typeof raw === 'string' && !raw.trim())) {
+    return required ? { error: `${label} is required.` } : { value: '' };
+  }
+  if (typeof raw !== 'string') return { error: `${label} must be text.` };
+  const value = raw.replace(/\r\n?/g, '\n').trim();
+  if (value.length > max) return { error: `Keep ${label.toLowerCase()} under ${max} characters.` };
+  return { value };
+}
+
+export const parseSessionSummary = (raw: unknown) => longText(raw, 'The summary', SESSION_SUMMARY_MAX, false);
+export const parseNoteBody = (raw: unknown) => longText(raw, 'The note', NOTE_BODY_MAX, true);
+
+export function parseSessionKind(raw: unknown): Parsed<SessionKind> {
+  if (raw === undefined || raw === null || raw === '') return { value: 'at the instrument' };
+  return (SESSION_KINDS as readonly string[]).includes(raw as string)
+    ? { value: raw as SessionKind }
+    : { error: `The kind of session is one of: ${SESSION_KINDS.join(', ')}.` };
+}
+
+export function parseMinutes(raw: unknown): Parsed<number | null> {
+  if (raw === undefined || raw === null || raw === '') return { value: null };
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 1 && n <= 1440 ? { value: n } : { error: 'Minutes are a whole number from 1 to 1440.' };
+}
+
+/** A date and time; null for now. Not in the future by more than a day (a slip of the date). */
+export function parseStartedAt(raw: unknown): Parsed<string | null> {
+  if (raw === undefined || raw === null || raw === '') return { value: null };
+  if (typeof raw !== 'string') return { error: 'Give the time as a date and time.' };
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return { error: `"${raw}" is not a date and time.` };
+  if (d.getTime() > Date.now() + 24 * 3600 * 1000) return { error: 'That time is in the future.' };
+  return { value: d.toISOString() };
+}
+
+export function parseIdList(raw: unknown): Parsed<number[]> {
+  if (raw === undefined || raw === null) return { value: [] };
+  if (!Array.isArray(raw)) return { error: 'Give a list of ids.' };
+  const ids = raw.map(Number);
+  return ids.every((n) => Number.isInteger(n) && n > 0) ? { value: ids } : { error: 'Invalid id in the list.' };
 }

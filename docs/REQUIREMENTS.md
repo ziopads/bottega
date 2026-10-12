@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.17
+**Version:** 0.18
 **Date:** 2026-10-12
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -9,6 +9,11 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.18** (2026-10-12) — Study sessions and notes (L-18 to L-22): a
+  member's sittings and notes, Claude documenting a conversation as a draft
+  the member publishes, private entries, the group page in tabs, and first
+  figures of progress. Resources are next (L-23, planned).
 
 - **0.17** (2026-10-12) — Learning, first slice (L-12 to L-17): study
   groups with a custodian and invitations; a syllabus of topics, lessons and
@@ -563,6 +568,29 @@ travel to the database.
 - **L-16** A document's owner may share a private document with a study
   group they belong to: its current members read it (view), and lose that
   when they leave. Built 12 October 2026 (decision 10 in §15).
+- **L-18** Study sessions. A member records a sitting in a group: when, how
+  long, what kind (at the instrument, a conversation, reading, watching a
+  video, other), a summary, and the topics it touched. Built 12 October 2026.
+- **L-19** Notes (L-3 as built). A member writes notes, each with its author
+  and time, standing alone or in one of their sessions, optionally on a
+  topic, a lesson or an exercise. Notes and summaries may cite the corpus with
+  the lessons' markers, checked the same way. Built 12 October 2026.
+- **L-20** Claude documents a session through the connector when the member
+  asks ("please document this"), summary and notes in one call. It arrives
+  as a draft only that member sees, marked as documented by Claude, until
+  they publish it (the session with its notes) or discard it. Built 12
+  October 2026.
+- **L-21** Sessions and notes are shared with the group by default; their
+  author may mark one private. A note in a private session is private. Only
+  the author changes their own; nothing published is deleted (L-9). Built 12
+  October 2026.
+- **L-22** Progress, drawn from sessions: sessions and minutes per member and
+  per week, sessions and minutes per topic (a session's minutes split evenly
+  over its topics) with when each was last touched, the topics not touched,
+  and exercises done. First version built 12 October 2026 (tables; charts
+  later).
+- **L-23** (planned) Resources: videos, articles and pages any member adds,
+  filed under topics, with notes pointing at moments in a video.
 - **L-17** Joining is by invitation only in the first slice; invitations go
   to approved accounts by email, and the invitee accepts or declines on the
   Learning page. The custodian cannot leave or be removed until handover

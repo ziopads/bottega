@@ -1,6 +1,6 @@
 # Bottega — architecture
 
-**Version:** 0.7
+**Version:** 0.8
 **Date:** 2026-10-12
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
@@ -9,6 +9,10 @@ story IDs below (S-3, W-6 and so on) refer to it.
 ---
 
 ## Changelog
+
+- **0.8** (2026-10-12) — Study sessions and notes (migration 017, §4 Study);
+  connector tools `record_study_session`, `list_study_notes`,
+  `get_study_history` (§6).
 
 - **0.7** (2026-10-12) — Study groups as built in migration 016 (§4 Study,
   §11 Study groups): groups, members and invitations, the syllabus with
@@ -314,9 +318,19 @@ moved, so two open pages cannot process the same pages twice.
   task, done when, position), each with origin, reviewed and rejected as in
   the workflow; `study_progress` (exercise, member, status, note);
   `study_group_documents` (group, document, shared by).
-- Later: `study_notes` (author, topic, kind note or question, an anchor to a
-  page and quotation or to a video timestamp), `note_answers`, video
-  `sources`, `instruments` (member, MPC model, firmware), join requests.
+- Built (017): `study_sessions` (group, author, started, minutes, kind,
+  summary, private, origin, published), `study_session_topics`,
+  `study_notes` (group, author, optional session, topic, lesson, exercise;
+  body, private, origin, published). Claude's writing (origin `assistant`)
+  is inserted unpublished; `study_session_publish()` publishes a session with
+  its notes; an author may delete only their own unpublished rows. Read
+  policy: members see their own, and others' published, non-private ones (a
+  note in a session also needs the session visible: `study_session_visible()`).
+  A session and its notes are written in one transaction, the notes taking
+  the new session's id from `currval(pg_get_serial_sequence(...))`.
+- Later: question and answer notes, `study_resources` (video, article, page;
+  topics; notes at a moment), `instruments` (member, MPC model, firmware),
+  join requests.
 - Citations are not stored apart from the lesson body: `lib/citations.ts`
   parses the markers (`[15:p42]`, `[15:p42-43]`, `[15:p42 "words"]`) for the
   checker (`checkCitations()` in `lib/study.ts`, run on every save, by a
@@ -372,7 +386,7 @@ them.
 | Phase | Tools |
 |---|---|
 | 1 | `list_documents` ✓, `search` ✓, `read_pages` ✓, `find_gear`, `get_gear`, `list_projects` ✓, `get_session` ✓ (named `get_project` in earlier drafts) |
-| 2 | `get_board`, `draft_card` ✓, `draft_criteria` ✓, `get_study_group` ✓ (syllabus, proposals and progress), `draft_topic` ✓, `draft_lesson` ✓, `draft_exercise` ✓, `list_study_notes`, `draft_study_note` |
+| 2 | `get_board`, `draft_card` ✓, `draft_criteria` ✓, `get_study_group` ✓ (syllabus, proposals and progress), `draft_topic` ✓, `draft_lesson` ✓, `draft_exercise` ✓, `record_study_session` ✓, `list_study_notes` ✓, `get_study_history` ✓ |
 | 3 | `get_analysis`, `compare_to_reference` |
 
 Corpus tools (`mcp/tools/corpus.ts`, `lib/search.ts`): search scopes to the

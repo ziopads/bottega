@@ -24,6 +24,10 @@ Latest commits, newest first:
 
 | Commit | What it did |
 |---|---|
+| `a41e987` | Sign-up page: anyone creates an account, which waits for approval |
+| `599870e` | Page reader: the PDF pane in the reader's layout, so it survives page turns |
+| `003a43c` | Page reader: PDF loaded once, pages by `#page`; reader links signed for a fixed window |
+| `86c9696` | Learning, first slice: study groups, syllabus, cited lessons, progress, group documents (016) |
 | `56ab88c` | Upload form asks private or library first; Scriptorium's page navigation in the reader; the 12 October handoff |
 | `2790d3e` | Corpus search: `search`, `read_pages`, `list_documents` on the connector; the page reader with the PDF beside the text |
 | `237c3fb` | `pipeline/document_home.py`: move a library document into its contributor's private documents |
@@ -37,12 +41,13 @@ Latest commits, newest first:
 | `b1b7cba` | Mix variants numbered within each variant (013) |
 
 The Learning slice and migration 016 were committed and pushed on 12
-October. **Not yet committed**: the PDF pane loading a book once (below,
-"Corpus search and the page reader"), checked with type check, lint and the
-access check, not yet in a browser. The command is in §7.
+October, then the PDF reader fixes and the sign-up page. **Not yet
+committed**: the study sessions and notes slice with migration 017, checked
+with type check, lint, the access check and its database tests, not yet seen
+in a browser. The commands are in §7.
 
 Migrations `db/001`–`016`, with test suites in `db/test/` for 002–016.
-001–016 are applied on Neon.
+001–016 are applied on Neon; **017 is not yet**.
 
 Confirmed working on production: sign-in and accounts, gear, document upload
 and processing, the session page and its tabs, the workflow, the connector
@@ -219,6 +224,21 @@ the light formatting), `lib/studyTypes.ts`, `lib/studyInput.ts`,
 tools in `mcp/tools/study.ts` (server 0.4.0). The account page's activity
 describes the new log entries.
 
+**Study sessions and notes** (L-18 to L-22, migration 017). The group page
+has tabs (`?tab=`, switched in place like the session page): Syllabus (with
+a Contents list in the aside: topics, lessons, the viewer's exercises done),
+Sessions (the viewer's drafts in a band at the top with Publish, Edit,
+Discard; "+ Log a session"; every visible session with its topics, summary
+and notes; "+ Note" in one's own), Notes (filter by member and topic; add,
+edit), Resources (placeholder for the next build), Progress (tables over 4,
+8, 12 or 26 weeks: per member with a small bar per week, per topic with last
+touched, exercises done; `studyHistory()` in `lib/studyTypes.ts`, shared with
+the connector). The lesson page lists notes on the lesson and takes new ones.
+Connector (server 0.5.0): `record_study_session` (summary, kind, minutes,
+time, topics by id or title, notes; a draft), `list_study_notes`,
+`get_study_history`; the instructions say to record only when asked, once,
+at the end, and to tell the person it waits as a draft.
+
 **Layout system** (ARCHITECTURE §13). `DetailGrid`, `PageHeader`, `Section`,
 `MetaList`, `TabBar`; control classes in `app/_ui/styles.ts`; four type
 sizes.
@@ -269,8 +289,27 @@ sizes.
    inference for PDFs without an outline. Recommended: the first. Open
    question: does the MPC Bible carry bookmarks?
 2. **Search box in the app** (search option 3), on the same `lib/search.ts`.
-3. **Learning, next slices** (decided 12 October: study groups, first slice
-   built). Candidates: asking to join and the directory of groups (L-8,
+3. **Learning, second slice: decided 12 October; (a) built, with a first
+   Progress tab; (b) resources next.**
+   Study sessions (one member, one sitting: date, minutes, kind at the MPC /
+   conversation / reading / video, summary, topics touched, optional lessons
+   and exercises) and notes (author and timestamp; optionally in a session,
+   on a topic, lesson, exercise, a book page by citation marker, or a
+   resource at a moment). Decisions: Claude's documented session is a draft
+   visible only to its author until they publish it (one click for the whole
+   session), labelled "documented by Claude"; sessions and notes are shared
+   with the group by default, private per item; a session records topics
+   touched plus total minutes, and Progress splits time evenly across them;
+   tabs Syllabus · Sessions · Notes · Resources · Progress (`?tab=`), members
+   and documents in the aside, a contents list beside the syllabus.
+   Connector: `record_study_session` (summary, topics and notes in one call,
+   for "please document it" at the end of a spoken conversation),
+   `list_study_notes`, `get_study_history`. Build order: (a) sessions, notes,
+   tabs, connector, migration 017; (b) resources (YouTube oEmbed for title,
+   channel, thumbnail; filed under topics; notes at moments open the video at
+   that time); (c) the Progress tab. To test early: whether the mobile app's
+   voice mode calls connector tools.
+4. **Learning, later** (first slice built 12 October). Candidates: asking to join and the directory of groups (L-8,
    L-11); handing over custodianship; questions and answers (L-4); each
    member's MPC model and firmware (L-6); challenges built on sessions (a
    reference track, notes at moments, attempts as mixes); findings searchable
@@ -278,10 +317,11 @@ sizes.
 
 ## 7. Next, in order
 
-0. Commit the PDF pane fix (James), then check in a browser that turning
-   the page no longer reloads the PDF. Try the first lesson from Claude
-   Desktop (`get_study_group`, then `draft_lesson` under Orientation, from
-   document 15).
+0. Commit what is uncommitted (James): apply 017 with `pipeline/migrate.py`
+   first, then commit and push. Then: log a session in the app; from the
+   mobile app, test whether voice mode calls the connector (ask it to list
+   your study groups), then have a conversation and say "please document
+   this"; publish the draft on the Sessions tab.
 1. The decisions in §6, then build what is chosen.
 2. **State tab, your read** (S-15): a four-step scale per zone and part
    (empty, sketched, working, baked), each change dated.

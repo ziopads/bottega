@@ -1,17 +1,32 @@
-// The Learning section on the connector (REQUIREMENTS §10, M-2, M-3, M-4):
+// The Learning section on the connector (REQUIREMENTS §10, M-2, M-3, M-4,
+// L-18 to L-22):
 // get_study_group reads a group's syllabus, proposals and progress;
 // draft_topic, draft_lesson and draft_exercise propose syllabus entries,
 // stored as written by the assistant and unreviewed, in the connected
 // person's name, until the group's custodian accepts or rejects them. A
 // lesson's citation markers are checked against the page text before it is
-// stored, and one that fails refuses the whole lesson. Nothing here edits or
-// deletes.
+// stored, and one that fails refuses the whole lesson. record_study_session
+// documents one of the person's own study sessions with its notes, as a draft
+// only they see until they publish it in the app; list_study_notes and
+// get_study_history read the group's record. Nothing here edits or deletes.
 
 import type { Scoped } from '@/lib/db';
 import { listModels } from '@/lib/gear';
-import { addExercise, addLesson, addTopic, checkCitations, getGroup, groupOf, listMyGroups, StudyError } from '@/lib/study';
-import { parseExerciseDone, parseLessonBody, parseLessonTitle, parseTask, parseTopicSummary, parseTopicTitle } from '@/lib/studyInput';
-import { lessonHref, type StudyGroup } from '@/lib/studyTypes';
+import { addExercise, addLesson, addTopic, checkCitations, createSession, getGroup, groupOf, listMyGroups, StudyError } from '@/lib/study';
+import {
+  parseExerciseDone,
+  parseLessonBody,
+  parseLessonTitle,
+  parseMinutes,
+  parseNoteBody,
+  parseSessionKind,
+  parseSessionSummary,
+  parseStartedAt,
+  parseTask,
+  parseTopicSummary,
+  parseTopicTitle,
+} from '@/lib/studyInput';
+import { lessonHref, studyHistory, tabHref, type StudyGroup } from '@/lib/studyTypes';
 import { ToolError } from '@/mcp/context';
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -75,6 +90,8 @@ export async function getStudyGroupTool(db: Scoped, origin: string, args: { id?:
     closed: g.status === 'closed' || undefined,
     members: g.members.map((m) => m.name),
     link: `${origin}/learning/${g.id}`,
+    sessions_recorded: g.sessions.filter((x) => x.published).length,
+    your_draft_sessions: g.sessions.filter((x) => !x.published && x.authorId === me).length || undefined,
     syllabus: accepted.map((t, i) => {
       const lessons = g.lessons.filter((l) => l.topicId === t.id && l.review === 'accepted');
       return {
@@ -201,5 +218,167 @@ export async function draftExerciseTool(
   return {
     proposed: { exercise_id: id, topic: topic.title, lesson_id: lessonId ?? undefined, task, done_when: doneWhen },
     next: `This waits in the review band on ${origin}/learning/${g.id} until ${g.custodianName}, the custodian, accepts or rejects it.`,
+  };
+}
+
+// ── Sessions and notes (db/017) ──────────────────────────────────────────────
+
+/** A topic by id or by title (any case, or a unique part of it), among the group's topics not rejected. */
+function topicId(g: StudyGroup, raw: string | number): number {
+  const live = g.topics.filter((t) => t.review !== 'rejected');
+  let found: StudyGroup['topics'][number] | undefined;
+  if (typeof raw === 'number' || /^\d+$/.test(String(raw).trim())) {
+    found = live.find((t) => t.id === Number(raw));
+  } else {
+    found = live.find((t) => norm(t.title) === norm(String(raw)));
+    if (!found) {
+      const partial = live.filter((t) => norm(t.title).includes(norm(String(raw))));
+      if (partial.length === 1) found = partial[0];
+    }
+  }
+  if (!found) {
+    throw new ToolError(`No topic "${raw}" in ${g.name}. Its topics are: ${live.map((t) => `${t.id} ${t.title}`).join('; ') || 'none yet'}.`);
+  }
+  return found.id;
+}
+
+const MAX_NOTES = 30;
+
+export async function recordStudySessionTool(
+  db: Scoped,
+  origin: string,
+  args: {
+    group_id: number;
+    summary: string;
+    kind?: string;
+    minutes?: number;
+    started_at?: string;
+    topics?: (string | number)[];
+    notes?: { body: string; topic?: string | number; lesson_id?: number; exercise_id?: number }[];
+    private?: boolean;
+  },
+) {
+  const g = await memberGroup(db, args.group_id);
+  const summary = clean(parseSessionSummary(args.summary));
+  if (!summary) throw new ToolError('Give the session a summary: what was worked on, what came of it, what to try next.');
+  const kind = clean(parseSessionKind(args.kind));
+  const minutes = clean(parseMinutes(args.minutes));
+  const startedAt = clean(parseStartedAt(args.started_at));
+  const topicIds = (args.topics ?? []).map((t) => topicId(g, t));
+  const raw = args.notes ?? [];
+  if (raw.length > MAX_NOTES) throw new ToolError(`At most ${MAX_NOTES} notes per session; fold the smaller points into the summary.`);
+  const notes = raw.map((n, i) => {
+    const body = parseNoteBody(n.body);
+    if ('error' in body) throw new ToolError(`Note ${i + 1}: ${body.error}`);
+    const lesson = n.lesson_id === undefined ? null : g.lessons.find((l) => l.id === n.lesson_id && l.review !== 'rejected');
+    if (n.lesson_id !== undefined && !lesson) throw new ToolError(`Note ${i + 1}: no lesson ${n.lesson_id} in ${g.name}.`);
+    const exercise = n.exercise_id === undefined ? null : g.exercises.find((e) => e.id === n.exercise_id && e.review !== 'rejected');
+    if (n.exercise_id !== undefined && !exercise) throw new ToolError(`Note ${i + 1}: no exercise ${n.exercise_id} in ${g.name}.`);
+    return {
+      body: body.value,
+      topicId: n.topic !== undefined ? topicId(g, n.topic) : (lesson?.topicId ?? exercise?.topicId ?? null),
+      lessonId: lesson?.id ?? null,
+      exerciseId: exercise?.id ?? null,
+    };
+  });
+  const id = await readable(() =>
+    createSession(db, g.id, { startedAt, minutes, kind, summary, private: args.private === true, topicIds }, 'assistant', notes),
+  );
+  return {
+    recorded: {
+      session_id: id,
+      group: g.name,
+      kind,
+      minutes: minutes ?? undefined,
+      topics: topicIds.map((t) => g.topics.find((x) => x.id === t)?.title),
+      notes: notes.length,
+      private: args.private === true || undefined,
+    },
+    link: `${origin}${tabHref(g.id, 'sessions', `session-${id}`)}`,
+    next:
+      'Stored as a draft that only the person sees, marked as documented by Claude. Tell them it waits on the Sessions tab, ' +
+      'where they can read it, correct it and publish it to the group (or keep it private), or discard it.',
+  };
+}
+
+export async function listStudyNotesTool(
+  db: Scoped,
+  origin: string,
+  args: { group_id: number; topic?: string | number; member?: string; session_id?: number; limit?: number },
+) {
+  const g = await getGroup(db, args.group_id);
+  if (!g) throw new ToolError(`No study group ${args.group_id} that you belong to. get_study_group without an id lists yours.`);
+  const me = db.person.userId;
+  const topic = args.topic !== undefined ? topicId(g, args.topic) : null;
+  const member = args.member?.trim() ? norm(args.member) : null;
+  const limit = Math.min(Math.max(args.limit ?? 30, 1), 100);
+  const notes = g.notes.filter(
+    (n) =>
+      (n.published || n.authorId === me) &&
+      (topic === null || n.topicId === topic) &&
+      (member === null || norm(n.authorName).includes(member)) &&
+      (args.session_id === undefined || n.sessionId === args.session_id),
+  );
+  const title = (id: number | null, list: { id: number; title: string }[]) => (id === null ? undefined : list.find((x) => x.id === id)?.title);
+  return {
+    group: g.name,
+    total: notes.length,
+    notes: notes.slice(0, limit).map((n) => ({
+      note_id: n.id,
+      author: n.authorName,
+      written: n.createdAt,
+      topic: title(n.topicId, g.topics),
+      lesson: title(n.lessonId, g.lessons),
+      exercise: n.exerciseId === null ? undefined : g.exercises.find((e) => e.id === n.exerciseId)?.task,
+      session_id: n.sessionId ?? undefined,
+      text: n.body,
+      draft: !n.published || undefined,
+      private: n.private || undefined,
+      documented_by_claude: n.origin === 'assistant' || undefined,
+    })),
+    link: `${origin}${tabHref(g.id, 'notes')}`,
+    note: 'Newest first. Notes are the members’ own record; drafts and private notes are shown only to their author.',
+  };
+}
+
+export async function getStudyHistoryTool(db: Scoped, origin: string, args: { group_id: number; weeks?: number; member?: string }) {
+  const g = await getGroup(db, args.group_id);
+  if (!g) throw new ToolError(`No study group ${args.group_id} that you belong to. get_study_group without an id lists yours.`);
+  const weeks = Math.min(Math.max(Math.round(args.weeks ?? 8), 1), 52);
+  let memberId: string | undefined;
+  if (args.member?.trim()) {
+    const asked = norm(args.member);
+    const found = g.members.filter((m) => norm(m.name).includes(asked));
+    if (found.length !== 1) throw new ToolError(`Name one member: ${g.members.map((m) => m.name).join(', ')}.`);
+    memberId = found[0].accountId;
+  }
+  const h = studyHistory(g, weeks, new Date(), memberId);
+  const since = new Date(h.since);
+  return {
+    group: g.name,
+    period: `the last ${weeks} weeks, since ${h.since.slice(0, 10)}`,
+    member: memberId ? g.members.find((m) => m.accountId === memberId)?.name : 'everyone',
+    sessions: h.sessions,
+    minutes: h.minutes,
+    by_member: h.members.map((m) => ({ member: m.name, sessions: m.sessions, minutes: m.minutes, sessions_per_week_oldest_first: m.perWeek })),
+    by_topic: h.topics.map((t) => ({ topic: t.title, sessions: t.sessions, minutes: t.minutes, last_touched: t.lastTouched?.slice(0, 10) })),
+    not_touched: h.neglected,
+    sessions_without_topic: h.untagged || undefined,
+    recent_sessions: g.sessions
+      .filter((x) => x.published && new Date(x.startedAt) >= since && (!memberId || x.authorId === memberId))
+      .slice(0, 20)
+      .map((x) => ({
+        session_id: x.id,
+        when: x.startedAt,
+        member: x.authorName,
+        kind: x.kind,
+        minutes: x.minutes ?? undefined,
+        topics: x.topicIds.map((t) => g.topics.find((y) => y.id === t)?.title),
+        summary: x.summary.length > 400 ? `${x.summary.slice(0, 400)}…` : x.summary,
+      })),
+    link: `${origin}${tabHref(g.id, 'progress')}`,
+    note:
+      'Counts published sessions the person can see; minutes of a session are split evenly over the topics it touched. ' +
+      'list_study_notes gives the notes behind a session or topic.',
   };
 }

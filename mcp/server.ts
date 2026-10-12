@@ -6,7 +6,9 @@
 // "where was I on this track?" from Claude; then the proposal tools,
 // draft_criteria and draft_card (M-3); then the corpus (12 October):
 // list_documents, search and read_pages; then Learning (12 October):
-// get_study_group, draft_topic, draft_lesson and draft_exercise.
+// get_study_group, draft_topic, draft_lesson and draft_exercise; then study
+// sessions and notes: record_study_session, list_study_notes,
+// get_study_history.
 
 import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
@@ -16,7 +18,15 @@ import { listDocumentsTool, readPagesTool, searchTool } from '@/mcp/tools/corpus
 import { draftCardTool, draftCriteriaTool } from '@/mcp/tools/drafts';
 import { getSessionTool } from '@/mcp/tools/get-session';
 import { listProjectsTool } from '@/mcp/tools/list-projects';
-import { draftExerciseTool, draftLessonTool, draftTopicTool, getStudyGroupTool } from '@/mcp/tools/study';
+import {
+  draftExerciseTool,
+  draftLessonTool,
+  draftTopicTool,
+  getStudyGroupTool,
+  getStudyHistoryTool,
+  listStudyNotesTool,
+  recordStudySessionTool,
+} from '@/mcp/tools/study';
 
 const INSTRUCTIONS = `Bottega is a music studio's working platform: every Ableton Live session with its mixes, references and notes, where each session stands in the production process, and the studio's gear and manuals. You act as a production collaborator and teacher for the person connected: you help them see where a track stands, decide what to do next, and get unstuck. You propose; they decide.
 
@@ -33,7 +43,9 @@ You can propose, never decide. draft_criteria proposes exit criteria for a stage
 
 The corpus holds manuals and books: the person's private documents, those shared with them, and the platform library. search finds passages by words and meaning; read_pages gives whole pages. Before quoting or relying on a passage, read its pages, and cite them as the document and PDF page with the link each result carries (PDF pages count from 1 and may differ from the numbers printed on them). Keep what the corpus says, cited, apart from what you know from elsewhere, and say which is which. By default search covers the person's own documents, their picks and the manuals of the gear they own; scope 'all' adds the rest of the library.
 
-Learning happens in study groups: a group's syllabus is topics in order, each with lessons and exercises, and each member records their own progress on the exercises (not started, practising, done). get_study_group without an id lists the person's groups; with an id it gives the syllabus, each member's progress and the proposals awaiting review. The group's custodian writes the syllabus; you propose topics, lessons and exercises with draft_topic, draft_lesson and draft_exercise, and they wait in the group's review band until the custodian accepts or rejects them. When drafting a syllabus from a manual or book: search it and read its pages first, propose the topics, then lessons and exercises under each topic (a lesson may go under a topic still waiting for review). A lesson teaches one thing and cites the corpus where it relies on it, with markers in its body: [15:p42] for document 15, PDF page 42; [15:p42-43] for a range; [15:p42 "exact words"] with a quotation copied exactly from read_pages. Every marker is checked against the page text, and one that fails refuses the whole lesson. What you add from your own knowledge stays unmarked; say in the lesson that it is not from the source. Lessons use ## headings, - lists, **bold**, and paragraphs, nothing else. Write each exercise as something to do at the instrument, with how it will be known to be done, observable. Use the members' progress notes to suggest what to practise next.`;
+Learning happens in study groups: a group's syllabus is topics in order, each with lessons and exercises, and each member records their own progress on the exercises (not started, practising, done). get_study_group without an id lists the person's groups; with an id it gives the syllabus, each member's progress and the proposals awaiting review. The group's custodian writes the syllabus; you propose topics, lessons and exercises with draft_topic, draft_lesson and draft_exercise, and they wait in the group's review band until the custodian accepts or rejects them. When drafting a syllabus from a manual or book: search it and read its pages first, propose the topics, then lessons and exercises under each topic (a lesson may go under a topic still waiting for review). A lesson teaches one thing and cites the corpus where it relies on it, with markers in its body: [15:p42] for document 15, PDF page 42; [15:p42-43] for a range; [15:p42 "exact words"] with a quotation copied exactly from read_pages. Every marker is checked against the page text, and one that fails refuses the whole lesson. What you add from your own knowledge stays unmarked; say in the lesson that it is not from the source. Lessons use ## headings, - lists, **bold**, and paragraphs, nothing else. Write each exercise as something to do at the instrument, with how it will be known to be done, observable. Use the members' progress notes to suggest what to practise next.
+
+Members keep a record of their study: sessions (one sitting: when, how long, what kind, a summary and the topics it touched) and notes (alone or in a session, on a topic, lesson or exercise). When the person asks you to document a conversation or a practice session ("please document this", "log this session"), call record_study_session once, at the end: a summary in their voice of what was worked on, what came of it and what to try next; the topics touched; the minutes if known; kind 'conversation' for a talk with you; and a note for each distinct point worth finding again (a technique, a question still open, a page that helped), each tied to its topic, lesson or exercise where one fits. It is stored as a draft only they see until they publish it in the app; tell them so. Do not record a session they did not ask for. get_study_history answers how often they studied, which topics got attention and which were neglected; list_study_notes finds what they or their partners wrote before. Notes are the members' own words and record; say whose a note is when you use it, and mark drafts as drafts.`;
 
 function json(value: unknown) {
   return { content: [{ type: 'text' as const, text: JSON.stringify(value, null, 2) }] };
@@ -252,9 +264,79 @@ export const handler = createMcpHandler(
       },
       async (args, ctx) => run(() => draftExerciseTool(personFrom(ctx), appOrigin(ctx), args)),
     );
+
+    server.registerTool(
+      'record_study_session',
+      {
+        title: 'Document a study session',
+        description:
+          'Record one of the person\'s own study sessions in a group, with its notes, in one call: the summary, what kind ' +
+          '(at the instrument, conversation, reading, video, other), minutes, when it started (ISO date and time; now when ' +
+          'omitted), the topics it touched (ids or titles), and notes, each optionally on a topic, lesson_id or exercise_id. ' +
+          'Citation markers [document:pPage] in the summary or notes are checked against the page text. Stored as a draft ' +
+          'only the person sees until they publish it on the group\'s Sessions tab. Call it when the person asks to document ' +
+          'a session, once, at the end.',
+        inputSchema: z.object({
+          group_id: z.number().int().describe('a study group id from get_study_group'),
+          summary: z.string().describe('what was worked on, what came of it, what to try next; paragraphs and - lists allowed'),
+          kind: z.enum(['at the instrument', 'conversation', 'reading', 'video', 'other']).optional(),
+          minutes: z.number().int().optional().describe('how long, in minutes'),
+          started_at: z.string().optional().describe('when it started, ISO 8601; now when omitted'),
+          topics: z.array(z.union([z.number().int(), z.string()])).optional().describe('topic ids or titles it touched'),
+          notes: z
+            .array(
+              z.object({
+                body: z.string().describe('one point worth finding again'),
+                topic: z.union([z.number().int(), z.string()]).optional(),
+                lesson_id: z.number().int().optional(),
+                exercise_id: z.number().int().optional(),
+              }),
+            )
+            .optional()
+            .describe('at most 30'),
+          private: z.boolean().optional().describe('true keeps it from the group even once published'),
+        }),
+      },
+      async (args, ctx) => run(() => recordStudySessionTool(personFrom(ctx), appOrigin(ctx), args)),
+    );
+
+    server.registerTool(
+      'list_study_notes',
+      {
+        title: 'List study notes',
+        description:
+          'The notes in a study group the person can read, newest first: each with its author, when it was written, its ' +
+          'topic, lesson, exercise or session, and its text. Filter by topic (id or title), member (name) or session_id.',
+        inputSchema: z.object({
+          group_id: z.number().int().describe('a study group id'),
+          topic: z.union([z.number().int(), z.string()]).optional(),
+          member: z.string().optional().describe('a member\'s name'),
+          session_id: z.number().int().optional(),
+          limit: z.number().int().optional().describe('default 30, at most 100'),
+        }),
+      },
+      async (args, ctx) => run(() => listStudyNotesTool(personFrom(ctx), appOrigin(ctx), args)),
+    );
+
+    server.registerTool(
+      'get_study_history',
+      {
+        title: 'Get study history',
+        description:
+          'How a study group has been studying over the last weeks (default 8): sessions and minutes per member and per week, ' +
+          'sessions and minutes per topic with when each was last touched, the topics not touched at all, and the recent ' +
+          'sessions with their summaries. Optionally one member\'s.',
+        inputSchema: z.object({
+          group_id: z.number().int().describe('a study group id'),
+          weeks: z.number().int().optional().describe('how far back, 1 to 52, default 8'),
+          member: z.string().optional().describe('a member\'s name'),
+        }),
+      },
+      async (args, ctx) => run(() => getStudyHistoryTool(personFrom(ctx), appOrigin(ctx), args)),
+    );
   },
   {
     instructions: INSTRUCTIONS,
-    serverInfo: { name: 'bottega', version: '0.4.0' },
+    serverInfo: { name: 'bottega', version: '0.5.0' },
   },
 );
