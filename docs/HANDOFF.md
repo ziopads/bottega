@@ -1,151 +1,205 @@
 # Bottega — handoff
 
-**Date:** 2026-10-10
-**Read first, then `REQUIREMENTS.md` (0.2) and `ARCHITECTURE.md` (0.1).**
+**Date:** 2026-10-11
+**Read first, then `REQUIREMENTS.md` (0.15) and `ARCHITECTURE.md` (0.6).**
 
-Bottega began in a design conversation held inside the Vivarium project on
-9–10 October 2026. This file carries everything that conversation settled, so
-work can continue in a project of its own.
+Bottega is James's studio platform for Sirsinate Sound Labs: a service with
+separate accounts holding sessions, gear, manuals and the work in progress,
+reachable from Claude through a connector so Claude can act as a production
+collaborator and teacher. This file replaces the 10 October handoff. It
+records what is built, how the work is done, and what comes next.
 
 ---
 
-## 1. What exists
+## 1. Where it stands
 
-Phase 0 is built, committed and deployed. The repository is
-`github.com/ziopads/bottega`, local at `~/Desktop/_PROJECTS/bottega`.
+Repository `github.com/ziopads/bottega`, local `~/Desktop/_PROJECTS/bottega`,
+deployed on Vercel to studio.sirsinate.com. Neon Postgres (project
+`bottega-sirsinate`) with row-level security under the role `bottega_app`;
+Cloudflare R2 for audio and files; Voyage for embeddings.
+
+Latest commits, newest first:
 
 | Commit | What it did |
 |---|---|
-| `6c0f1d3` | Next 16 scaffold, Neon sign-in and allowlist, migration runner, `db/001-foundation.sql`, the Vivarium copy script, the two design docs |
-| `97b56c3` | The studio ported from Vivarium: sessions list, project pages, mixes, notes, collections |
-| `7020b05` | Sign-in logs Neon Auth's real refusal (`[sign-in] refused` in the server log) |
-| `dc12c03` | Step 0.5: references, choosing the current mix, a Length column, `/admin/lengths`, "collection" wording |
+| `dd04d36` | One type scale across the site; the document page in the layout system; `PageHeader` and shared control styles |
+| `b25d313` | State tab: Live sets read in the browser from a dropped project folder, stored as snapshots (014) |
+| `b1b7cba` | Mix variants numbered within each variant (013); parked cards folded away |
+| `347d907` | Connector proposal tools `draft_criteria` and `draft_card` |
+| `c5d9983` | Workflow tab (011); connector sign-in with `list_projects` and `get_session` (012) |
+| `8716f1e` | Session header on one line; page titles below the app name |
+| `fc6a891` | Session page columns; History as its own tab |
+| `fa74b79` | Account page in tabs (010) |
+| `36ca0bb` | Session tabs, waveform player, notes pinned to moments, one volume (009) |
 
-Running services:
+Migrations `db/001`–`014`, with test suites in `db/test/` for 002–014.
+001–013 are applied on Neon. **014
+was committed; confirm it is applied** (`migrate.py --status`).
 
-- **Vercel** project `bottega` (team ziopads, Hobby), building `main`.
-  studio.sirsinate.com was being moved to it from Vivarium's Sirsinate project
-  at the end of the conversation; confirm it serves Bottega.
-- **Neon** project `bottega-sirsinate`, in its own organization, separate from
-  the organization that holds Scriptorium. Migration 001 applied. Neon Auth on.
-- **Cloudflare R2**: the audio bucket Vivarium's studio already used. Same
-  account, token and bucket; object keys unchanged. Its CORS rule already
-  allowed studio.sirsinate.com.
+Confirmed working on production: sign-in and accounts, gear and its photos,
+document upload and processing (the BeatStep Pro and Terra manuals are
+searchable in the library), the session page and its tabs, the workflow, the
+connector from Claude Desktop (asked "where was I on Khione?" and got a correct
+answer, including spotting that its two mixes were numbered in the wrong order).
 
-Data: copied from Vivarium's Sirsinate Supabase database on 10 October and
-checked by row counts on both sides: 4 artists, 3 members, 5 genres, 182 music
-projects, 194 titles, 261 mixes, 1 note, 0 collections. James decided no
-second copy is needed; Vivarium's studio is no longer the place to work.
+Not yet tried on production: the State tab's folder drop (the parser was
+checked in Node against all 20 Khione saves, not in a browser), mix variants,
+the proposal tools after their deploy, and the type pass of `dd04d36`, which
+was never seen rendered.
 
-## 2. Settled decisions
+## 2. How James works, and how to work with him
 
-- **Its own repository on Neon.** The studio left Vivarium because it needs
-  layers Vivarium will never have (embeddings, a Claude connector, analysis).
-  Vivarium's library and catalogue raisonné stay metadata holders.
-- **Gear and manuals live in Bottega**, with the sessions. Gear moves out of
-  Vivarium's Sirsinate instance in Phase 1 (it held no gear records yet; check).
-- **Neon, one project per app.** Free-plan limits are per project (1 GB storage
-  and 100 compute-hours a month on the current page; Scriptorium's own records
-  say 512 MB for its project). A shared corpus database would pool every app
-  into one allowance; shared code with separate projects does not.
-- **Sign-in copied from Scriptorium**: Neon Auth for identity, `ALLOWED_EMAILS`
-  for access, checked in every page and route. `ADMIN_EMAILS` decides who may
-  delete mixes and other people's notes.
-- **Projects are one shared table plus a table per kind** (`music_projects`,
-  `collections`; installation and multimedia later), with `project_parts`
-  holding ordered membership. The name `project_parts` is provisional:
-  `members` already names the people table.
-- **Kinds**: music, installation, multimedia, collection. A collection is a
-  meta project: EP, LP, single, compilation, multi-part composition. Vivarium's
-  releases became collections ('album' became 'lp').
-- **Mixes and references share the `audio` table** with a `role` column. Mixes
-  are numbered per project; references are credited and unnumbered.
-- **The current mix** is `music_projects.current_mix_id`; null means the newest.
-  A trigger refuses a reference or another project's mix.
-- **Study group**: Phase 2, the three studio members (VIG, KR, KJI).
-- **Name**: Bottega, the Renaissance workshop that took commissions, kept the
-  tools, trained apprentices and worked in stages. Chosen over Officina,
-  Atelier, Athanor, Taller and Opificio.
+- Read the code before proposing a change. For anything beyond a small fix:
+  understand first, list three or more approaches with their tradeoffs, and
+  get his approval before building. Once he says "go", build the whole agreed
+  slice.
+- **James runs every install, migration, commit and push himself.** Give each
+  command in a code block he can copy. Git commands name every file
+  explicitly (never `git add -A`) and quote paths with brackets:
+  `'app/api/cards/[id]/route.ts'`.
+- After a build: say what was checked (type check, lint, access check,
+  database tests) and what was not (anything not seen in a browser).
+- Writing style for everything written to him: no "not X but Y" or "rather
+  than" framings, no machine metaphors ("the heavy lifting", "load-bearing"),
+  no flourish sentences, abbreviations expanded at first use, concise.
+- Never print secret values from `.env` files; name the variables only.
 
-## 3. Lessons from the build
+## 3. The working setup
 
-- **Neon Auth accounts are made by a sign-up request**, never by the Console's
-  "Create user", which sets no password:
+- Claude reaches the Mac through a Linux VM with the connected folders
+  mounted (`$HOME/mnt/bottega`). It can read, edit and run `npx tsc`, `npx
+  eslint` and `node scripts/check-access.mjs` there. It cannot install npm
+  packages, cannot reach Neon, and cannot delete files: a `git` command run
+  there leaves lock files under `.git`, so **do not run git from the VM**
+  (it happened once; the lock was renamed aside).
+- Database work is tested in the cloud workspace on a local Postgres 16
+  (socket `/tmp`, port 5433, user `owner`, started by `/tmp/t4/pg.sh`), with
+  a pgvector stand-in for 004 (`/tmp/t4/004.sql`). The cloud workspace is
+  reclaimed between conversations, so a new one may need to rebuild this: a
+  local Postgres, a `bottega_app` role, migrations 001–014 applied in order.
+- Files written in the cloud go to the Mac with the commit tool, then the
+  checks run in the VM.
+- The cloud workspace has no npm registry access; a browser preview of pages
+  has not been possible. Ask James for screenshots.
+- The Khione Ableton project folder is connected for parser work:
+  `/Volumes/VIGORISH/AUDIO   ABL VIGORISH SESSIONS/2025 0727 new studio
+  config euf dp4 Project` (three spaces after AUDIO; remote folder prompts
+  refuse that name, so James adds such folders with Add folder).
 
-      curl -X POST <origin>/api/auth/sign-up/email \
-        -H 'Content-Type: application/json' -H 'Origin: <origin>' \
-        -d '{"email":"…","password":"…","name":"…"}'
+Environment variables (names only): `DATABASE_URL`, `NEON_AUTH_BASE_URL`,
+`NEON_AUTH_COOKIE_SECRET`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
+`R2_SECRET_ACCESS_KEY`, `R2_AUDIO_BUCKET`, `R2_FILES_BUCKET`,
+`VOYAGE_API_KEY`.
 
-  Type the password in the terminal; do not paste the response anywhere, since
-  it carries a session token.
-- **Neon Auth trusts `localhost` only.** Every other address (the `.vercel.app`
-  one, studio.sirsinate.com) must be added under Auth → Configuration →
-  domains, or sign-in fails with what looks like a wrong password.
-- **The sign-in form shows one message for every refusal.** The real cause is
-  in the server log as `[sign-in] refused`.
-- **Next 16**: route and page `params` are Promises (`await ctx.params`); the
-  middleware file is `proxy.ts`.
-- **Vercel saw `pipeline/requirements.txt` as a second app** and chose the
-  Services preset, which needs a `vercel.json`. Import as a single Next.js
-  project.
-- **Git pushes over SSH** (`git@github.com:ziopads/bottega.git`). Over HTTPS
-  macOS supplied a saved login for a different GitHub account.
-- **Neon's HTTP driver** returns bigint and numeric as strings and timestamps
-  as Date objects; `lib/studio.ts` converts every row (`num`, `iso`). Multi-
-  statement writes use `sql.transaction([...])` or one statement with CTEs.
-- **Migrations**: `db/NNN-*.sql`, safe to run twice, applied with
-  `pipeline/.venv/bin/python3 pipeline/migrate.py`, which records checksums
-  and refuses an edited applied file. Run `--status` before every deploy that
-  reads a new column.
-- **Claude's tooling on James's Mac**: a shell in a Linux VM over the connected
-  folders. It cannot install npm packages (no registry access, and it would
-  fetch Linux binaries), cannot delete files, and cannot reach Neon. James runs
-  installs, migrations and git. The type check (`tsc`) does run in the VM.
+## 4. What is built
 
-## 4. Where things are
+**Accounts and access** (REQUIREMENTS §2, AC-1 to AC-13). Separate accounts;
+new sign-ups wait for approval; items shared one at a time at view,
+contribute or edit; only owners delete; every access change in an
+append-only log. Enforced in the database (`project_rank`, `gear_rank`,
+`document_rank`, policies on every table) and in the app (`lib/access.ts`;
+`scripts/check-access.mjs` fails the build if a page or route skips a guard).
+The account page has tabs: Profile (display name, artists), Usage (storage by
+kind, largest files), Sharing (everything shared, both directions), Security
+(password, recent activity, connected apps with revoke), Preferences (default
+artist), Billing and Data ("Coming soon…").
 
-```
-app/page.tsx                    Sessions (home)
-app/projects/[id]/page.tsx      one music project
-app/collections/…               collections list and detail
-app/admin/lengths/              fill in missing mix lengths (admins)
-app/_studio/                    client components ported from Vivarium
-app/api/…                       projects, notes, genres, tracks (audio),
-                                references, audio/[id]/duration, collections
-lib/studio.ts                   all studio SQL
-lib/studioTypes.ts              shapes and input rules shared with the browser
-lib/studioAudio.ts, storage.ts  R2 signing
-lib/auth/                       Neon Auth client and the allowlist guard
-db/001-foundation.sql           the schema
-pipeline/migrate.py             migration runner
-scripts/migrate_from_vivarium.py  the one-time copy (done; keep for the record)
-```
+**Gear** (§4). A platform catalogue of models and each account's units;
+browser-made WebP images in per-image folders; public and private files; a
+gear map by studio group (`lib/gearGroups.ts`).
 
-## 5. Open items
+**Corpus** (§8). Documents processed in the app in resumable batches, with
+storage and page allowances; one platform library of manufacturers' manuals,
+private documents per account. Search over it is not built yet.
 
-Phase 0 remainder:
+**Sessions** (§6). Tabs: Overview (details and sharing on the left; current
+mix, where it stands, latest notes), Mixes (versions grouped by variant,
+waveforms, notes on the selected version by moment), State, Workflow, Notes
+(filters on the left), History. One player sounds at a time; one volume for
+the app.
 
-1. Confirm studio.sirsinate.com serves Bottega and sign-in works there (Neon
-   Auth domain added).
-2. Run `/admin/lengths` on production and check the Length column.
-3. Create accounts for Kamikaze Rabbit and Kawaji; add both addresses to
-   `ALLOWED_EMAILS` in Vercel; check their `members` rows point at KR and KJI.
-4. Retire the studio pages in Vivarium (`app/studio`, `app/api/studio`,
-   `lib/studio*.ts`, the `studio` switch in `lib/instance.ts`). The
-   `studio_*` tables in Supabase can stay as an archive.
-5. A change-password page (Neon Auth's SDK; no email delivery is set up, so
-   there is no reset).
-6. Styling pass: `app/globals.css` holds Vivarium's token names with the
-   Sirsinate palette.
+**Mix variants** (S-14, 013). A mix belongs to the main mix or a named
+variant ("Radio edit"), chosen at upload, numbered within it; labels read
+"Radio edit v1" everywhere (`mixLabel` in `lib/studioTypes.ts`). Remixes are
+their own sessions; a link between them is not built.
 
-Documentation drift to fix:
+**Workflow** (§7, W-1 to W-12, 011). Music stages: sketch, arrange, mix,
+master; sound design is a card kind. Exit criteria per stage; advancing needs
+every accepted criterion met; moving back needs a reason. Elements copied per
+session from `lib/elementTemplate.ts` (the zones TACTUS, BASS, BACKGROUND,
+LEADS, TEXTURE, VOX, plus STRUCTURE and BUS). Cards with kind, element, stage,
+what and done-when; parked cards for later stages; settled decisions as
+cards, reopened only with a reason. Claude's proposals wait in a review band.
 
-- `ARCHITECTURE.md` §9 lacks `ADMIN_EMAILS`; §4 should record the `audio.role`
-  split as built, `current_mix_id`, and the `/api` paths.
-- `REQUIREMENTS.md` §15 open decision 4 (gear in Vivarium) and 6 (domain) can
-  be closed once checked.
+**State tab and session analysis** (A-6 to A-8, 014). Dropping a session's
+Ableton project folder reads every saved `.als` at its top in the browser
+(`lib/als/`: `xml.ts` reader, `parse.ts`, `analyse.ts`, `readFolder.ts`;
+the server side in `store.ts`). One snapshot per save, identified by
+SHA-256, so dropping again adds only new saves; a newer `PARSER_VERSION`
+re-reads old ones. The folder is listed by name and size; no audio is
+uploaded. Shown: zone coverage (by track-name prefix TAC, BAS, BKG, LDS,
+TEX, VOX, or the group's), an arrangement map, maintenance (plugins and
+instances, Live devices, samples outside the folder, missing files, unused
+files, files only older saves use, tracks off or empty, devices off), and the
+changes between saves. `als_plugins` holds plugin instances per snapshot for
+questions across sessions. The `.als` files themselves are not stored.
 
-Phase 1 (gear, corpus, connector) and the open decisions in `REQUIREMENTS.md`
-§15: stage order for music, stages for collections, the element template (to
-come from the track-components work in James's music production project),
-embedding size.
+**Connector** (§11, M-1 to M-5, 012). Ported from Scriptorium: the app is its
+own OAuth server (`lib/oauth.ts`, `app/oauth/`, `app/.well-known/`); tokens
+in `oauth_tokens` behind security-definer functions that check the account's
+status on every request. `app/api/mcp` with `mcp/server.ts`; every tool runs
+as the token's account (`mcp/context.ts`). Tools: `list_projects`,
+`get_session`, `draft_criteria`, `draft_card`. Connector address:
+`https://studio.sirsinate.com/api/mcp`.
+
+**Layout system** (ARCHITECTURE §13). Twelve columns, `DetailGrid` (main 8,
+aside 4, aside left or right), `PageHeader`, `Section`, `MetaList`,
+`TabBar` in `app/_ui/layout.tsx`; control classes in `app/_ui/styles.ts`;
+four type sizes (`t-title` 18px, `t-lead` 15px, `t-body` 13px, `t-label`
+11px uppercase) with the app name at 20px.
+
+## 5. Lessons from the build
+
+- A server component importing a non-component value from a `'use client'`
+  module gets a client reference: shared values live in plain modules
+  (`lib/sessionTabs.ts`, `lib/accountTabs.ts`).
+- Tailwind 4's `divide-y` puts the border on the bottom of every child but
+  the last; a coloured border on a list item colours that rule too.
+- Neon's HTTP driver: one non-interactive transaction per call
+  (`db.tx([...])`); no value passes between its statements. bigint and
+  numeric arrive as strings, timestamps as Dates.
+- Live 12 names the main track `MainTrack` (Live 11 `MasterTrack`).
+  `RelativePathType` 3 is a project file, 5 a Live pack; preset references
+  carry paths from Ableton's own machines and are not samples. Track names
+  Live gives itself start with a number ("7-Trilian") that shifts when tracks
+  move.
+- Changing a Postgres function's return type needs `drop function` first;
+  `create or replace` refuses it.
+- The connector's OAuth needs `client_id_metadata_document_supported` and
+  public clients, as in Scriptorium.
+
+## 6. Next, in the order last discussed
+
+1. **Check the last three deploys**: migration 014 applied; the State tab's
+   folder drop on Khione in a browser; mix variants; the type pass
+   (screenshots of Gear, Library, Collections, Sessions).
+2. **State tab, your read** (S-15): a four-step scale per zone and part
+   (empty, sketched, working, baked), each change dated, beside what the set
+   shows.
+3. **Connector analysis tool**: the latest snapshot, changes since the
+   previous save, plugin use across sessions; Claude then proposes
+   maintenance cards (kind "fix").
+4. **Automatic updates** (A-9): a small program on the Mac watching the
+   sessions folder, sending each new save with the same TypeScript parser and
+   a personal token.
+5. **Layout follow-through**: Gear and Collection detail pages into the
+   two-column layout with `PageHeader`.
+6. **Corpus search and the page reader**, then `search` and `read_pages` on
+   the connector.
+7. Smaller: renumbering mix versions (Khione's v1 and v2 are reversed);
+   linking a remix to its original; a "made for" field (DJ tool or listening)
+   that Claude asked about; the bulk manual import from the HARDWARE folder;
+   accounts for Gordon and Chris.
+
+Unconfirmed from earlier: the R2 audio bucket's CORS rule allowing GET from
+the site (the waveform backfill needs it).
