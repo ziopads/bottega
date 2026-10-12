@@ -120,7 +120,15 @@ Environment variables (names only): `DATABASE_URL`, `DATABASE_URL_UNPOOLED`
 **Accounts and access** (REQUIREMENTS §2, AC-1 to AC-13). Separate accounts;
 anyone creates one at `/auth/sign-up` (linked from sign-in; added 12 October:
 a user added in the Neon Console has no password and cannot sign in), and
-new sign-ups wait for approval at Accounts; items shared one at a time at view,
+new sign-ups wait for approval at Accounts. `/api/auth/[...path]` passes
+only `GET get-session` to Neon Auth and answers 404 to every other path (12
+October): all sign-in, sign-up, sign-out and password calls run server-side
+straight to Neon Auth, and so does the middleware's session check. Neon
+Auth's own address (`NEON_AUTH_BASE_URL`) still answers anyone who finds it,
+so approval stays the control; and Neon Auth sees Vercel's address, not the
+person's, on every server-side call, so its per-address limit on sign-in
+attempts does not single out one guesser (an attempt limit of our own is a
+pending decision); items shared one at a time at view,
 contribute or edit; only owners delete; every access change in an
 append-only log. Enforced in the database (`project_rank`, `gear_rank`,
 `document_rank`, policies on every table) and in the app (`lib/access.ts`;
@@ -268,6 +276,12 @@ sizes.
   images.
 
 ## 6. Decisions waiting on James
+
+00. **Sign-in attempt limit of our own** (raised 12 October). Neon Auth's
+   rate limit sees Vercel's address for every server-side call. Proposed: a
+   small table of failed attempts by email and by the caller's address
+   (`x-forwarded-for` on Vercel), checked in the sign-in and sign-up actions,
+   refusing for a while after a handful of failures. Migration 018.
 
 0. **Printed page numbers** (asked for 12 October). Citations and the reader
    use PDF pages; the MPC Bible's printed numbers differ. Scriptorium keeps
