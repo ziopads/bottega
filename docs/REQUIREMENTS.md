@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.16
+**Version:** 0.17
 **Date:** 2026-10-12
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -9,6 +9,14 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.17** (2026-10-12) — Learning, first slice (L-12 to L-17): study
+  groups with a custodian and invitations; a syllabus of topics, lessons and
+  exercises that the custodian writes and Claude proposes into; lessons cite
+  the corpus by PDF page, with quotations checked; each member's progress on
+  each exercise; a private document shared with a group. Asking to join,
+  handing over custodianship, questions and answers (L-4) and each member's
+  instrument (L-6) come later.
 
 - **0.16** (2026-10-12) — Session variants (S-14, S-16): a session's
   variants are a list kept on the session, chosen by chips in its header;
@@ -533,6 +541,32 @@ travel to the database.
 - **L-11** Groups are listed by name for every active account to find and ask
   to join; their contents are visible to members only. Joining, leaving,
   removal and changes of custodian are written to the access log (AC-11).
+- **L-12** The syllabus. A group's topics are ordered; each holds ordered
+  lessons and exercises, and an exercise may belong to one of its topic's
+  lessons. A topic may name a catalogue model. The custodian writes, edits
+  and orders the syllabus. Built 12 October 2026.
+- **L-13** Claude proposes topics, lessons and exercises through the
+  connector for any member who asks; proposals wait in the group's review
+  band until the custodian accepts or rejects them. A lesson or exercise under
+  a topic still waiting is accepted only after its topic; rejecting a topic
+  rejects what waits under it. Built 12 October 2026.
+- **L-14** A lesson cites the corpus with markers in its body: `[15:p42]`,
+  `[15:p42-43]`, or `[15:p42 "exact words"]`. Saving a lesson, by a person or
+  by Claude, checks that each document is readable by the writer, that the
+  pages exist and have been read, and that each quotation is on the pages
+  cited (M-4). Readers see numbered links to the page reader and a list of
+  sources. Built 12 October 2026.
+- **L-15** Each member records their own progress on each accepted exercise:
+  not started, practising or done, with a short note. Every member sees
+  everyone's. This is L-5 for the first slice, with exercises as the skills.
+  Built 12 October 2026.
+- **L-16** A document's owner may share a private document with a study
+  group they belong to: its current members read it (view), and lose that
+  when they leave. Built 12 October 2026 (decision 10 in §15).
+- **L-17** Joining is by invitation only in the first slice; invitations go
+  to approved accounts by email, and the invitee accepts or declines on the
+  Learning page. The custodian cannot leave or be removed until handover
+  exists (L-8).
 
 ## 11. Connector (M)
 

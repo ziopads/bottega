@@ -1,13 +1,15 @@
 # Bottega — handoff
 
 **Date:** 2026-10-12
-**Read first, then `REQUIREMENTS.md` (0.16) and `ARCHITECTURE.md` (0.6).**
+**Read first, then `REQUIREMENTS.md` (0.17) and `ARCHITECTURE.md` (0.7).**
 
 Bottega is James's studio platform for Sirsinate Sound Labs: a service with
 separate accounts holding sessions, gear, manuals and the work in progress,
 reachable from Claude through a connector so Claude can act as a production
-collaborator and teacher. This file replaces the 11 October handoff. It
-records what is built, how the work is done, and what comes next.
+collaborator and teacher. This file replaces the 11 October handoff and was
+brought up to date at the end of 12 October, after the Learning section's
+first slice. It records what is built, how the work is done, and what comes
+next.
 
 ---
 
@@ -22,6 +24,7 @@ Latest commits, newest first:
 
 | Commit | What it did |
 |---|---|
+| `56ab88c` | Upload form asks private or library first; Scriptorium's page navigation in the reader; the 12 October handoff |
 | `2790d3e` | Corpus search: `search`, `read_pages`, `list_documents` on the connector; the page reader with the PDF beside the text |
 | `237c3fb` | `pipeline/document_home.py`: move a library document into its contributor's private documents |
 | `31d988d` | Documents get their own upload limit, 150 MB (gear files stay at 50 MB) |
@@ -34,13 +37,12 @@ Latest commits, newest first:
 | `b1b7cba` | Mix variants numbered within each variant (013) |
 
 **Not yet committed** at the end of 12 October (in the working tree, checked
-with type check and lint): the upload form asking "private or library" first
-(`app/_library/Library.tsx`), the reader's page navigation
-(`app/_library/PageNav.tsx`, `app/library/[id]/read/page.tsx`,
-`app/globals.css`), and this handoff. The commit command is in §7.
+with type check, lint, the access check and the database tests): the Learning
+section's first slice (§4, "Learning") with migration 016, and the doc
+updates. The commands are in §7.
 
-Migrations `db/001`–`015`, with test suites in `db/test/` for 002–015.
-001–015 are applied on Neon.
+Migrations `db/001`–`016`, with test suites in `db/test/` for 002–016.
+001–015 are applied on Neon; **016 is not yet**.
 
 Confirmed working on production: sign-in and accounts, gear, document upload
 and processing, the session page and its tabs, the workflow, the connector
@@ -51,7 +53,7 @@ Khione saves read), variant chips and adding a variant, the MPC Bible
 
 Not yet seen in a browser: the page reader and its scrubber, the PDF pane,
 the new upload form, saving a note at a typed moment, moving a save between
-variants by hand.
+variants by hand, and everything in Learning.
 
 ## 2. How James works, and how to work with him
 
@@ -177,10 +179,36 @@ decisions, Claude's proposals in a review band.
 
 **Connector** (§11, 012). `https://studio.sirsinate.com/api/mcp`. Tools:
 `list_projects`, `get_session`, `draft_criteria`, `draft_card`,
-`list_documents`, `search`, `read_pages` (server 0.3.0). Results carry links
+`list_documents`, `search`, `read_pages`, and from 016 `get_study_group`,
+`draft_topic`, `draft_lesson`, `draft_exercise` (server 0.4.0). Results carry links
 back into the app (`appOrigin` in `mcp/context.ts`, from the request's
 origin). The instructions tell Claude to read pages before quoting, cite
 "PDF p." with the link, and keep the corpus apart from its own knowledge.
+
+**Learning** (REQUIREMENTS L-7 to L-17, migration 016, decided 12 October:
+study groups; custodian curates; inline citation markers; group document
+shares; `draft_topic` added). A **Learning** item in the navigation.
+`/learning` lists the person's groups and their invitations, and starts a
+group (its creator becomes custodian and first member). `/learning/[id]`: a
+review band with Claude's proposed topics, lessons (expandable, rendered)
+and exercises, for the custodian to accept or reject; the syllabus, topics
+in order with their lessons (links) and exercises, each exercise with the
+viewer's progress control (not started, practising, done, and a note) and
+the other members' progress; an aside with members, invitations (invite by
+email, withdraw, remove), and the documents the lessons cite with whether
+each is shared with the group. The custodian edits names, summaries, titles,
+the instrument (a catalogue model) and the order with ↑ ↓, and closes or
+reopens the group; a member leaves. `/learning/[id]/lessons/[lessonId]`: the
+lesson with numbered citation links to the page reader and a Sources list,
+its exercises, the lessons before and after, and editing for the custodian.
+A private document's page has a "Study groups" box for its owner to share it
+with groups they belong to. Code: `lib/study.ts` (data layer and
+`checkCitations()`), `lib/citations.ts` (marker grammar, quotation matching,
+the light formatting), `lib/studyTypes.ts`, `lib/studyInput.ts`,
+`lib/studyRoutes.ts`, routes under `app/api/study/` and
+`app/api/documents/[id]/groups/`, components in `app/_learning/`, connector
+tools in `mcp/tools/study.ts` (server 0.4.0). The account page's activity
+describes the new log entries.
 
 **Layout system** (ARCHITECTURE §13). `DetailGrid`, `PageHeader`, `Section`,
 `MetaList`, `TabBar`; control classes in `app/_ui/styles.ts`; four type
@@ -208,39 +236,30 @@ sizes.
 
 ## 6. Decisions waiting on James
 
-1. **The Learning section ("Skills & Drills").** Proposed: study groups as
-   planned in REQUIREMENTS L-7 to L-11 (a space belonging to no one account,
-   a custodian, invitations), holding topics (each may name a catalogue
-   model), lessons citing the corpus by PDF page, and exercises with progress
-   per member; Claude proposes topics, lessons and exercises through the
-   connector (`draft_lesson`, `draft_exercise`) into a review band.
-   Alternatives offered: a course owned by James's account and shared like a
-   session; or that now and groups later. Recommended: study groups. First
-   slice: group, membership by invitation, topics, lessons, exercises with
-   progress, a Learning item in the navigation, connector tools; migration
-   016. Later: questions and answers (L-4), each member's MPC model and
-   firmware (L-6), challenges built on sessions (a reference track, notes at
-   moments, attempts as mixes), findings searchable by Claude beside the
-   corpus.
-2. **Bookmarks in the reader.** Proposed: read the PDF's outline with unpdf
+1. **Bookmarks in the reader.** Proposed: read the PDF's outline with unpdf
    during extraction into `document_sections` (rebuildable), plus a "Read the
    contents" action for documents already processed; the reader gains a
    Contents list and "In: chapter"; the connector names chapters. Alternatives:
    read the outline in the browser only; or add Scriptorium's running-heads
    inference for PDFs without an outline. Recommended: the first. Open
    question: does the MPC Bible carry bookmarks?
-3. **Search box in the app** (search option 3), on the same `lib/search.ts`.
+2. **Search box in the app** (search option 3), on the same `lib/search.ts`.
+3. **Learning, next slices** (decided 12 October: study groups, first slice
+   built). Candidates: asking to join and the directory of groups (L-8,
+   L-11); handing over custodianship; questions and answers (L-4); each
+   member's MPC model and firmware (L-6); challenges built on sessions (a
+   reference track, notes at moments, attempts as mixes); findings searchable
+   by Claude beside the corpus.
 
 ## 7. Next, in order
 
-0. Commit what is uncommitted (James):
-
-       git add app/_library/Library.tsx app/_library/PageNav.tsx 'app/library/[id]/read/page.tsx' app/globals.css docs/HANDOFF.md
-       git commit -m "Upload form asks private or library first; Scriptorium's page navigation in the reader; handoff for 12 October"
-       git push
-
-1. The decisions in §6, then build what is chosen (Learning first slice is
-   the likely next build).
+0. Apply 016 and commit the Learning slice (James): `pipeline/migrate.py`
+   first, since the new code reads the study tables; then the commit and push.
+   Then in a browser: start the group, add or accept topics, open a lesson,
+   set progress, share the MPC Bible with the group from its Library page.
+   From Claude Desktop (reconnect if the four study tools do not appear):
+   `get_study_group`, then draft the MPC syllabus from document 15.
+1. The decisions in §6, then build what is chosen.
 2. **State tab, your read** (S-15): a four-step scale per zone and part
    (empty, sketched, working, baked), each change dated.
 3. **Connector analysis tool**: the latest snapshot, changes since the

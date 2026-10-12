@@ -4,6 +4,7 @@ import DocumentDetail from '@/app/_library/DocumentDetail';
 import { requireAccount } from '@/lib/access';
 import { getDocument } from '@/lib/documents';
 import { listModels } from '@/lib/gear';
+import { documentGroups } from '@/lib/study';
 
 // One document (REQUIREMENTS §8). A document the person cannot see is a 404:
 // its existence is not disclosed.
@@ -19,5 +20,6 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
   const models = doc.library
     ? (await listModels(db)).filter((m) => m.status === 'approved').map((m) => ({ id: m.id, manufacturer: m.manufacturer, model: m.model }))
     : [];
-  return <DocumentDetail initial={doc} viewerId={userId} isAdmin={isPlatformAdmin} models={models} />;
+  const groups = !doc.library && doc.level === 'owner' ? await documentGroups(db, id) : [];
+  return <DocumentDetail initial={doc} viewerId={userId} isAdmin={isPlatformAdmin} models={models} groups={groups} />;
 }

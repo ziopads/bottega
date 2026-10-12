@@ -225,7 +225,7 @@ export interface ActivityEntry {
   mine: boolean;
 }
 
-const KIND_WORD: Record<string, string> = { project: 'session', gear: 'unit', document: 'document' };
+const KIND_WORD: Record<string, string> = { project: 'session', gear: 'unit', document: 'document', study_group: 'study group' };
 
 function describe(r: Row, subjectName: string, itemLabel: string | null): string {
   const action = String(r.action);
@@ -262,6 +262,28 @@ function describe(r: Row, subjectName: string, itemLabel: string | null): string
       return `Library submission ${item} ${String(after.review_status ?? 'reviewed')}`;
     case 'admin_view':
       return 'Viewed by the platform administrator';
+    case 'document_shared_with_group':
+      return `Shared ${item} with the study group “${String(after.group ?? '')}” (view)`;
+    case 'document_unshared_from_group':
+      return `Stopped sharing ${item} with the study group “${String(before.group ?? '')}”`;
+    case 'study_group_created':
+      return `Started the study group ${item}`;
+    case 'study_group_invited':
+      return `${subjectName === 'you' ? 'You were' : `${subjectName} was`} invited to ${item}`;
+    case 'study_group_invitation_declined':
+      return `${subjectName === 'you' ? 'You' : subjectName} declined the invitation to ${item}`;
+    case 'study_group_invitation_withdrawn':
+      return `The invitation to ${item} for ${subjectName} was withdrawn`;
+    case 'study_group_joined':
+      return `${subjectName === 'you' ? 'You' : subjectName} joined ${item}`;
+    case 'study_group_left':
+      return `${subjectName === 'you' ? 'You' : subjectName} left ${item}`;
+    case 'study_group_member_removed':
+      return `${subjectName === 'you' ? 'You were' : `${subjectName} was`} removed from ${item}`;
+    case 'study_group_closed':
+      return `Closed ${item}`;
+    case 'study_group_reopened':
+      return `Reopened ${item}`;
     default:
       return action.replace(/_/g, ' ');
   }
@@ -278,12 +300,14 @@ export async function listActivity(db: Scoped, limit = 50): Promise<ActivityEntr
               when 'gear' then (select coalesce(nullif(g.nickname, ''), btrim(coalesce(m.manufacturer, g.manufacturer) || ' ' || coalesce(m.model, g.name)))
                                   from gear g left join gear_models m on m.id = g.model_id where g.id = l.item_id)
               when 'document' then (select d.title from documents d where d.id = l.item_id)
+              when 'study_group' then (select sg.name from study_groups sg where sg.id = l.item_id)
             end as item_label
        from access_log l
       where l.actor = app_user() or l.subject_id = app_user()
          or (l.item_kind = 'project' and project_rank(l.item_id) = 4)
          or (l.item_kind = 'gear' and gear_rank(l.item_id) = 4)
          or (l.item_kind = 'document' and document_rank(l.item_id) = 4)
+         or (l.item_kind = 'study_group' and study_custodian(l.item_id))
       order by l.at desc, l.id desc
       limit $1`,
     [limit],

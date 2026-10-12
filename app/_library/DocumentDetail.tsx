@@ -17,6 +17,7 @@ import { formatBytes, levelAtLeast } from '@/lib/studioTypes';
 // follow the viewer's level; the routes and the database enforce the same.
 
 type Model = { id: number; manufacturer: string; model: string };
+type Group = { id: number; name: string; shared: boolean };
 
 const RUNNING = new Set(['pending', 'processing']);
 
@@ -25,17 +26,21 @@ export default function DocumentDetail({
   viewerId,
   isAdmin,
   models,
+  groups: initialGroups = [],
 }: {
   initial: StudioDocument;
   viewerId: string;
   isAdmin: boolean;
   /** Approved catalogue models, for linking a library manual. */
   models: Model[];
+  /** For the owner of a private document: their study groups, and which it is shared with (db/016). */
+  groups?: Group[];
 }) {
   const router = useRouter();
   const [doc, setDoc] = useState(initial);
   const [error, setError] = useState('');
   const [running, setRunning] = useState(false);
+  const [groups, setGroups] = useState(initialGroups);
   const stop = useRef(false);
 
   const canEdit = levelAtLeast(doc.level, 'edit');
@@ -46,6 +51,13 @@ export default function DocumentDetail({
   useEffect(() => () => {
     stop.current = true;
   }, []);
+
+  async function shareWithGroup(groupId: number, share: boolean) {
+    setError('');
+    const r = await api<{ groups: Group[] }>(`/api/documents/${doc.id}/groups`, { method: share ? 'POST' : 'DELETE', body: JSON.stringify({ groupId }) });
+    if (!r.ok) return setError(r.body.error || 'Could not change the sharing.');
+    setGroups(r.data.groups);
+  }
 
   async function patch(body: Record<string, unknown>): Promise<boolean> {
     setError('');
@@ -187,40 +199,57 @@ export default function DocumentDetail({
   );
 
   const aside = (
-    <Section label="Details">
-      <MetaList
-        rows={[
-          {
-            label: 'Manufacturer',
-            value: canEdit ? (
-              <InlineEdit value={doc.manufacturer} placeholder="—" label="Manufacturer" textClass="t-body" onSave={(v) => patch({ manufacturer: v })} />
-            ) : (
-              doc.manufacturer || '—'
-            ),
-          },
-          {
-            label: 'Model',
-            value: canEdit ? (
-              <InlineEdit value={doc.model} placeholder="—" label="Model" textClass="t-body" onSave={(v) => patch({ model: v })} />
-            ) : (
-              doc.model || '—'
-            ),
-          },
-          { label: 'Kind', value: DOCUMENT_KIND_LABEL[doc.kind] },
-          { label: 'Where', value: doc.library ? 'The library' : doc.level === 'owner' ? 'Yours, private' : `${doc.ownerName}’s, private` },
-          ...(doc.library && doc.contributorName ? [{ label: 'Contributed', value: doc.contributorName }] : []),
-          {
-            label: 'File',
-            value: (
-              <span className="break-all">
-                {doc.filename} <span className="t-num text-muted">· {formatBytes(doc.bytes)}</span>
-              </span>
-            ),
-          },
-          ...(doc.pageCount !== null ? [{ label: 'Pages', value: <span className="t-num">{doc.pageCount}</span> }] : []),
-        ]}
-      />
-    </Section>
+    <>
+      <Section label="Details">
+        <MetaList
+          rows={[
+            {
+              label: 'Manufacturer',
+              value: canEdit ? (
+                <InlineEdit value={doc.manufacturer} placeholder="—" label="Manufacturer" textClass="t-body" onSave={(v) => patch({ manufacturer: v })} />
+              ) : (
+                doc.manufacturer || '—'
+              ),
+            },
+            {
+              label: 'Model',
+              value: canEdit ? (
+                <InlineEdit value={doc.model} placeholder="—" label="Model" textClass="t-body" onSave={(v) => patch({ model: v })} />
+              ) : (
+                doc.model || '—'
+              ),
+            },
+            { label: 'Kind', value: DOCUMENT_KIND_LABEL[doc.kind] },
+            { label: 'Where', value: doc.library ? 'The library' : doc.level === 'owner' ? 'Yours, private' : `${doc.ownerName}’s, private` },
+            ...(doc.library && doc.contributorName ? [{ label: 'Contributed', value: doc.contributorName }] : []),
+            {
+              label: 'File',
+              value: (
+                <span className="break-all">
+                  {doc.filename} <span className="t-num text-muted">· {formatBytes(doc.bytes)}</span>
+                </span>
+              ),
+            },
+            ...(doc.pageCount !== null ? [{ label: 'Pages', value: <span className="t-num">{doc.pageCount}</span> }] : []),
+          ]}
+        />
+      </Section>
+      {!doc.library && doc.level === 'owner' && groups.length > 0 && (
+        <Section label="Study groups">
+          <ul className="t-body space-y-1">
+            {groups.map((g) => (
+              <li key={g.id}>
+                <label className="flex items-baseline gap-2">
+                  <input type="checkbox" checked={g.shared} onChange={(e) => shareWithGroup(g.id, e.target.checked)} />
+                  <span>{g.name}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1 text-[11px] text-muted">A group’s members can read a document shared with it, and its lessons’ citations link to it, for as long as they are members.</p>
+        </Section>
+      )}
+    </>
   );
 
   return (

@@ -5,7 +5,8 @@
 // First tools (11 October 2026): list_projects and get_session, enough to ask
 // "where was I on this track?" from Claude; then the proposal tools,
 // draft_criteria and draft_card (M-3); then the corpus (12 October):
-// list_documents, search and read_pages.
+// list_documents, search and read_pages; then Learning (12 October):
+// get_study_group, draft_topic, draft_lesson and draft_exercise.
 
 import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
@@ -15,6 +16,7 @@ import { listDocumentsTool, readPagesTool, searchTool } from '@/mcp/tools/corpus
 import { draftCardTool, draftCriteriaTool } from '@/mcp/tools/drafts';
 import { getSessionTool } from '@/mcp/tools/get-session';
 import { listProjectsTool } from '@/mcp/tools/list-projects';
+import { draftExerciseTool, draftLessonTool, draftTopicTool, getStudyGroupTool } from '@/mcp/tools/study';
 
 const INSTRUCTIONS = `Bottega is a music studio's working platform: every Ableton Live session with its mixes, references and notes, where each session stands in the production process, and the studio's gear and manuals. You act as a production collaborator and teacher for the person connected: you help them see where a track stands, decide what to do next, and get unstuck. You propose; they decide.
 
@@ -29,7 +31,9 @@ Start with list_projects to find a session, then get_session for its state. Card
 
 You can propose, never decide. draft_criteria proposes exit criteria for a stage; draft_card proposes a card. Both wait in the review band on the session's Workflow tab until the person accepts or rejects them. Write each criterion so it can be checked off: one condition, observable, with no "and" joining two things. Write each card with one element, what needs to happen, and how it will be known to be done. When a card comes from a note, pass from_note so it keeps the mix and moment. Propose when the person asks for criteria or cards, or agrees to your suggestion; otherwise suggest in your reply first. Say plainly what you stored and that it is waiting for them. This connection cannot edit or delete anything, change the current mix or move the stage; those are the person's to do in the app.
 
-The corpus holds manuals and books: the person's private documents, those shared with them, and the platform library. search finds passages by words and meaning; read_pages gives whole pages. Before quoting or relying on a passage, read its pages, and cite them as the document and PDF page with the link each result carries (PDF pages count from 1 and may differ from the numbers printed on them). Keep what the corpus says, cited, apart from what you know from elsewhere, and say which is which. By default search covers the person's own documents, their picks and the manuals of the gear they own; scope 'all' adds the rest of the library.`;
+The corpus holds manuals and books: the person's private documents, those shared with them, and the platform library. search finds passages by words and meaning; read_pages gives whole pages. Before quoting or relying on a passage, read its pages, and cite them as the document and PDF page with the link each result carries (PDF pages count from 1 and may differ from the numbers printed on them). Keep what the corpus says, cited, apart from what you know from elsewhere, and say which is which. By default search covers the person's own documents, their picks and the manuals of the gear they own; scope 'all' adds the rest of the library.
+
+Learning happens in study groups: a group's syllabus is topics in order, each with lessons and exercises, and each member records their own progress on the exercises (not started, practising, done). get_study_group without an id lists the person's groups; with an id it gives the syllabus, each member's progress and the proposals awaiting review. The group's custodian writes the syllabus; you propose topics, lessons and exercises with draft_topic, draft_lesson and draft_exercise, and they wait in the group's review band until the custodian accepts or rejects them. When drafting a syllabus from a manual or book: search it and read its pages first, propose the topics, then lessons and exercises under each topic (a lesson may go under a topic still waiting for review). A lesson teaches one thing and cites the corpus where it relies on it, with markers in its body: [15:p42] for document 15, PDF page 42; [15:p42-43] for a range; [15:p42 "exact words"] with a quotation copied exactly from read_pages. Every marker is checked against the page text, and one that fails refuses the whole lesson. What you add from your own knowledge stays unmarked; say in the lesson that it is not from the source. Lessons use ## headings, - lists, **bold**, and paragraphs, nothing else. Write each exercise as something to do at the instrument, with how it will be known to be done, observable. Use the members' progress notes to suggest what to practise next.`;
 
 function json(value: unknown) {
   return { content: [{ type: 'text' as const, text: JSON.stringify(value, null, 2) }] };
@@ -175,9 +179,82 @@ export const handler = createMcpHandler(
       },
       async (args, ctx) => run(() => readPagesTool(personFrom(ctx), appOrigin(ctx), args)),
     );
+
+    server.registerTool(
+      'get_study_group',
+      {
+        title: 'Get study group',
+        description:
+          'Without an id: the study groups the person belongs to, with ids. With an id: the group\'s syllabus (topics in ' +
+          'order, their lessons with links, their exercises with every member\'s progress), the proposals awaiting the ' +
+          'custodian\'s review, and the documents its lessons cite or that are shared with it. Pass topic to include the ' +
+          'full text of that topic\'s lessons.',
+        inputSchema: z.object({
+          id: z.number().int().optional().describe('a study group id'),
+          topic: z.number().int().optional().describe('a topic_id whose lessons to give in full'),
+        }),
+      },
+      async (args, ctx) => run(() => getStudyGroupTool(personFrom(ctx), appOrigin(ctx), args)),
+    );
+
+    server.registerTool(
+      'draft_topic',
+      {
+        title: 'Propose a topic',
+        description:
+          'Propose one topic for a study group\'s syllabus, such as Sampling and chopping. Stored as a proposal in the ' +
+          'group\'s review band until the custodian accepts or rejects it; it goes at the end of the topic list. ' +
+          'instrument optionally names a catalogue model, such as Akai MPC One. Returns the topic_id, under which lessons ' +
+          'and exercises can be drafted at once. Needs the person to be a member of the group.',
+        inputSchema: z.object({
+          group_id: z.number().int().describe('a study group id from get_study_group'),
+          title: z.string().describe('the topic, at most 120 characters'),
+          summary: z.string().optional().describe('what the topic covers, at most 1000 characters'),
+          instrument: z.string().optional().describe('a catalogue model, such as Akai MPC One'),
+        }),
+      },
+      async (args, ctx) => run(() => draftTopicTool(personFrom(ctx), appOrigin(ctx), args)),
+    );
+
+    server.registerTool(
+      'draft_lesson',
+      {
+        title: 'Propose a lesson',
+        description:
+          'Propose one lesson under a topic: a title and a body that teaches one thing, citing the corpus with markers ' +
+          '[document:pPage], [document:pFrom-To] or [document:pPage "exact words"]. Every marker is checked: the ' +
+          'document must be readable by the person, the pages read, and a quotation found on the pages cited; one failure ' +
+          'stores nothing and says what to fix. Formatting: paragraphs, ## and ### headings, - or 1. lists, **bold**. ' +
+          'At most 20,000 characters. Stored as a proposal until the custodian accepts it.',
+        inputSchema: z.object({
+          topic_id: z.number().int().describe('a topic_id from get_study_group or draft_topic'),
+          title: z.string().describe('the lesson title, at most 160 characters'),
+          body: z.string().describe('the lesson, with citation markers'),
+        }),
+      },
+      async (args, ctx) => run(() => draftLessonTool(personFrom(ctx), appOrigin(ctx), args)),
+    );
+
+    server.registerTool(
+      'draft_exercise',
+      {
+        title: 'Propose an exercise',
+        description:
+          'Propose one exercise under a topic, optionally tied to one of its lessons: the task to do at the instrument, ' +
+          'and how it will be known to be done (one observable result). Members record their progress on it once the ' +
+          'custodian accepts it.',
+        inputSchema: z.object({
+          topic_id: z.number().int().describe('a topic_id from get_study_group or draft_topic'),
+          task: z.string().describe('what to do, at most 2000 characters'),
+          done_when: z.string().describe('how it will be known to be done, at most 1000 characters'),
+          lesson_id: z.number().int().optional().describe('the lesson it practises, in the same topic'),
+        }),
+      },
+      async (args, ctx) => run(() => draftExerciseTool(personFrom(ctx), appOrigin(ctx), args)),
+    );
   },
   {
     instructions: INSTRUCTIONS,
-    serverInfo: { name: 'bottega', version: '0.3.0' },
+    serverInfo: { name: 'bottega', version: '0.4.0' },
   },
 );

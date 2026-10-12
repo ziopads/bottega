@@ -1,7 +1,7 @@
 # Bottega — architecture
 
-**Version:** 0.6
-**Date:** 2026-10-10
+**Version:** 0.7
+**Date:** 2026-10-12
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
 story IDs below (S-3, W-6 and so on) refer to it.
@@ -9,6 +9,13 @@ story IDs below (S-3, W-6 and so on) refer to it.
 ---
 
 ## Changelog
+
+- **0.7** (2026-10-12) — Study groups as built in migration 016 (§4 Study,
+  §11 Study groups): groups, members and invitations, the syllabus with
+  Claude's proposals, progress, documents shared with a group (which widens
+  `document_rank()`); lesson citations (`lib/citations.ts`); the Learning
+  pages; connector tools `get_study_group`, `draft_topic`, `draft_lesson`,
+  `draft_exercise` (§6).
 
 - **0.6** (2026-10-10) — The corpus (migration 004): documents are extracted,
   chunked and embedded in the app, in resumable batches; allowances, the
@@ -300,11 +307,22 @@ moved, so two open pages cannot process the same pages twice.
 
 ### Study (Phase 2)
 
-- `study_groups`, members and requests (§11). Within a group: `topics`,
-  `sources` (a document, or a video URL), `study_notes` (author,
-  topic, kind note or question, an anchor to a page and quotation or to a video
-  timestamp), `note_answers`, `skills`, `skill_progress`, `instruments`
-  (member, MPC model, firmware).
+- Built (016): `study_groups`, `study_group_members`,
+  `study_group_invitations` (§11); `study_topics` (group, title, summary,
+  catalogue model, position), `study_lessons` (topic, title, body with
+  citation markers, position), `study_exercises` (topic, optional lesson,
+  task, done when, position), each with origin, reviewed and rejected as in
+  the workflow; `study_progress` (exercise, member, status, note);
+  `study_group_documents` (group, document, shared by).
+- Later: `study_notes` (author, topic, kind note or question, an anchor to a
+  page and quotation or to a video timestamp), `note_answers`, video
+  `sources`, `instruments` (member, MPC model, firmware), join requests.
+- Citations are not stored apart from the lesson body: `lib/citations.ts`
+  parses the markers (`[15:p42]`, `[15:p42-43]`, `[15:p42 "words"]`) for the
+  checker (`checkCitations()` in `lib/study.ts`, run on every save, by a
+  person or the connector) and for the renderer (`app/_learning/LessonBody.tsx`).
+  A quotation is compared with the page text ignoring case, curly quotes,
+  dashes, soft hyphens, words broken across lines and runs of white space.
 
 ### Analysis (Phase 3)
 
@@ -354,7 +372,7 @@ them.
 | Phase | Tools |
 |---|---|
 | 1 | `list_documents` ✓, `search` ✓, `read_pages` ✓, `find_gear`, `get_gear`, `list_projects` ✓, `get_session` ✓ (named `get_project` in earlier drafts) |
-| 2 | `get_board`, `draft_card` ✓, `draft_criteria` ✓, `list_study_notes`, `draft_study_note`, `get_progress` |
+| 2 | `get_board`, `draft_card` ✓, `draft_criteria` ✓, `get_study_group` ✓ (syllabus, proposals and progress), `draft_topic` ✓, `draft_lesson` ✓, `draft_exercise` ✓, `list_study_notes`, `draft_study_note` |
 | 3 | `get_analysis`, `compare_to_reference` |
 
 Corpus tools (`mcp/tools/corpus.ts`, `lib/search.ts`): search scopes to the
@@ -543,19 +561,41 @@ nothing.
 
 ### Study groups (Phase 2)
 
-- `study_groups` — name, description, custodian (an account), status (`open`,
-  `closed`), created.
+As built in migration 016 (12 October 2026):
+
+- `study_groups` — name (unique, any case), description, custodian (an
+  account), status (`open`, `closed`), created. Creating one makes the
+  creator custodian and first member (a trigger).
 - `study_group_members` — group, account, joined, and how (`created`,
-  `invited`, `requested`). `study_group_requests` — group, account, kind
-  (`invitation` or `request`), status, decided by and when.
+  `invited`, `requested`). Written only by the functions below.
+- `study_group_invitations` — group, account, invited by, status (`pending`,
+  `accepted`, `declined`, `withdrawn`), kept after they are answered. Asking
+  to join (`requested`) comes later.
+- Functions, each refusing with a message the app shows:
+  `study_group_invite(group, email)` (custodian; approved accounts only),
+  `study_invitation_answer(invitation, accept)` (the invitee),
+  `study_invitation_withdraw(invitation)` (custodian),
+  `study_group_leave(group)` (a member, not the custodian),
+  `study_group_remove(group, account)` (custodian),
+  `study_group_set_status(group, status)` (custodian). Handover comes later;
+  until then the custodian can neither leave nor be removed.
+- `study_member()`, `study_custodian()`, `study_open()` answer for the
+  current person. Syllabus rows are written by the custodian as their own
+  (origin `human`, reviewed) or by any member as Claude's proposal (origin
+  `assistant`, unreviewed), only while the group is open; only the custodian
+  updates them (accepting, rejecting, editing, ordering). Progress rows are
+  written by their member only, on accepted exercises, while the group is open.
+- `study_group_documents`: the owner of a private document shares it with a
+  group they belong to; `document_rank()` gives the group's current members
+  view. Sharing and unsharing are logged (`document_shared_with_group`,
+  `document_unshared_from_group`).
 - Policies: every active account reads group names and descriptions; members
-  read everything in a group and insert their own writing while it is open;
-  authors update their own writing; the custodian manages invitations,
-  requests, removal and handover; no policy allows delete, so groups and their
-  contents are deleted only through the owner role, by the platform
-  administrator.
-- Triggers on `study_group_members` and on custodian changes write the access
-  log.
+  read everything in a group; no delete is granted on any study table except
+  `study_group_documents`, so groups and their contents are deleted only
+  through the owner role, by the platform administrator.
+- The access log records creation, invitations (sent, declined, withdrawn),
+  joining, leaving, removal, closing and reopening; a custodian reads the
+  entries about their group.
 
 ### Enforcement: the application
 
