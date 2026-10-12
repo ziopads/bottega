@@ -178,6 +178,20 @@ export type StudioTrack = {
   uploadedAt: string;
 };
 
+/**
+ * A named variant of a session (db/015): "Radio edit" beside the main mix,
+ * which has no entry and the empty name. Saved Live sets whose file name
+ * contains match join it.
+ */
+export type StudioVariant = {
+  id: number;
+  name: string;
+  /** Text in a saved set's file name that puts the save in this variant; any case. */
+  match: string;
+  mixes: number;
+  saves: number;
+};
+
 /** One entry in a project's working-name history. */
 export type StudioName = { name: string; setByName: string; setAt: string };
 

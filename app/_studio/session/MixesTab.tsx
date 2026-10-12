@@ -8,7 +8,7 @@ import Player, { type PlayerHandle } from '@/app/_ui/audio/Player';
 import type { Marker } from '@/app/_ui/audio/Waveform';
 import { DetailGrid, Section } from '@/app/_ui/layout';
 import type { StudioNote, StudioReference, StudioTrack } from '@/lib/studioTypes';
-import { COMMON_VARIANTS, formatBytes, formatDuration, parseVariant } from '@/lib/studioTypes';
+import { formatBytes, formatDuration } from '@/lib/studioTypes';
 
 import { audioUrl, formatDate, uploadMix, uploadReference } from './audioUpload';
 
@@ -22,6 +22,7 @@ type Upload = { name: string; progress: number; error?: string };
 export default function MixesTab({
   projectId,
   tracks,
+  variant,
   setTracks,
   references,
   setReferences,
@@ -39,7 +40,10 @@ export default function MixesTab({
   onLength,
 }: {
   projectId: number;
+  /** The chosen variant's mixes, newest first. */
   tracks: StudioTrack[];
+  /** The variant chosen above the tabs, where uploads go: '' is the main mix (db/015). */
+  variant: string;
   setTracks: React.Dispatch<React.SetStateAction<StudioTrack[]>>;
   references: StudioReference[];
   setReferences: React.Dispatch<React.SetStateAction<StudioReference[]>>;
@@ -59,11 +63,6 @@ export default function MixesTab({
   const [selected, setSelected] = useState<number | null>(currentId ?? tracks[0]?.id ?? null);
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [dragging, setDragging] = useState(false);
-  // The variant new uploads go to (db/013): '' is the main mix.
-  const [variant, setVariant] = useState('');
-  const variants = Array.from(new Set(tracks.map((t) => t.variant))).sort((a, b) =>
-    a === '' ? -1 : b === '' ? 1 : a.localeCompare(b),
-  );
   const [error, setError] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
   const players = useRef(new Map<number, PlayerHandle>());
@@ -90,8 +89,7 @@ export default function MixesTab({
     for (let i = 0; i < mp3s.length; i++) {
       const set = (u: Partial<Upload>) => setUploads((l) => l.map((x, j) => (j === start + i ? { ...x, ...u } : x)));
       try {
-        const target = parseVariant(variant);
-        const track = await uploadMix(projectId, mp3s[i], (p) => set({ progress: p }), 'value' in target ? target.value : '');
+        const track = await uploadMix(projectId, mp3s[i], (p) => set({ progress: p }), variant);
         setTracks((l) =>
           [track, ...l].sort(
             (a, b) =>
@@ -117,12 +115,9 @@ export default function MixesTab({
   const main = (
     <>
       <Section label={`Mixes · ${tracks.length}`}>
-        {tracks.length === 0 && <p className="t-body text-muted">No mixes yet.</p>}
-        {variants.map((v) => (
-        <div key={v || 'main'} className={v ? 'mt-5' : ''}>
-        {variants.length > 1 && <h3 className="t-label mb-1">{v || 'Main mix'}</h3>}
+        {tracks.length === 0 && <p className="t-body text-muted">{variant ? `No mixes of ${variant} yet.` : 'No mixes yet.'}</p>}
         <ul className="divide-y divide-line">
-          {tracks.filter((t) => t.variant === v).map((t) => (
+          {tracks.map((t) => (
             <MixRow
               key={t.id}
               track={t}
@@ -146,8 +141,6 @@ export default function MixesTab({
             />
           ))}
         </ul>
-        </div>
-        ))}
 
         {canContribute &&
           (uploadsEnabled ? (
@@ -164,21 +157,7 @@ export default function MixesTab({
               }}
               className={`t-body mt-3 rounded border border-dashed px-3 py-3 text-center ${dragging ? 'border-ink' : 'border-line text-muted'}`}
             >
-              Drop an MP3 to add the next version of{' '}
-              <input
-                value={variant}
-                onChange={(e) => setVariant(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                placeholder="the main mix"
-                list="mix-variants"
-                aria-label="Variant: leave empty for the main mix, or name it (Radio edit, Extended…)"
-                className="w-36 rounded border border-line bg-card px-1.5 py-0 text-ink outline-none focus:border-rust"
-              />
-              <datalist id="mix-variants">
-                {Array.from(new Set([...variants.filter(Boolean), ...COMMON_VARIANTS])).map((v) => (
-                  <option key={v} value={v} />
-                ))}
-              </datalist>
+              Drop an MP3 to add the next version of {variant ? <span className="text-ink">{variant}</span> : 'the main mix'}
               , or{' '}
               <button onClick={() => fileInput.current?.click()} className="underline hover:text-ink">
                 choose a file

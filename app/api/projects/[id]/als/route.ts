@@ -13,7 +13,8 @@ function parseId(raw: string): number | null {
 }
 
 // GET /api/projects/:id/als            the saves already stored (fingerprints, parser version)
-// GET /api/projects/:id/als?state=1    the State tab's data
+// GET /api/projects/:id/als?state=1[&variant=Radio edit][&save=ID]
+//                                      the State tab's data for a variant, at a save
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const account = await apiAccount();
   if (account instanceof NextResponse) return account;
@@ -21,8 +22,14 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
   const refusal = await projectRefusal(account.db, id, 'view');
   if (refusal) return refusal;
-  if (new URL(req.url).searchParams.get('state')) {
-    return NextResponse.json({ state: await getSessionState(account.db, id) });
+  const q = new URL(req.url).searchParams;
+  if (q.get('state')) {
+    const save = Number(q.get('save'));
+    const state = await getSessionState(account.db, id, {
+      variant: (q.get('variant') ?? '').trim(),
+      saveId: Number.isInteger(save) && save > 0 ? save : null,
+    });
+    return NextResponse.json({ state });
   }
   return NextResponse.json({ snapshots: await listSnapshotMeta(account.db, id) });
 }

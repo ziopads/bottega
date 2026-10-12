@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { TabBar } from '@/app/_ui/layout';
 import type {
@@ -12,6 +12,7 @@ import type {
   StudioRelease,
   StudioShare,
   StudioTrack,
+  StudioVariant,
 } from '@/lib/studioTypes';
 import type { SessionTab } from '@/lib/sessionTabs';
 import { levelAtLeast } from '@/lib/studioTypes';
@@ -24,6 +25,7 @@ import MixesTab from './session/MixesTab';
 import NotesTab from './session/NotesTab';
 import OverviewTab from './session/OverviewTab';
 import StateTab from './session/StateTab';
+import VariantBar from './session/VariantBar';
 import WorkflowTab from './session/WorkflowTab';
 
 // One session (REQUIREMENTS S-1 to S-13), as tabs over one shared state, so
@@ -36,7 +38,12 @@ import WorkflowTab from './session/WorkflowTab';
 //   Notes      every note, filterable
 //   History    uploads and name changes
 //
-// The tab is in the address (?tab=), so a link can open one. What the
+// Variants (db/015): chips in the header choose the main mix or a named
+// variant (a radio edit); the Mixes and State tabs show the chosen one's mixes
+// and saves. The workflow, references and notes are common to the session.
+//
+// The tab and the variant are in the address (?tab=, ?variant=), so a link
+// can open one. What the
 // controls offer follows the viewer's level (AC-5); the routes and the
 // database enforce the same rules.
 
@@ -56,6 +63,8 @@ export default function ProjectDetail({
   uploadsEnabled,
   initialWorkflow,
   initialSessionState,
+  initialVariants,
+  initialVariant,
 }: {
   initialTab: SessionTab;
   initialProject: StudioProject;
@@ -71,6 +80,9 @@ export default function ProjectDetail({
   uploadsEnabled: boolean;
   initialWorkflow: Workflow;
   initialSessionState: SessionState;
+  initialVariants: StudioVariant[];
+  /** '' is the main mix. */
+  initialVariant: string;
 }) {
   const [tab, setTab] = useState<SessionTab>(initialTab);
   const [project, setProject] = useState(initialProject);
@@ -80,6 +92,11 @@ export default function ProjectDetail({
   const [notes, setNotes] = useState(initialNotes);
   const [references, setReferences] = useState(initialReferences);
   const [workflow, setWorkflow] = useState(initialWorkflow);
+  const [variants, setVariants] = useState(initialVariants);
+  const [variant, setVariant] = useState(initialVariant);
+  const [sessionState, setSessionState] = useState(initialSessionState);
+  // The variant last chosen, so a slower answer for an earlier choice is dropped.
+  const wanted = useRef(initialVariant);
   const [error, setError] = useState('');
 
   const isOwner = project.level === 'owner';
@@ -90,6 +107,40 @@ export default function ProjectDetail({
   const current = tracks.find((t) => t.id === project.currentMixId) ?? tracks[0] ?? null;
   const chosenByHand = !!current && project.currentMixId === current.id && current !== tracks[0];
   const pastNames = nameHistory.filter((n) => n.name !== project.workingName);
+
+  const variantTracks = tracks.filter((t) => t.variant === variant);
+
+  async function loadState(name: string) {
+    const q = new URLSearchParams({ state: '1' });
+    if (name) q.set('variant', name);
+    const r = await api<{ state: SessionState }>(`/api/projects/${project.id}/als?${q}`, { method: 'GET' });
+    if (wanted.current !== name) return;
+    if (r.ok) setSessionState(r.data.state);
+    else setError(r.body.error || 'Could not read the saves.');
+  }
+
+  function selectVariant(name: string) {
+    setVariant(name);
+    wanted.current = name;
+    if (sessionState.variant !== name) void loadState(name);
+    const url = new URL(window.location.href);
+    if (name) url.searchParams.set('variant', name);
+    else url.searchParams.delete('variant');
+    window.history.replaceState(null, '', url);
+  }
+
+  /** A rename or removal changes mixes' labels and saves' places: the page is read again. */
+  function reloadWith(name: string) {
+    const url = new URL(window.location.href);
+    if (name) url.searchParams.set('variant', name);
+    else url.searchParams.delete('variant');
+    window.location.assign(url.toString());
+  }
+
+  async function refreshVariants() {
+    const r = await api<{ variants: StudioVariant[] }>(`/api/projects/${project.id}/variants`, { method: 'GET' });
+    if (r.ok) setVariants(r.data.variants);
+  }
 
   function selectTab(key: string) {
     const next = key as SessionTab;
@@ -190,6 +241,22 @@ export default function ProjectDetail({
             {project.level === 'edit' ? 'edit' : project.level === 'contribute' ? 'contribute' : 'listen'}
           </span>
         )}
+        <div className="ml-auto">
+          <VariantBar
+            projectId={project.id}
+            variants={variants}
+            current={variant}
+            canEdit={canEdit}
+            isOwner={isOwner}
+            onSelect={selectVariant}
+            onCreated={(list, name) => {
+              setVariants(list);
+              selectVariant(name);
+            }}
+            onRenamed={reloadWith}
+            onRemoved={() => reloadWith('')}
+          />
+        </div>
       </div>
 
       <div className="mb-6 mt-3 border-b border-line">
@@ -198,8 +265,8 @@ export default function ProjectDetail({
           onSelect={selectTab}
           tabs={[
             { key: 'overview', label: 'Overview' },
-            { key: 'mixes', label: 'Mixes', count: tracks.length },
-            { key: 'state', label: 'State' },
+            { key: 'mixes', label: variant ? `Mixes · ${variant}` : 'Mixes', count: variantTracks.length },
+            { key: 'state', label: variant ? `State · ${variant}` : 'State' },
             { key: 'workflow', label: workflow.stage ? `Workflow · ${workflow.stages.find((x) => x.key === workflow.stage)?.label ?? ''}` : 'Workflow' },
             { key: 'notes', label: 'Notes', count: notes.length },
             { key: 'history', label: 'History' },
@@ -230,8 +297,10 @@ export default function ProjectDetail({
       )}
       {tab === 'mixes' && (
         <MixesTab
+          key={variant}
           projectId={project.id}
-          tracks={tracks}
+          tracks={variantTracks}
+          variant={variant}
           setTracks={setTracks}
           references={references}
           setReferences={setReferences}
@@ -249,7 +318,17 @@ export default function ProjectDetail({
           onLength={fillLength}
         />
       )}
-      {tab === 'state' && <StateTab projectId={project.id} initialState={initialSessionState} canEdit={canEdit} />}
+      {tab === 'state' && (
+        <StateTab
+          projectId={project.id}
+          state={sessionState}
+          setState={setSessionState}
+          variant={variant}
+          variants={variants}
+          canEdit={canEdit}
+          onSavesMoved={() => void refreshVariants()}
+        />
+      )}
       {tab === 'workflow' && (
         <WorkflowTab
           projectId={project.id}
@@ -268,6 +347,7 @@ export default function ProjectDetail({
           canEdit={canEdit}
           projectId={project.id}
           tracks={tracks}
+          variants={variants}
           notes={notes}
           setNotes={setNotes}
           viewerId={viewerId}

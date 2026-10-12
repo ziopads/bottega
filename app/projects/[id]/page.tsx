@@ -18,11 +18,12 @@ import {
 import { audioConfigured } from '@/lib/studioAudio';
 import { getWorkflow } from '@/lib/workflow';
 import { getSessionState } from '@/lib/als/store';
+import { listVariants } from '@/lib/variants';
 
 // One music project, as the signed-in person may see it: a project they can
 // neither own nor see is not found (its existence is not disclosed).
 
-type Params = { params: Promise<{ id: string }>; searchParams?: Promise<{ tab?: string }> };
+type Params = { params: Promise<{ id: string }>; searchParams?: Promise<{ tab?: string; variant?: string }> };
 
 function parseId(raw: string): number | null {
   const id = Number(raw);
@@ -45,8 +46,12 @@ export default async function ProjectPage({ params, searchParams }: Params) {
   const project = await getProject(db, id);
   if (!project) notFound();
   const isOwner = project.level === 'owner';
-  const asked = (await searchParams)?.tab;
+  const query = (await searchParams) ?? {};
+  const asked = query.tab;
   const tab: SessionTab = SESSION_TABS.includes(asked as SessionTab) ? (asked as SessionTab) : 'overview';
+  // The variant chosen above the tabs (db/015); an unknown name is the main mix.
+  const variants = await listVariants(db, id);
+  const variant = variants.find((v) => v.name.toLowerCase() === (query.variant ?? '').trim().toLowerCase())?.name ?? '';
 
   const [tracks, names, artists, genres, notes, releases, references, shares, workflow, sessionState] = await Promise.all([
     listTracks(db, id),
@@ -58,7 +63,7 @@ export default async function ProjectPage({ params, searchParams }: Params) {
     listReferences(db, id),
     isOwner ? listShares(db, { kind: 'project', id }) : Promise.resolve([]),
     getWorkflow(db, id),
-    getSessionState(db, id),
+    getSessionState(db, id, { variant }),
   ]);
 
   return (
@@ -81,6 +86,8 @@ export default async function ProjectPage({ params, searchParams }: Params) {
         uploadsEnabled={audioConfigured()}
         initialWorkflow={workflow}
         initialSessionState={sessionState}
+        initialVariants={variants}
+        initialVariant={variant}
       />
     </div>
   );

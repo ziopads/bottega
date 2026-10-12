@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { api } from '@/app/_studio/controls';
 import { NoteComposer, NoteItem } from '@/app/_studio/Notes';
 import { DetailGrid, Section } from '@/app/_ui/layout';
-import type { StudioNote, StudioTrack } from '@/lib/studioTypes';
+import type { StudioNote, StudioTrack, StudioVariant } from '@/lib/studioTypes';
 import type { Workflow } from '@/lib/workflowTypes';
 
 // The Notes tab (REQUIREMENTS S-5, S-11): every note on the session, newest
@@ -23,6 +23,7 @@ export default function NotesTab({
   canEdit,
   projectId,
   tracks,
+  variants,
   notes,
   setNotes,
   viewerId,
@@ -34,6 +35,8 @@ export default function NotesTab({
   canEdit: boolean;
   projectId: number;
   tracks: StudioTrack[];
+  /** The session's named variants (db/015); notes on a mix can be filtered by its variant. */
+  variants: StudioVariant[];
   notes: StudioNote[];
   setNotes: React.Dispatch<React.SetStateAction<StudioNote[]>>;
   viewerId: string;
@@ -41,7 +44,9 @@ export default function NotesTab({
   canDelete: boolean;
 }) {
   const [person, setPerson] = useState('');
-  const [version, setVersion] = useState<'all' | 'session' | number>('all');
+  // A version's id, the whole session, or every mix of a variant ("v:" and its name; "v:" alone is the main mix).
+  const [version, setVersion] = useState<'all' | 'session' | number | `v:${string}`>('all');
+  const variantOf = new Map(tracks.map((t) => [t.id, t.variant]));
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [error, setError] = useState('');
@@ -64,6 +69,7 @@ export default function NotesTab({
     if (person && (n.authorId ?? '') !== person) return false;
     if (version === 'session' && n.trackId !== null) return false;
     if (typeof version === 'number' && n.trackId !== version) return false;
+    if (typeof version === 'string' && version.startsWith('v:') && (n.trackId === null || variantOf.get(n.trackId) !== version.slice(2))) return false;
     const day = localDay(n.createdAt);
     if (from && day < from) return false;
     if (to && day > to) return false;
@@ -146,11 +152,21 @@ export default function NotesTab({
             value={String(version)}
             onChange={(e) => {
               const v = e.target.value;
-              setVersion(v === 'all' || v === 'session' ? v : Number(v));
+              setVersion(v === 'all' || v === 'session' ? v : v.startsWith('v:') ? (v as `v:${string}`) : Number(v));
             }}
             className={field}
           >
             <option value="all">Anything</option>
+            {variants.length > 0 && (
+              <optgroup label="Every mix of">
+                <option value="v:">Main</option>
+                {variants.map((v) => (
+                  <option key={v.id} value={`v:${v.name}`}>
+                    {v.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
             {tracks.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.label}

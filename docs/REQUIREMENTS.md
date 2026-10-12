@@ -1,7 +1,7 @@
 # Bottega — requirements
 
-**Version:** 0.15
-**Date:** 2026-10-11
+**Version:** 0.16
+**Date:** 2026-10-12
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
 built is in `ARCHITECTURE.md`.
@@ -9,6 +9,13 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.16** (2026-10-12) — Session variants (S-14, S-16): a session's
+  variants are a list kept on the session, chosen by chips in its header;
+  each variant has its own mixes and its own saved sets, sorted by a name
+  rule or by hand. The State tab lists the chosen variant's saves and shows
+  any one of them. The workflow, references and notes on the whole session
+  stay common. A note's moment can be typed (S-4).
 
 - **0.15** (2026-10-11) — Session analysis built (A-6 to A-8): the State
   tab reads a dropped project folder's saved sets in the browser and shows
@@ -311,8 +318,9 @@ there may be lost in the move.
 - **S-2** Rating 0–5 (0 unrated), genre from an extendable list, BPM.
 - **S-3** Mixes: MP3s uploaded to private storage, numbered versions, streamed
   in the page and downloadable through signed links.
-- **S-4** Notes per session, newest first, optionally attached to one mix,
-  filterable by person, mix and date.
+- **S-4** Notes per session, newest first, optionally attached to one mix
+  and to a moment in it, typed as "1:35" (beside a mix, filled in from the
+  player), filterable by person, mix, variant and date.
 - **S-5** The session list: sortable columns, search, filters by artist, genre,
   rating and audio, multi-select bulk edit, and a shared player that auditions
   each session's current mix with keyboard shortcuts.
@@ -345,10 +353,22 @@ there may be lost in the move.
   by person, version and date from the left. History: versions and
   references uploaded and names changed, newest first.
 - **S-14** Mix variants: a mix belongs to the main mix or to a named variant
-  (radio edit, extended, instrumental…), chosen at upload, and versions are
-  numbered within it ("Radio edit v1"). The Mixes tab groups by variant; the
-  session's current mix can be any version of any variant. A remix is its
+  (radio edit, extended, instrumental…), and versions are numbered within it
+  ("Radio edit v1"). A mix goes to the variant chosen in the session's
+  header (S-16); the Mixes tab shows that variant's mixes. The session's
+  current mix can be any version of any variant. A remix is its
   own session; a link between a remix and its original comes later.
+- **S-16** Variants are a list on the session: chips in its header (Main,
+  then each variant) choose what the Mixes and State tabs show. Edit access
+  adds and renames a variant; the owner removes one that has no mixes. Each
+  variant has a name rule, text in a saved set's file name ("radio edit"),
+  that puts the save in the variant; the longest rule found wins, and no
+  rule found means the main mix. A save can be moved by hand and handed
+  back to the rules. The State tab lists the chosen variant's saves, newest
+  first, each with what changed since the save before; choosing one shows
+  the set as it was then. A variant's first save is compared with the main
+  save just before it. The workflow, references and notes about the whole
+  session are common to all variants; a note on a mix follows its mix.
 - **S-15 (planned)** A State tab, between Mixes and Workflow: each element's
   state as the person reads it (empty, sketched, working, baked; each change
   dated) beside what the latest analysis shows (how much of the arrangement

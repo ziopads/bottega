@@ -2,19 +2,22 @@
 
 import { useMemo, useRef, useState } from 'react';
 
+import { api } from '@/app/_studio/controls';
 import { DetailGrid, Section } from '@/app/_ui/layout';
-import { beatsToTime, playable } from '@/lib/als/analyse';
+import { beatsToTime, playable, type SetChange } from '@/lib/als/analyse';
 import { parseSet } from '@/lib/als/parse';
 import { filesFromDrop, filesFromInput, gunzipText, listing, savedSets, sha256, type PickedFile } from '@/lib/als/readFolder';
-import type { SessionState } from '@/lib/als/store';
+import type { SaveEntry, SessionState } from '@/lib/als/store';
 import { PARSER_VERSION, type AlsSet, type AlsTrack, type Zone } from '@/lib/als/types';
-import { formatBytes } from '@/lib/studioTypes';
+import { formatBytes, type StudioVariant } from '@/lib/studioTypes';
 
-// The State tab (REQUIREMENTS S-15, A-6 to A-8): what the saved Live sets
-// show about the session. Drop the session's Ableton project folder on the
-// left; every saved set in it is read here in the browser and stored as a
-// snapshot, and the folder is listed by name and size (no audio leaves the
-// computer). The person's own read of each element comes next.
+// The State tab (REQUIREMENTS S-15, S-16, A-6 to A-8): what the saved Live
+// sets show about one variant of the session (the main mix, or a radio edit
+// chosen above the tabs). The variant's saves are listed on the left, newest
+// first; choosing one shows the set as it was at that save, and what changed
+// since the save before. Dropping the session's Ableton project folder reads
+// every saved set in it here in the browser; the database sorts each save
+// into a variant by its file name (db/015), and a save can be moved by hand.
 
 const ZONE_COLOR: Record<string, string> = {
   TACTUS: '#b5543c',
@@ -37,21 +40,73 @@ function bars(beats: number): string {
   return `${Math.round(beats / 4)} bars`;
 }
 
+const bare = (fileName: string) => fileName.replace(/\.als$/i, '');
+const variantLabel = (v: string) => v || 'Main';
+
+/** What changed, as short phrases. */
+function changeParts(c: SetChange): string[] {
+  const parts: string[] = [];
+  if (c.tracksAdded.length) parts.push(`+${c.tracksAdded.length} ${c.tracksAdded.length === 1 ? 'track' : 'tracks'} (${c.tracksAdded.join(', ')})`);
+  if (c.tracksRemoved.length) parts.push(`−${c.tracksRemoved.length} (${c.tracksRemoved.join(', ')})`);
+  for (const r of c.tracksRenamed) parts.push(`${r.from} → ${r.to}`);
+  if (c.pluginsAdded.length) parts.push(`added ${c.pluginsAdded.join(', ')}`);
+  if (c.pluginsRemoved.length) parts.push(`removed ${c.pluginsRemoved.join(', ')}`);
+  if (c.clips) parts.push(`${c.clips > 0 ? '+' : ''}${c.clips} clips`);
+  if (Math.abs(c.lengthBeats) >= 4) parts.push(`length ${c.lengthBeats > 0 ? '+' : '−'}${Math.round(Math.abs(c.lengthBeats) / 4)} bars`);
+  if (c.tempo) parts.push(`tempo ${c.tempo.from ?? '?'} → ${c.tempo.to ?? '?'}`);
+  for (const z of c.zones) parts.push(`${z.zone ?? 'no zone'} ${Math.round(z.from / 4)} → ${Math.round(z.to / 4)} bars`);
+  if (c.samplesExternal) parts.push(`${c.samplesExternal > 0 ? '+' : ''}${c.samplesExternal} samples outside the folder`);
+  return parts;
+}
+
+function summary(s: SaveEntry): string {
+  if (s.first) return 'The first save read.';
+  if (!s.change) return 'Nothing the parser tracks changed.';
+  return changeParts(s.change).join(' · ');
+}
+
 export default function StateTab({
   projectId,
-  initialState,
+  state,
+  setState,
+  variant,
+  variants,
   canEdit,
+  onSavesMoved,
 }: {
   projectId: number;
-  initialState: SessionState;
+  state: SessionState;
+  setState: (s: SessionState) => void;
+  /** The variant chosen above the tabs: '' is the main mix. */
+  variant: string;
+  variants: StudioVariant[];
   canEdit: boolean;
+  /** Saves were read or moved: the variants' counts change. */
+  onSavesMoved: () => void;
 }) {
-  const [state, setState] = useState(initialState);
   const [lines, setLines] = useState<Line[]>([]);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState('');
   const input = useRef<HTMLInputElement>(null);
+
+  async function load(saveId?: number) {
+    setLoading(true);
+    const q = new URLSearchParams({ state: '1' });
+    if (variant) q.set('variant', variant);
+    if (saveId) q.set('save', String(saveId));
+    try {
+      const r = await fetch(`/api/projects/${projectId}/als?${q}`).then((x) => x.json());
+      if (r.state) setState(r.state);
+      else setError(r.error || 'Could not read the saves.');
+    } catch {
+      setError('Could not read the saves.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
 
   async function importFolder(folderName: string, files: PickedFile[]) {
     setError('');
@@ -82,7 +137,7 @@ export default function StateTab({
             body: JSON.stringify({ fileName: path, savedAt: new Date(file.lastModified).toISOString(), sha256: sha, bytes: file.size, set: parsed }),
           });
           const body = await res.json().catch(() => ({}));
-          if (!res.ok) set(i, { state: 'error', detail: body.error || 'Could not store it.' });
+          if (!res.ok) set(i, { state: 'error', detail: body.error || `Could not store it (${res.status}).` });
           else set(i, { state: body.result as Line['state'] });
         } catch (err) {
           set(i, { state: 'error', detail: err instanceof Error ? err.message : 'Could not read it.' });
@@ -94,8 +149,8 @@ export default function StateTab({
         body: JSON.stringify({ folderName, files: listing(files) }),
       });
       if (!put.ok) setError('The sets were read, but the folder listing could not be stored.');
-      const fresh = await fetch(`/api/projects/${projectId}/als?state=1`).then((r) => r.json());
-      if (fresh.state) setState(fresh.state);
+      await load();
+      onSavesMoved();
     } catch {
       setError('Reading the folder failed. Try again.');
     } finally {
@@ -103,22 +158,73 @@ export default function StateTab({
     }
   }
 
-  const latest = state.latest?.set ?? null;
+  async function move(saveId: number, to: string | null) {
+    setError('');
+    const r = await api(`/api/projects/${projectId}/als/${saveId}`, { method: 'PATCH', body: JSON.stringify({ variant: to }) });
+    if (!r.ok) {
+      setError(r.body.error || 'Could not move the save.');
+      return;
+    }
+    await load(saveId);
+    onSavesMoved();
+  }
+
+  // The page is fetching the variant chosen above the tabs.
+  const switching = state.variant !== variant;
+  const sel = state.selected;
+  const latest = sel?.set ?? null;
   const m = state.maintenance;
   const stored = lines.filter((l) => l.state === 'stored' || l.state === 'replaced').length;
   const kept = lines.filter((l) => l.state === 'kept').length;
+  const rule = variants.find((v) => v.name === variant)?.match ?? null;
 
   // ── Left column ─────────────────────────────────────────────────────────────
   const aside = (
     <>
-      <Section label="The set">
-        {latest && state.latest ? (
+      <Section label={`Saves · ${variantLabel(variant)} · ${state.saves.length}`}>
+        {state.saves.length === 0 ? (
+          <p className="t-body text-muted">
+            {state.total === 0
+              ? 'No sets read yet. Drop the project folder below.'
+              : variant
+                ? `No saves in ${variant} yet. A save whose file name contains “${rule}” joins it; any save can also be moved here from another variant.`
+                : 'Every save read belongs to a variant.'}
+          </p>
+        ) : (
+          <ul className={`t-body max-h-96 space-y-px overflow-y-auto ${loading || switching ? 'opacity-60' : ''}`}>
+            {state.saves.map((s) => {
+              const on = s.id === sel?.id;
+              return (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    onClick={() => !on && void load(s.id)}
+                    aria-current={on ? 'true' : undefined}
+                    className={`block w-full border-l-2 py-1 pl-2 pr-1 text-left ${on ? 'border-rust bg-card' : 'border-transparent hover:bg-card'}`}
+                  >
+                    <span className="flex items-baseline gap-2">
+                      <span className={`min-w-0 flex-1 truncate ${on ? 'font-medium' : ''}`} title={s.fileName}>
+                        {bare(s.fileName)}
+                      </span>
+                      <span className="t-num shrink-0 text-[11px] text-muted">{new Date(s.savedAt).toLocaleDateString()}</span>
+                    </span>
+                    <span className="block truncate text-[11px] text-muted" title={summary(s)}>
+                      {summary(s)}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Section>
+
+      {sel && latest && (
+        <Section label="This save">
           <dl className="t-body space-y-1">
-            <div className="truncate font-medium" title={state.latest.fileName}>
-              {state.latest.fileName.replace(/\.als$/, '')}
-            </div>
+            <div className="break-words font-medium">{bare(sel.fileName)}</div>
             <div className="text-[11px] text-muted">
-              Saved {whenDay(state.latest.savedAt)} · {latest.live.replace('Ableton ', '')}
+              Saved {whenDay(sel.savedAt)} · {latest.live.replace('Ableton ', '')}
             </div>
             <div className="t-num pt-1">
               {latest.tempo ? `${latest.tempo} BPM · ` : ''}
@@ -128,12 +234,35 @@ export default function StateTab({
             <div className="text-muted">
               {countKinds(latest.tracks)} · {m?.plugins.reduce((n, p) => n + p.instances, 0) ?? 0} plugin instances
             </div>
-            <div className="text-muted">{state.history.length} saved {state.history.length === 1 ? 'version' : 'versions'} read</div>
           </dl>
-        ) : (
-          <p className="t-body text-muted">No sets read yet.</p>
-        )}
-      </Section>
+          {canEdit && (variants.length > 0 || sel.byHand) && (
+            <div className="t-body mt-3 flex flex-wrap items-center gap-2 text-muted">
+              <label className="flex items-center gap-1.5">
+                Variant
+                <select
+                  value={variant}
+                  onChange={(e) => void move(sel.id, e.target.value)}
+                  className="rounded border border-line bg-card px-1.5 py-0.5 text-ink outline-none focus:border-rust"
+                >
+                  <option value="">Main</option>
+                  {variants.map((v) => (
+                    <option key={v.id} value={v.name}>
+                      {v.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {sel.byHand ? (
+                <button type="button" onClick={() => void move(sel.id, null)} className="underline hover:text-ink">
+                  follow the name rules
+                </button>
+              ) : (
+                <span className="text-[11px]">by its file name</span>
+              )}
+            </div>
+          )}
+        </Section>
+      )}
 
       <Section label="Project folder">
         {state.folder && (
@@ -193,8 +322,8 @@ export default function StateTab({
           <p className="t-body text-muted">Someone with edit access reads the folder.</p>
         )}
         <p className="mt-2 text-[11px] text-muted">
-          Every saved set in the folder is read here in your browser. The rest of the folder is listed by name and size; no audio is uploaded.
-          Dropping it again adds only new saves.
+          Every saved set in the folder is read here in your browser and sorted into a variant by its file name. The rest of the folder is listed by
+          name and size; no audio is uploaded. Dropping it again adds only new saves.
         </p>
         {error && <p className="t-body mt-2 text-rust">{error}</p>}
         {lines.length > 0 && (
@@ -209,7 +338,7 @@ export default function StateTab({
               {lines.map((l) => (
                 <li key={l.name} className="flex gap-2">
                   <span className="min-w-0 flex-1 truncate" title={l.name}>
-                    {l.name.replace(/\.als$/, '')}
+                    {bare(l.name)}
                   </span>
                   <span className={l.state === 'error' ? 'text-rust' : 'text-muted'} title={l.detail}>
                     {l.state === 'reading' ? '…' : l.state === 'kept' ? 'already read' : l.state === 'error' ? 'failed' : 'read'}
@@ -223,7 +352,7 @@ export default function StateTab({
     </>
   );
 
-  if (!latest || !m) {
+  if (!sel || !latest || !m) {
     return (
       <DetailGrid
         side="left"
@@ -231,7 +360,11 @@ export default function StateTab({
         main={
           <Section label="What the set shows">
             <div className="t-body max-w-prose space-y-2 text-muted">
-              <p>Drop the session&rsquo;s Ableton project folder on the left. From its saved sets this tab shows:</p>
+              <p>
+                {state.total === 0
+                  ? 'Drop the session’s Ableton project folder on the left. From its saved sets this tab shows:'
+                  : `Once ${variantLabel(variant)} has a save, this tab shows:`}
+              </p>
               <ul className="list-disc space-y-1 pl-5">
                 <li>how much of the arrangement each zone covers, and a map of where everything plays;</li>
                 <li>plugins and devices with their instances, samples outside the project folder, missing and unused files;</li>
@@ -245,12 +378,12 @@ export default function StateTab({
   }
 
   const main = (
-    <>
+    <div className={loading || switching ? 'opacity-60' : ''}>
+      <ChangesSection save={sel} />
       <Zones state={state} set={latest} />
       <ArrangementMap set={latest} />
       <MaintenanceSection m={m} folderRead={!!state.folder} />
-      <HistorySection state={state} />
-    </>
+    </div>
   );
 
   return <DetailGrid side="left" aside={aside} main={main} />;
@@ -482,41 +615,24 @@ function Finding({ title, ok, items, note }: { title: string; ok: string; items:
   );
 }
 
-// ── History ──────────────────────────────────────────────────────────────────
+// ── Changes ───────────────────────────────────────────────────────────────────
 
-function HistorySection({ state }: { state: SessionState }) {
+function ChangesSection({ save }: { save: SaveEntry }) {
+  const parts = save.change ? changeParts(save.change) : [];
+  const label = save.comparedWith ? `Since ${bare(save.comparedWith)} (main)` : 'Since the save before';
   return (
-    <Section label={`Saved versions · ${state.history.length}`}>
-      <ul className="t-body divide-y divide-line">
-        {state.history.map((h, i) => {
-          const first = i === state.history.length - 1;
-          const c = h.change;
-          const parts: string[] = [];
-          if (c) {
-            if (c.tracksAdded.length) parts.push(`+${c.tracksAdded.length} ${c.tracksAdded.length === 1 ? 'track' : 'tracks'} (${c.tracksAdded.join(', ')})`);
-            if (c.tracksRemoved.length) parts.push(`−${c.tracksRemoved.length} (${c.tracksRemoved.join(', ')})`);
-            for (const r of c.tracksRenamed) parts.push(`${r.from} → ${r.to}`);
-            if (c.pluginsAdded.length) parts.push(`added ${c.pluginsAdded.join(', ')}`);
-            if (c.pluginsRemoved.length) parts.push(`removed ${c.pluginsRemoved.join(', ')}`);
-            if (c.clips) parts.push(`${c.clips > 0 ? '+' : ''}${c.clips} clips`);
-            if (Math.abs(c.lengthBeats) >= 4) parts.push(`length ${c.lengthBeats > 0 ? '+' : '−'}${Math.round(Math.abs(c.lengthBeats) / 4)} bars`);
-            if (c.tempo) parts.push(`tempo ${c.tempo.from ?? '?'} → ${c.tempo.to ?? '?'}`);
-            for (const z of c.zones) parts.push(`${z.zone ?? 'no zone'} ${Math.round(z.from / 4)} → ${Math.round(z.to / 4)} bars`);
-            if (c.samplesExternal) parts.push(`${c.samplesExternal > 0 ? '+' : ''}${c.samplesExternal} samples outside the folder`);
-          }
-          return (
-            <li key={h.id} className="py-1.5">
-              <div className="flex items-baseline gap-3">
-                <span className="min-w-0 flex-1 truncate" title={h.fileName}>
-                  {h.fileName.replace(/\.als$/, '')}
-                </span>
-                <span className="shrink-0 text-[11px] text-muted">{whenDay(h.savedAt)}</span>
-              </div>
-              <p className="text-[11px] text-muted">{first ? 'The first save read.' : parts.length ? parts.join(' · ') : 'Nothing the parser tracks changed.'}</p>
-            </li>
-          );
-        })}
-      </ul>
+    <Section label={label}>
+      {save.first ? (
+        <p className="t-body text-muted">The first save read: nothing earlier to compare with.</p>
+      ) : parts.length === 0 ? (
+        <p className="t-body text-muted">Nothing the parser tracks changed.</p>
+      ) : (
+        <ul className="t-body list-disc space-y-0.5 pl-5">
+          {parts.map((p, i) => (
+            <li key={i}>{p}</li>
+          ))}
+        </ul>
+      )}
     </Section>
   );
 }
