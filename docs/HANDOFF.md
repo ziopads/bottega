@@ -145,7 +145,8 @@ where it exists. Without an embedding the search runs on words alone and
 says so. The reader, `/library/[id]/read?page=N&q=…`: a page's extracted
 text with the query's words marked, Scriptorium's navigation (‹ ›, arrow
 keys, a page field, a scrubber that moves on release), and the PDF at that
-page on request. The PDF pane asks `/api/documents/[id]/file?reader=1` once
+page on request. The PDF pane lives in the reader's `layout.tsx`, which
+stays mounted across page turns, and reads the page from the address. It asks `/api/documents/[id]/file?reader=1` once
 for a link signed for a fixed six-hour window (`signReaderGet()` in
 `lib/files.ts`, valid twelve hours, `Cache-Control: private`), so repeated
 requests get the same address and the browser can cache the file; turning the
@@ -225,6 +226,10 @@ sizes.
 - A server component importing a non-component value from a `'use client'`
   module gets a client reference: shared values live in plain modules.
 - Tailwind 4's `divide-y` borders every child but the last.
+- Next.js keys a page by its search parameters too: `?page=824` and
+  `?page=825` are different pages, and client state inside page.tsx is lost
+  on every change. State that must survive (the reader's PDF pane) goes in a
+  layout, which only remounts when the path changes.
 - Neon's HTTP driver: one non-interactive transaction per call; bigint and
   numeric arrive as strings, timestamps as Dates.
 - Live 12 names the main track `MainTrack`; track names Live gives itself

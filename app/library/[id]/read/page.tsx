@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 
 import PageNav from '@/app/_library/PageNav';
-import PdfPane from '@/app/_library/PdfPane';
 import { PageHeader, Section } from '@/app/_ui/layout';
 import { requireAccount } from '@/lib/access';
 import { getDocument, readPages } from '@/lib/documents';
@@ -11,7 +10,8 @@ import { getDocument, readPages } from '@/lib/documents';
 // request. Search results and the connector's citations link here
 // (/library/15/read?page=212&q=chop), so a citation can be checked. Pages
 // are PDF pages from 1, which may differ from the numbers printed on them.
-// A document the person cannot see is a 404.
+// A document the person cannot see is a 404. The PDF beside the text lives in
+// this route's layout.tsx, which stays mounted as the page changes.
 
 export const metadata = { title: 'Read · Bottega' };
 
@@ -48,20 +48,15 @@ export default async function ReadPage({ params, searchParams }: Props) {
         meta={[total ? `${total} pages` : null, 'PDF pages count from 1; printed numbers may differ', q ? `marking “${q}”` : null]}
       />
       <PageNav documentId={id} page={page} total={total} q={q} />
-      <div className="grid grid-cols-1 gap-x-10 gap-y-8 lg:grid-cols-2">
-        <Section label="Text">
-          {text ? (
-            <div className="t-body max-w-prose whitespace-pre-wrap break-words leading-relaxed">{marked(text.text, q)}</div>
-          ) : (
-            <p className="t-body text-muted">
-              {doc.pagesExtracted < page ? 'This page’s text has not been read yet. Processing reads it.' : 'This page carries no text.'}
-            </p>
-          )}
-        </Section>
-        <Section label="The PDF">
-          <PdfPane documentId={id} page={page} />
-        </Section>
-      </div>
+      <Section label="Text">
+        {text ? (
+          <div className="t-body max-w-prose whitespace-pre-wrap break-words leading-relaxed">{marked(text.text, q)}</div>
+        ) : (
+          <p className="t-body text-muted">
+            {doc.pagesExtracted < page ? 'This page’s text has not been read yet. Processing reads it.' : 'This page carries no text.'}
+          </p>
+        )}
+      </Section>
     </div>
   );
 }

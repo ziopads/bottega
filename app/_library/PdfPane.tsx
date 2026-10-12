@@ -1,5 +1,6 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 import { api } from '@/app/_studio/controls';
@@ -8,7 +9,8 @@ import { BUTTON } from '@/app/_ui/styles';
 // The PDF beside the page reader's text, opened on request: a large book is
 // not fetched until someone wants to see the page itself.
 //
-// The file is loaded once. Opening the pane asks for the reader's link (signed
+// The pane sits in the reader's layout, which stays mounted as the page
+// changes, and takes the page number from the address. The file is loaded once. Opening the pane asks for the reader's link (signed
 // for a fixed window, so it is the same address on every request and the
 // browser can keep the file in its cache); turning the page then changes only
 // the #page part of the frame's address, which the browser's PDF viewer
@@ -17,7 +19,9 @@ import { BUTTON } from '@/app/_ui/styles';
 
 const VIEW = 'toolbar=0&navpanes=0&view=FitH';
 
-export default function PdfPane({ documentId, page }: { documentId: number; page: number }) {
+export default function PdfPane({ documentId }: { documentId: number }) {
+  const asked = Math.floor(Number(useSearchParams().get('page')) || 1);
+  const page = Math.max(1, asked);
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
