@@ -5,9 +5,10 @@ import { createNeonAuth } from '@neondatabase/auth/next/server';
 // in ./guard.ts.
 //
 // Neon Auth allows anyone on the web to sign up, and /api/auth/[...path]
-// proxies that API, so open registration is reachable whether or not there is
-// a sign-up form. Accounts are therefore created in the Neon Console, and
-// access is decided by the allowlist.
+// proxies that API. That is intended (REQUIREMENTS AC-1): /auth/sign-up
+// creates the identity, and Bottega registers the account as pending until
+// the platform administrator approves it (lib/access.ts, db/002). A user
+// added in the Neon Console has no password and cannot sign in.
 //
 // Constructed at module load, because proxy.ts calls auth.middleware() at
 // module scope. Both variables must exist at BUILD time as well as at runtime;

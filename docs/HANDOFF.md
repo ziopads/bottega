@@ -113,7 +113,9 @@ Environment variables (names only): `DATABASE_URL`, `DATABASE_URL_UNPOOLED`
 ## 4. What is built
 
 **Accounts and access** (REQUIREMENTS §2, AC-1 to AC-13). Separate accounts;
-new sign-ups wait for approval; items shared one at a time at view,
+anyone creates one at `/auth/sign-up` (linked from sign-in; added 12 October:
+a user added in the Neon Console has no password and cannot sign in), and
+new sign-ups wait for approval at Accounts; items shared one at a time at view,
 contribute or edit; only owners delete; every access change in an
 append-only log. Enforced in the database (`project_rank`, `gear_rank`,
 `document_rank`, policies on every table) and in the app (`lib/access.ts`;

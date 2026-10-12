@@ -9,7 +9,7 @@
 // database refuses on its own whatever a file forgets; this catches the
 // forgetting before it ships, and keeps refusals readable.
 //
-// Exempt: the sign-in pages and Neon Auth's proxy (they come before anyone is
+// Exempt: the sign-in and sign-up pages and Neon Auth's proxy (they come before anyone is
 // known), and, from Phase 1, the OAuth and .well-known paths the connector
 // uses, which check tokens instead.
 
@@ -20,7 +20,7 @@ const ROOT = new URL('..', import.meta.url).pathname;
 const APP = join(ROOT, 'app');
 
 const CHECKED = /(^|\/)(page\.tsx|route\.ts|actions\.ts)$/;
-const EXEMPT = [/^app\/auth\/sign-in\//, /^app\/api\/auth\//, /^app\/oauth\//, /^app\/\.well-known\//, /^app\/api\/mcp\//];
+const EXEMPT = [/^app\/auth\/sign-in\//, /^app\/auth\/sign-up\//, /^app\/api\/auth\//, /^app\/oauth\//, /^app\/\.well-known\//, /^app\/api\/mcp\//];
 const GUARDS = /\b(requireAccount|requirePlatformAdmin|apiAccount|getAccount)\s*\(/;
 
 function walk(dir, out = []) {

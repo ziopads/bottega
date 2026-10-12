@@ -1,10 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { use, useActionState } from 'react';
 
 import { signInWithEmail } from './actions';
 
-// No sign-up form: accounts are created in the Neon Console.
+// Signing in. New accounts are created at /auth/sign-up and wait for the
+// platform administrator's approval (REQUIREMENTS AC-1).
 
 export default function SignInPage({
   searchParams,
@@ -43,6 +45,13 @@ export default function SignInPage({
       >
         {pending ? 'Signing in…' : 'Sign in'}
       </button>
+
+      <p className="t-body text-muted">
+        New here?{' '}
+        <Link href="/auth/sign-up" className="text-rust hover:underline">
+          Create an account
+        </Link>
+      </p>
     </form>
   );
 }
