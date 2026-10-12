@@ -105,14 +105,19 @@ export default function VariantBar({
 
   return (
     <div className="t-body flex flex-wrap items-center gap-1.5">
-      {variants.length > 0 && chip('Main', '', 'The main mix: its mixes, and the saves no variant’s name rule finds')}
+      {chip('Main', '', 'The main mix: its mixes, and the saves no variant’s name rule finds')}
       {variants.map((v) =>
         chip(v.name, v.name, `${v.mixes} ${v.mixes === 1 ? 'mix' : 'mixes'} · ${v.saves} ${v.saves === 1 ? 'save' : 'saves'} · saves named “…${v.match}…”`),
       )}
       {canEdit && !form && (
         <>
-          <button type="button" onClick={() => open({ mode: 'add' })} className="px-1 text-muted hover:text-ink" title="Add a variant: a radio edit, an extended mix…">
-            + Variant
+          <button
+            type="button"
+            onClick={() => open({ mode: 'add' })}
+            className="rounded-full border border-dashed border-line px-2.5 py-0.5 text-muted hover:border-ink hover:text-ink"
+            title="A radio edit, an extended mix…: its own mixes and its own saved sets"
+          >
+            + Add variant
           </button>
           {selected && (
             <button type="button" onClick={() => open({ mode: 'edit', v: selected })} className="px-1 text-muted hover:text-ink">
