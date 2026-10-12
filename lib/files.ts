@@ -124,6 +124,31 @@ export async function signFileGet(
   );
 }
 
+// The page reader's link to a document, signed for a fixed window rather than
+// from the moment of asking: every request in the same six hours gets the same
+// address, so the browser can keep the file in its cache and a page refresh
+// does not download a large book again. The link stays valid for up to twelve
+// hours after its window opens, longer than the ten minutes of an ordinary
+// link; the reader is only reached after the database has said the person may
+// read the document.
+const READER_WINDOW_SECONDS = 6 * 60 * 60;
+
+export async function signReaderGet(key: string, opts: { filename: string; contentType: string }): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  const windowStart = new Date((now - (now % READER_WINDOW_SECONDS)) * 1000);
+  return getSignedUrl(
+    getClient(),
+    new GetObjectCommand({
+      Bucket: filesBucket,
+      Key: key,
+      ResponseContentType: opts.contentType || 'application/octet-stream',
+      ResponseContentDisposition: disposition('inline', opts.filename),
+      ResponseCacheControl: `private, max-age=${READER_WINDOW_SECONDS}`,
+    }),
+    { expiresIn: 2 * READER_WINDOW_SECONDS, signingDate: windowStart },
+  );
+}
+
 export async function deleteFile(key: string): Promise<void> {
   await getClient().send(new DeleteObjectCommand({ Bucket: filesBucket, Key: key }));
 }

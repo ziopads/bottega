@@ -36,13 +36,13 @@ Latest commits, newest first:
 | `b25d313` | State tab: Live sets read from a dropped project folder (014) |
 | `b1b7cba` | Mix variants numbered within each variant (013) |
 
-**Not yet committed** at the end of 12 October (in the working tree, checked
-with type check, lint, the access check and the database tests): the Learning
-section's first slice (§4, "Learning") with migration 016, and the doc
-updates. The commands are in §7.
+The Learning slice and migration 016 were committed and pushed on 12
+October. **Not yet committed**: the PDF pane loading a book once (below,
+"Corpus search and the page reader"), checked with type check, lint and the
+access check, not yet in a browser. The command is in §7.
 
 Migrations `db/001`–`016`, with test suites in `db/test/` for 002–016.
-001–015 are applied on Neon; **016 is not yet**.
+001–016 are applied on Neon.
 
 Confirmed working on production: sign-in and accounts, gear, document upload
 and processing, the session page and its tabs, the workflow, the connector
@@ -145,7 +145,13 @@ where it exists. Without an embedding the search runs on words alone and
 says so. The reader, `/library/[id]/read?page=N&q=…`: a page's extracted
 text with the query's words marked, Scriptorium's navigation (‹ ›, arrow
 keys, a page field, a scrubber that moves on release), and the PDF at that
-page on request (`/api/documents/[id]/file?inline=1`). Pages are PDF pages
+page on request. The PDF pane asks `/api/documents/[id]/file?reader=1` once
+for a link signed for a fixed six-hour window (`signReaderGet()` in
+`lib/files.ts`, valid twelve hours, `Cache-Control: private`), so repeated
+requests get the same address and the browser can cache the file; turning the
+page changes only the frame's `#page=` and the viewer moves without
+refetching. The viewer's toolbar is hidden (`toolbar=0`); a link opens the
+PDF in a new tab with its tools. Pages are PDF pages
 from 1; printed numbers may differ. Documents with text show "Read the
 pages".
 
@@ -236,6 +242,18 @@ sizes.
 
 ## 6. Decisions waiting on James
 
+0. **Printed page numbers** (asked for 12 October). Citations and the reader
+   use PDF pages; the MPC Bible's printed numbers differ. Scriptorium keeps
+   page offsets per work, with page labels marked unverified until checked.
+   To design: offsets per document (one or several ranges), shown as "p. 812
+   (PDF 824)" in the reader, lesson citations and connector results.
+0a. **The PDF reader, properly** (option 2 of 12 October, agreed as the next
+   step after the quick fix): render pages with PDF.js (`pdfjs-dist`) from
+   byte ranges, so opening page 824 of a 94 MB book fetches only what that
+   page needs; our own zoom and no clipped toolbar; reads the outline for the
+   Contents list (item 1). Needs the package installed and a CORS rule on the
+   R2 files bucket allowing GET with the Range header and exposing
+   Content-Range and Accept-Ranges.
 1. **Bookmarks in the reader.** Proposed: read the PDF's outline with unpdf
    during extraction into `document_sections` (rebuildable), plus a "Read the
    contents" action for documents already processed; the reader gains a
@@ -253,12 +271,10 @@ sizes.
 
 ## 7. Next, in order
 
-0. Apply 016 and commit the Learning slice (James): `pipeline/migrate.py`
-   first, since the new code reads the study tables; then the commit and push.
-   Then in a browser: start the group, add or accept topics, open a lesson,
-   set progress, share the MPC Bible with the group from its Library page.
-   From Claude Desktop (reconnect if the four study tools do not appear):
-   `get_study_group`, then draft the MPC syllabus from document 15.
+0. Commit the PDF pane fix (James), then check in a browser that turning
+   the page no longer reloads the PDF. Try the first lesson from Claude
+   Desktop (`get_study_group`, then `draft_lesson` under Orientation, from
+   document 15).
 1. The decisions in §6, then build what is chosen.
 2. **State tab, your read** (S-15): a four-step scale per zone and part
    (empty, sketched, working, baked), each change dated.
