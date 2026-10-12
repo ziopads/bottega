@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
@@ -234,6 +235,11 @@ export default function DocumentDetail({
         ]}
         actions={
           <>
+            {doc.pagesExtracted > 0 && (
+              <Link href={`/library/${doc.id}/read?page=1`} className={TEXT_ACTION}>
+                Read the pages
+              </Link>
+            )}
             {doc.library && doc.reviewStatus === 'approved' && (
               <label className="flex items-center gap-1.5 text-muted">
                 <input type="checkbox" checked={doc.picked} onChange={(e) => patch({ picked: e.target.checked })} />

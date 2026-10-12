@@ -353,9 +353,17 @@ them.
 
 | Phase | Tools |
 |---|---|
-| 1 | `search`, `read_pages`, `find_gear`, `get_gear`, `list_projects` ✓, `get_session` ✓ (named `get_project` in earlier drafts) |
+| 1 | `list_documents` ✓, `search` ✓, `read_pages` ✓, `find_gear`, `get_gear`, `list_projects` ✓, `get_session` ✓ (named `get_project` in earlier drafts) |
 | 2 | `get_board`, `draft_card` ✓, `draft_criteria` ✓, `list_study_notes`, `draft_study_note`, `get_progress` |
 | 3 | `get_analysis`, `compare_to_reference` |
+
+Corpus tools (`mcp/tools/corpus.ts`, `lib/search.ts`): search scopes to the
+person's documents, picks and owned gear's manuals by default (K-7), lists
+those documents first and searches only their chunks, so row-level security
+never empties the nearest-neighbour candidates; pgvector's iterative scan is
+turned on where available. Results and pages carry links to the page reader,
+`/library/[id]/read?page=N&q=…`, which shows a page's extracted text with the
+query marked and, on request, the PDF at that page. Pages are PDF pages from 1.
 
 ## 7. Migration from Vivarium (Phase 0)
 

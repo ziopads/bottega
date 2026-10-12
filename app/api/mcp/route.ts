@@ -10,14 +10,14 @@
 
 import { withMcpAuth } from 'mcp-handler';
 
-import { RESOURCE_METADATA_PATH, SCOPE, verifyAccess } from '@/lib/oauth';
+import { originFrom, RESOURCE_METADATA_PATH, SCOPE, verifyAccess } from '@/lib/oauth';
 import { handler } from '@/mcp/server';
 
 export const dynamic = 'force-dynamic';
 
 const authed = withMcpAuth(
   handler,
-  async (_req, token) => {
+  async (req, token) => {
     if (!token) return undefined;
     const found = await verifyAccess(token);
     if (!found) return undefined;
@@ -26,7 +26,8 @@ const authed = withMcpAuth(
       clientId: found.clientId,
       scopes: [SCOPE],
       expiresAt: found.expiresAt,
-      extra: { userId: found.userId },
+      // origin: for links back into the app in tool results.
+      extra: { userId: found.userId, origin: originFrom(req.headers) },
     };
   },
   { required: true, resourceMetadataPath: RESOURCE_METADATA_PATH },

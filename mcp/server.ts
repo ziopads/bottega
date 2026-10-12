@@ -4,12 +4,14 @@
 //
 // First tools (11 October 2026): list_projects and get_session, enough to ask
 // "where was I on this track?" from Claude; then the proposal tools,
-// draft_criteria and draft_card (M-3). Corpus search comes next.
+// draft_criteria and draft_card (M-3); then the corpus (12 October):
+// list_documents, search and read_pages.
 
 import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
 
-import { personFrom, ToolError } from '@/mcp/context';
+import { appOrigin, personFrom, ToolError } from '@/mcp/context';
+import { listDocumentsTool, readPagesTool, searchTool } from '@/mcp/tools/corpus';
 import { draftCardTool, draftCriteriaTool } from '@/mcp/tools/drafts';
 import { getSessionTool } from '@/mcp/tools/get-session';
 import { listProjectsTool } from '@/mcp/tools/list-projects';
@@ -25,7 +27,9 @@ Three habits matter most:
 
 Start with list_projects to find a session, then get_session for its state. Cards and criteria with status 'proposed' or under awaiting_review are pending proposals, not the person's decisions; say so when you mention them.
 
-You can propose, never decide. draft_criteria proposes exit criteria for a stage; draft_card proposes a card. Both wait in the review band on the session's Workflow tab until the person accepts or rejects them. Write each criterion so it can be checked off: one condition, observable, with no "and" joining two things. Write each card with one element, what needs to happen, and how it will be known to be done. When a card comes from a note, pass from_note so it keeps the mix and moment. Propose when the person asks for criteria or cards, or agrees to your suggestion; otherwise suggest in your reply first. Say plainly what you stored and that it is waiting for them. This connection cannot edit or delete anything, change the current mix or move the stage; those are the person's to do in the app.`;
+You can propose, never decide. draft_criteria proposes exit criteria for a stage; draft_card proposes a card. Both wait in the review band on the session's Workflow tab until the person accepts or rejects them. Write each criterion so it can be checked off: one condition, observable, with no "and" joining two things. Write each card with one element, what needs to happen, and how it will be known to be done. When a card comes from a note, pass from_note so it keeps the mix and moment. Propose when the person asks for criteria or cards, or agrees to your suggestion; otherwise suggest in your reply first. Say plainly what you stored and that it is waiting for them. This connection cannot edit or delete anything, change the current mix or move the stage; those are the person's to do in the app.
+
+The corpus holds manuals and books: the person's private documents, those shared with them, and the platform library. search finds passages by words and meaning; read_pages gives whole pages. Before quoting or relying on a passage, read its pages, and cite them as the document and PDF page with the link each result carries (PDF pages count from 1 and may differ from the numbers printed on them). Keep what the corpus says, cited, apart from what you know from elsewhere, and say which is which. By default search covers the person's own documents, their picks and the manuals of the gear they own; scope 'all' adds the rest of the library.`;
 
 function json(value: unknown) {
   return { content: [{ type: 'text' as const, text: JSON.stringify(value, null, 2) }] };
@@ -122,9 +126,58 @@ export const handler = createMcpHandler(
       },
       async (args, ctx) => run(() => draftCardTool(personFrom(ctx), args)),
     );
+
+    server.registerTool(
+      'list_documents',
+      {
+        title: 'List documents',
+        description:
+          'The manuals and books the person can read: their private documents, those shared with them, and the ' +
+          'library. Each gives its id, title, kind, what it is about, where it lives, ' +
+          'its page count, and how far it is searchable. Pass ids to search (documents) or read_pages.',
+        inputSchema: z.object({}),
+      },
+      async (_args, ctx) => run(() => listDocumentsTool(personFrom(ctx), appOrigin(ctx))),
+    );
+
+    server.registerTool(
+      'search',
+      {
+        title: 'Search the corpus',
+        description:
+          'Search manuals and books by words and by meaning together. Returns passages with their document, PDF ' +
+          'pages, how each was found, and a link to read the page in Bottega. scope "mine" (default): the person\'s ' +
+          'documents, their picks and the manuals of gear they own; "all": the whole library as well. documents ' +
+          'narrows to given document ids. Search more than once with different wordings for a broad question, and ' +
+          'read the pages before quoting.',
+        inputSchema: z.object({
+          query: z.string().describe('what to look for, in plain words'),
+          scope: z.enum(['mine', 'all']).optional(),
+          documents: z.array(z.number().int()).optional().describe('only these document ids'),
+          limit: z.number().int().optional().describe('passages to return, default 8, at most 20'),
+        }),
+      },
+      async (args, ctx) => run(() => searchTool(personFrom(ctx), appOrigin(ctx), args)),
+    );
+
+    server.registerTool(
+      'read_pages',
+      {
+        title: 'Read pages',
+        description:
+          'The full text of pages of one document, at most 10 per call, each with a link to that page in Bottega. ' +
+          'Pages are PDF pages counted from 1.',
+        inputSchema: z.object({
+          document: z.number().int().describe('a document id from search or list_documents'),
+          from: z.number().int().describe('first page'),
+          to: z.number().int().optional().describe('last page; from when omitted'),
+        }),
+      },
+      async (args, ctx) => run(() => readPagesTool(personFrom(ctx), appOrigin(ctx), args)),
+    );
   },
   {
     instructions: INSTRUCTIONS,
-    serverInfo: { name: 'bottega', version: '0.2.0' },
+    serverInfo: { name: 'bottega', version: '0.3.0' },
   },
 );

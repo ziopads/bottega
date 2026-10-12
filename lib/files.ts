@@ -108,9 +108,10 @@ function disposition(kind: 'inline' | 'attachment', filename: string): string {
 /** A 10-minute link. Images open inline unless a download is asked for; anything else downloads. */
 export async function signFileGet(
   key: string,
-  opts: { filename: string; contentType: string; download?: boolean },
+  opts: { filename: string; contentType: string; download?: boolean; inline?: boolean },
 ): Promise<string> {
-  const inline = !opts.download && opts.contentType.startsWith('image/');
+  // Images open inline; a PDF does when asked (the page reader shows it in a frame).
+  const inline = !opts.download && (opts.contentType.startsWith('image/') || (opts.inline === true && opts.contentType === 'application/pdf'));
   return getSignedUrl(
     getClient(),
     new GetObjectCommand({

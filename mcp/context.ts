@@ -14,3 +14,10 @@ export function personFrom(ctx: unknown): Scoped {
   if (typeof userId !== 'string' || !userId) throw new ToolError('This connection has no account. Reconnect Bottega.');
   return forPerson({ userId });
 }
+
+/** The app's address as the request reached it, for links back into the app. */
+export function appOrigin(ctx: unknown): string {
+  const c = ctx as { http?: { authInfo?: { extra?: { origin?: unknown } } }; authInfo?: { extra?: { origin?: unknown } } };
+  const origin = c?.http?.authInfo?.extra?.origin ?? c?.authInfo?.extra?.origin;
+  return typeof origin === 'string' && origin ? origin : 'https://studio.sirsinate.com';
+}
