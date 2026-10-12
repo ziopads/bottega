@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { apiAccount } from '@/lib/access';
 import { fingerprintMatch, getAllowance, storageAllows } from '@/lib/documents';
 import { DOCUMENT_CONTENT_TYPE, isSha256 } from '@/lib/documentTypes';
-import { FILE_MAX_BYTES, filesConfigured, newDocumentKey, signFileUpload } from '@/lib/files';
+import { DOCUMENT_MAX_BYTES, filesConfigured, newDocumentKey, signFileUpload } from '@/lib/files';
 import { formatBytes } from '@/lib/studioTypes';
 
 export const dynamic = 'force-dynamic';
@@ -33,8 +33,8 @@ export async function POST(req: Request) {
   if (!isSha256(body.sha256)) return NextResponse.json({ error: 'Missing fingerprint' }, { status: 400 });
   if (body.contentType !== DOCUMENT_CONTENT_TYPE) return NextResponse.json({ error: 'Documents must be PDFs.' }, { status: 400 });
   if (!Number.isFinite(bytes) || bytes <= 0) return NextResponse.json({ error: 'The file is empty.' }, { status: 400 });
-  if (bytes > FILE_MAX_BYTES) {
-    return NextResponse.json({ error: `The file is over ${FILE_MAX_BYTES / (1024 * 1024)} MB.` }, { status: 400 });
+  if (bytes > DOCUMENT_MAX_BYTES) {
+    return NextResponse.json({ error: `The file is over ${DOCUMENT_MAX_BYTES / (1024 * 1024)} MB.` }, { status: 400 });
   }
 
   const [match, allowance] = await Promise.all([fingerprintMatch(db, body.sha256), getAllowance(db)]);

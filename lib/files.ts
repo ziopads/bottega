@@ -22,6 +22,13 @@ import { getClient, r2Configured } from './storage';
 const filesBucket = process.env.R2_FILES_BUCKET || '';
 
 export const FILE_MAX_BYTES = 50 * 1024 * 1024;
+/**
+ * Documents for the corpus (K-1): manuals and books run larger than gear files,
+ * and a scanned or image-heavy book can pass 50 MB even compressed. The
+ * account's storage allowance (K-10) still bounds what one person stores, and
+ * only extraction reads the whole file, 300 pages per step.
+ */
+export const DOCUMENT_MAX_BYTES = 150 * 1024 * 1024;
 const PUT_TTL_SECONDS = 15 * 60;
 const GET_TTL_SECONDS = 10 * 60;
 

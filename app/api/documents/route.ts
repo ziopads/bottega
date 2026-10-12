@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { apiAccount } from '@/lib/access';
 import { createDocument, fingerprintMatch, getDocument, linkModel, listDocuments } from '@/lib/documents';
 import { DOCUMENT_CONTENT_TYPE, DOCUMENT_KINDS, isSha256, LIBRARY_KINDS, type DocumentKind } from '@/lib/documentTypes';
-import { deleteFile, FILE_MAX_BYTES, fileObject, filesConfigured, isDocumentKey } from '@/lib/files';
+import { deleteFile, DOCUMENT_MAX_BYTES, fileObject, filesConfigured, isDocumentKey } from '@/lib/files';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
 
   const stored = await fileObject(key);
   if (!stored) return NextResponse.json({ error: 'The upload did not reach storage. Please try again.' }, { status: 409 });
-  if (stored.contentType !== DOCUMENT_CONTENT_TYPE || stored.bytes > FILE_MAX_BYTES) {
+  if (stored.contentType !== DOCUMENT_CONTENT_TYPE || stored.bytes > DOCUMENT_MAX_BYTES) {
     await deleteFile(key);
     return NextResponse.json({ error: 'The stored file is not an accepted type or size.' }, { status: 400 });
   }
