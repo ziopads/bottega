@@ -1,9 +1,8 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import PageNav from '@/app/_library/PageNav';
 import PdfPane from '@/app/_library/PdfPane';
 import { PageHeader, Section } from '@/app/_ui/layout';
-import { FIELD } from '@/app/_ui/styles';
 import { requireAccount } from '@/lib/access';
 import { getDocument, readPages } from '@/lib/documents';
 
@@ -40,7 +39,6 @@ export default async function ReadPage({ params, searchParams }: Props) {
   const page = Math.min(Math.max(1, asked), Math.max(1, total));
   const q = (sp.q ?? '').slice(0, 200);
   const [text] = await readPages(db, id, page, page);
-  const href = (n: number) => `/library/${id}/read?page=${n}${q ? `&q=${encodeURIComponent(q)}` : ''}`;
 
   return (
     <div>
@@ -49,29 +47,7 @@ export default async function ReadPage({ params, searchParams }: Props) {
         title={`${doc.title}, PDF page ${page}`}
         meta={[total ? `${total} pages` : null, 'PDF pages count from 1; printed numbers may differ', q ? `marking “${q}”` : null]}
       />
-      <nav className="t-body mb-6 flex flex-wrap items-center gap-3">
-        {page > 1 ? (
-          <Link href={href(page - 1)} className="text-muted hover:text-ink">
-            ← Page {page - 1}
-          </Link>
-        ) : (
-          <span className="text-muted/50">← Previous</span>
-        )}
-        <form action={`/library/${id}/read`} className="flex items-center gap-1.5">
-          <label className="text-muted" htmlFor="page">
-            Page
-          </label>
-          <input id="page" name="page" type="number" min={1} max={total || undefined} defaultValue={page} className={`${FIELD} w-20`} />
-          {q && <input type="hidden" name="q" value={q} />}
-        </form>
-        {page < total ? (
-          <Link href={href(page + 1)} className="text-muted hover:text-ink">
-            Page {page + 1} →
-          </Link>
-        ) : (
-          <span className="text-muted/50">Next →</span>
-        )}
-      </nav>
+      <PageNav documentId={id} page={page} total={total} q={q} />
       <div className="grid grid-cols-1 gap-x-10 gap-y-8 lg:grid-cols-2">
         <Section label="Text">
           {text ? (

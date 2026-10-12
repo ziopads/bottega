@@ -106,7 +106,9 @@ function Upload() {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [library, setLibrary] = useState(true);
+  // Asked first, with no default (K-4, K-6): a book put in the library by
+  // mistake can only be moved back with the owner role.
+  const [library, setLibrary] = useState<boolean | null>(null);
   const [title, setTitle] = useState('');
   const [manufacturer, setManufacturer] = useState('');
   const [model, setModel] = useState('');
@@ -122,8 +124,15 @@ function Upload() {
     if (f && !title) setTitle(f.name.replace(/\.pdf$/i, '').replace(/[_]+/g, ' ').trim());
   }
 
+  function chooseHome(toLibrary: boolean) {
+    setLibrary(toLibrary);
+    setMatch(null);
+    setError('');
+    setKind(toLibrary ? 'manual' : 'book');
+  }
+
   async function upload() {
-    if (!file) return;
+    if (!file || library === null) return;
     setError('');
     setMatch(null);
     try {
@@ -167,7 +176,28 @@ function Upload() {
   return (
     <section className="rounded border border-line p-4">
       <h2 className="t-label mb-3 border-b border-line pb-1">Add a document</h2>
-      <div className="flex flex-wrap items-center gap-3 t-body">
+      <fieldset className="t-body mb-4 grid gap-2 sm:grid-cols-2">
+        <legend className="mb-2">What are you adding?</legend>
+        {(
+          [
+            [false, 'A private document', 'A book, notes, anything of your own. Only you, and the people you share it with.'],
+            [true, 'A manual for the library', 'A manufacturer’s manual, service manual or firmware notes. Every account can read it once the administrator approves it.'],
+          ] as const
+        ).map(([value, label, help]) => (
+          <label
+            key={label}
+            className={`flex cursor-pointer gap-2 rounded border px-3 py-2 ${library === value ? 'border-ink' : 'border-line hover:border-ink/50'}`}
+          >
+            <input type="radio" name="document-home" checked={library === value} onChange={() => chooseHome(value)} className="mt-1" />
+            <span>
+              <span className="font-medium">{label}</span>
+              <span className="block text-muted">{help}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      {library !== null && (
+        <div className="flex flex-wrap items-center gap-3 t-body">
         <button onClick={() => input.current?.click()} className="rounded border border-line px-3 py-1 hover:border-ink">
           {file ? 'Choose another PDF' : 'Choose a PDF'}
         </button>
@@ -186,27 +216,11 @@ function Upload() {
             e.target.value = '';
           }}
         />
-      </div>
+        </div>
+      )}
 
-      {file && (
+      {file && library !== null && (
         <div className="mt-4 space-y-3 t-body">
-          <fieldset className="flex flex-wrap gap-x-5 gap-y-1">
-            <label className="flex items-center gap-1.5">
-              <input
-                type="radio"
-                checked={library}
-                onChange={() => {
-                  setLibrary(true);
-                  if (!LIBRARY_KINDS.includes(kind)) setKind('manual');
-                }}
-              />
-              A manual for the library, which others can use once it is approved
-            </label>
-            <label className="flex items-center gap-1.5">
-              <input type="radio" checked={!library} onChange={() => setLibrary(false)} />
-              Private: only you, and the people you share it with
-            </label>
-          </fieldset>
           <div className="flex flex-wrap gap-2">
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" className={`${field} w-72`} aria-label="Title" />
             <input value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} placeholder="Manufacturer (Moog)" className={`${field} w-40`} aria-label="Manufacturer" />
@@ -234,7 +248,7 @@ function Upload() {
         </div>
       )}
 
-      {match && <MatchNote match={match} library={library} />}
+      {match && <MatchNote match={match} library={library === true} />}
       {error && !match && <p className="mt-3 t-body text-rust">{error}</p>}
     </section>
   );

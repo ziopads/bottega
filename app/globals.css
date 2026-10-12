@@ -85,3 +85,39 @@ a {
   font-size: 13px;
   color: var(--ink);
 }
+
+/* The page reader's scrubber (from Scriptorium): a hairline track with a small
+   thumb, for crossing a long book in one drag. */
+.scrubber {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 1rem;
+  background: transparent;
+  cursor: pointer;
+}
+.scrubber::-webkit-slider-runnable-track {
+  height: 2px;
+  background: var(--line);
+}
+.scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  margin-top: -4.5px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.scrubber::-moz-range-track {
+  height: 2px;
+  background: var(--line);
+}
+.scrubber::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+}
