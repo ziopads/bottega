@@ -164,9 +164,26 @@ export function NoteItem({
 }
 
 /**
- * The box that writes a note. Beside a mix, it offers to pin the note to the
- * moment the mix is at (captured when you start writing, renewable with
- * "now"); elsewhere it asks which version the note is about.
+ * "1:35" (or "95", "1:02:05", "1:35.5") as seconds; '' as no moment; null when
+ * it cannot be read.
+ */
+export function parseMoment(text: string): number | '' | null {
+  const t = text.trim();
+  if (!t) return '';
+  if (!/^\d+(:\d{1,2}){0,2}(\.\d+)?$/.test(t)) return null;
+  const parts = t.split(':').map(Number);
+  if (parts.slice(1).some((p) => p >= 60)) return null;
+  const s = parts.reduce((acc, p) => acc * 60 + p, 0);
+  return Math.round(s * 10) / 10;
+}
+
+/**
+ * The box that writes a note. A note about a version can be pinned to a
+ * moment in it, typed as "1:35". Beside a mix the moment is filled in from
+ * the player when you start writing (if it is playing or paused past the
+ * start), and "now" fills it again; elsewhere the box asks which version the
+ * note is about and the moment is typed. An empty moment leaves the note
+ * unpinned.
  */
 export function NoteComposer({
   projectId,
@@ -187,21 +204,38 @@ export function NoteComposer({
 }) {
   const [draft, setDraft] = useState('');
   const [about, setAbout] = useState<number | 'project'>(fixedTrackId ?? tracks[0]?.id ?? 'project');
-  const [at, setAt] = useState<number | null>(null);
-  const [pin, setPin] = useState(true);
+  const [at, setAt] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  function capture() {
-    if (moment) setAt(Math.round(moment() * 10) / 10);
+  const trackId = fixedTrackId ?? (about === 'project' ? null : about);
+  const track = trackId === null ? null : (tracks.find((t) => t.id === trackId) ?? null);
+
+  function fromPlayer(onlyIfEmpty: boolean) {
+    if (!moment || (onlyIfEmpty && at)) return;
+    const s = moment();
+    if (s > 0) setAt(formatMoment(Math.round(s * 10) / 10));
   }
 
   async function submit() {
     if (!draft.trim()) return;
+    let positionS: number | null = null;
+    if (trackId !== null) {
+      const p = parseMoment(at);
+      if (p === null) {
+        setError('Write the moment as minutes and seconds, such as 1:35.');
+        return;
+      }
+      if (p !== '') {
+        if (track?.durationS && p > track.durationS) {
+          setError(`${track.label} is ${formatMoment(track.durationS)} long; that moment is past its end.`);
+          return;
+        }
+        positionS = p;
+      }
+    }
     setBusy(true);
     setError('');
-    const trackId = fixedTrackId ?? (about === 'project' ? null : about);
-    const positionS = fixedTrackId && pin && at !== null && at > 0 ? at : null;
     const r = await api<{ note: StudioNote }>(`/api/projects/${projectId}/notes`, {
       method: 'POST',
       body: JSON.stringify({ body: draft, trackId, positionS }),
@@ -213,14 +247,14 @@ export function NoteComposer({
     }
     onAdded(r.data.note);
     setDraft('');
-    setAt(null);
+    setAt('');
   }
 
   return (
     <div className="t-body">
       <textarea
         value={draft}
-        onFocus={() => at === null && capture()}
+        onFocus={() => fromPlayer(true)}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => {
           // Cmd/Ctrl-Enter posts, like most comment boxes.
@@ -234,23 +268,16 @@ export function NoteComposer({
         className="t-body w-full resize-y rounded border border-line bg-parchment px-2 py-1.5 outline-none focus:border-rust"
       />
       <div className="mt-1.5 flex flex-wrap items-center gap-3">
-        {fixedTrackId !== undefined ? (
-          at !== null &&
-          at > 0 && (
-            <label className="flex items-center gap-1.5 text-muted">
-              <input type="checkbox" checked={pin} onChange={(e) => setPin(e.target.checked)} />
-              at <span className="t-num text-ink">{formatMoment(at)}</span>
-              <button type="button" onClick={capture} className="underline hover:text-ink">
-                now
-              </button>
-            </label>
-          )
-        ) : (
+        {fixedTrackId === undefined && (
           <label className="flex items-center gap-1.5 text-muted">
             About
             <select
               value={String(about)}
-              onChange={(e) => setAbout(e.target.value === 'project' ? 'project' : Number(e.target.value))}
+              onChange={(e) => {
+                setAbout(e.target.value === 'project' ? 'project' : Number(e.target.value));
+                // A moment belongs to the version it was heard in.
+                setAt('');
+              }}
               className="rounded border border-line bg-parchment px-1.5 py-0.5 text-ink outline-none focus:border-rust"
             >
               {tracks.map((t, i) => (
@@ -261,6 +288,24 @@ export function NoteComposer({
               ))}
               <option value="project">the whole session</option>
             </select>
+          </label>
+        )}
+        {trackId !== null && (
+          <label className="flex items-center gap-1.5 text-muted">
+            at
+            <input
+              value={at}
+              onChange={(e) => setAt(e.target.value)}
+              placeholder="0:00"
+              inputMode="decimal"
+              aria-label="The moment in the mix this note is about, such as 1:35; leave empty for the whole version"
+              className="t-num w-16 rounded border border-line bg-parchment px-1.5 py-0.5 text-ink outline-none focus:border-rust"
+            />
+            {moment && (
+              <button type="button" onClick={() => fromPlayer(false)} className="underline hover:text-ink">
+                now
+              </button>
+            )}
           </label>
         )}
         <button
