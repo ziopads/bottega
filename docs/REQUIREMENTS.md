@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.18
+**Version:** 0.19
 **Date:** 2026-10-12
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -9,6 +9,10 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.19** (2026-10-12) — Adding many documents at once by drop or folder
+  (K-11), and the administrator moving a document between the library and
+  private documents (K-12).
 
 - **0.18** (2026-10-12) — Study sessions and notes (L-18 to L-22): a
   member's sittings and notes, Claude documenting a conversation as a draft
@@ -482,6 +486,17 @@ there may be lost in the move.
   submission counts against its contributor until it is approved, and
   against nobody after. Changes to allowances are written to the access log
   (AC-11).
+
+- **K-11** Many documents can be added at once: several PDFs or whole
+  folders, dropped or chosen, with "private or library" and the kind asked
+  once for the batch. Each file is checked for duplicates and uploaded as a
+  single one would be; none is processed until someone opens it. Built 12
+  October 2026.
+- **K-12** The platform administrator moves a document between the library
+  and an account's private documents, either way, choosing its kind. Moving
+  out of the library returns it to its contributor and removes picks and
+  model links; moving in approves it and removes its shares. Pages are kept,
+  and every move is logged. Built 12 October 2026 (migration 018).
 
 ## 9. Analysis (A)
 

@@ -262,6 +262,8 @@ function describe(r: Row, subjectName: string, itemLabel: string | null): string
       return `Library submission ${item} ${String(after.review_status ?? 'reviewed')}`;
     case 'admin_view':
       return 'Viewed by the platform administrator';
+    case 'document_moved':
+      return after.library ? `Moved ${item} into the library` : `Moved ${item} out of the library, into private documents`;
     case 'document_shared_with_group':
       return `Shared ${item} with the study group “${String(after.group ?? '')}” (view)`;
     case 'document_unshared_from_group':

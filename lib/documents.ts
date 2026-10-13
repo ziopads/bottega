@@ -190,6 +190,22 @@ export async function updateDocument(db: Scoped, id: number, patch: DocumentPatc
   return rows.length > 0;
 }
 
+/**
+ * The platform administrator moves a document between the library and
+ * private documents (db/018 document_set_home): returns null when done, or the
+ * refusal to show.
+ */
+export async function setDocumentHome(db: Scoped, id: number, library: boolean, kind: DocumentKind): Promise<string | null> {
+  try {
+    await db.q('select document_set_home($1, $2, $3)', [id, library, kind]);
+    return null;
+  } catch (err) {
+    const msg = (err as { message?: string })?.message ?? '';
+    if (/administrator|already|library takes|no kind|no document/.test(msg)) return msg.charAt(0).toUpperCase() + msg.slice(1) + '.';
+    throw err;
+  }
+}
+
 /** The platform administrator's review of a library submission (K-6). */
 export async function reviewDocument(db: Scoped, id: number, status: ReviewStatus): Promise<boolean> {
   const rows = await db.q('update documents set review_status = $2 where id = $1 and library returning id', [id, status]);

@@ -5,6 +5,7 @@ import {
   deleteDocument,
   getDocument,
   reviewDocument,
+  setDocumentHome,
   setPicked,
   updateDocument,
   type DocumentPatch,
@@ -80,6 +81,37 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   }
 
   return NextResponse.json({ document: await getDocument(db, id) });
+}
+
+// POST /api/documents/:id   { op: 'move', library: boolean, kind }
+// The platform administrator moves a document between the library and private
+// documents (db/018); the database refuses anyone else, and logs the move.
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const account = await apiAccount();
+  if (account instanceof NextResponse) return account;
+  const id = parseId((await ctx.params).id);
+  if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  const doc = await getDocument(account.db, id);
+  if (!doc) return NOT_FOUND();
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
+  }
+  if (body.op !== 'move' || typeof body.library !== 'boolean') return NextResponse.json({ error: 'Unknown operation' }, { status: 400 });
+  if (!account.isPlatformAdmin) {
+    return NextResponse.json({ error: 'Only the platform administrator moves documents.' }, { status: 403 });
+  }
+  const allowed = body.library ? LIBRARY_KINDS : DOCUMENT_KINDS;
+  if (!allowed.includes(body.kind as DocumentKind)) {
+    return NextResponse.json({ error: body.library ? 'Choose manual, service manual or firmware notes.' : 'Choose a kind.' }, { status: 400 });
+  }
+  const refusal = await setDocumentHome(account.db, id, body.library, body.kind as DocumentKind);
+  if (refusal) return NextResponse.json({ error: refusal }, { status: 400 });
+  // After a move to someone else's private documents, the administrator may no longer see it.
+  const moved = await getDocument(account.db, id);
+  return NextResponse.json({ document: moved, gone: !moved });
 }
 
 // DELETE /api/documents/:id — the owner of a private document; the

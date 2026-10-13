@@ -1,6 +1,6 @@
 # Bottega — architecture
 
-**Version:** 0.8
+**Version:** 0.9
 **Date:** 2026-10-12
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
@@ -9,6 +9,10 @@ story IDs below (S-3, W-6 and so on) refer to it.
 ---
 
 ## Changelog
+
+- **0.9** (2026-10-12) — `document_set_home()` (migration 018, §11 The
+  library): the administrator moves a document between the library and
+  private documents.
 
 - **0.8** (2026-10-12) — Study sessions and notes (migration 017, §4 Study);
   connector tools `record_study_session`, `list_study_notes`,
@@ -572,6 +576,14 @@ nothing.
   models, its picks, its private documents and those shared with it.
 - Private documents follow the ownership and sharing rules above, with
   `document_level()`.
+- A document's home changes only through `document_set_home(document,
+  library, kind)` (018), callable by the platform administrator only: it
+  sets `app.document_home` for the transaction, which `documents_guard`
+  honours for the administrator alone (the app role has no update grant on
+  `library`, `owner_id` or `contributed_by`, so the setting cannot be used by
+  hand). Library to private removes picks and model links; private to library
+  approves and removes shares and group shares; both refuse a second copy of
+  the same file and write `document_moved` to the access log.
 
 ### Study groups (Phase 2)
 

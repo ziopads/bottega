@@ -7,8 +7,11 @@
 
 WHY THIS EXISTS
 
+    Since db/018 the administrator moves a document both ways from its page in
+    the app (document_set_home); this script remains for the owner role.
+
     A document's home (the platform library, or one account's private
-    documents) cannot change in the app: db/004's documents_guard refuses it,
+    documents) cannot change by an ordinary update: db/004's documents_guard refuses it,
     so that an approved manual can never be taken out of the library by its
     contributor. A book uploaded to the library by mistake therefore needs the
     owner role, which the guard lets through. Its pages and chunks stay as

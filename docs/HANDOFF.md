@@ -24,6 +24,8 @@ Latest commits, newest first:
 
 | Commit | What it did |
 |---|---|
+| `f1a04af` | Auth proxy passes only `get-session` to Neon Auth |
+| `a4193c4` | Study sessions and notes (017), group page tabs, connector tools |
 | `a41e987` | Sign-up page: anyone creates an account, which waits for approval |
 | `599870e` | Page reader: the PDF pane in the reader's layout, so it survives page turns |
 | `003a43c` | Page reader: PDF loaded once, pages by `#page`; reader links signed for a fixed window |
@@ -41,13 +43,15 @@ Latest commits, newest first:
 | `b1b7cba` | Mix variants numbered within each variant (013) |
 
 The Learning slice and migration 016 were committed and pushed on 12
-October, then the PDF reader fixes and the sign-up page. **Not yet
-committed**: the study sessions and notes slice with migration 017, checked
-with type check, lint, the access check and its database tests, not yet seen
-in a browser. The commands are in §7.
+October, then the PDF reader fixes, the sign-up page, study sessions and
+notes (017, `a4193c4`) and the narrowed auth proxy (`f1a04af`). **Not yet
+committed**: batch upload and the administrator's move between library and
+private (migration 018), checked with type check, lint, the access check and
+018's database tests, not seen in a browser. The commands are in §7.
 
 Migrations `db/001`–`016`, with test suites in `db/test/` for 002–016.
-001–016 are applied on Neon; **017 is not yet**.
+001–017 are applied on Neon (017 presumably, with its push; check with
+`pipeline/migrate.py --status`); **018 is not yet**.
 
 Confirmed working on production: sign-in and accounts, gear, document upload
 and processing, the session page and its tabs, the workflow, the connector
@@ -147,6 +151,27 @@ home cannot change in the app (004's `documents_guard`);
 `pipeline/document_home.py ID --private --kind book [--apply]` moves one with
 the owner role, removing picks and model links, and logs it. Only library
 documents can be linked to catalogue models.
+
+**Adding documents** (12 October). The Library's "Add documents" box asks
+private or library first (no default), then takes PDFs by drop (several
+files, or folders, read to the bottom) or by "Choose PDFs" / "Choose a
+folder" (`app/_library/Upload.tsx`). Non-PDFs and files over 150 MB are
+skipped and named; each file goes through fingerprint, duplicate check,
+signed upload and record, one at a time, with its status in a list (added,
+already here, skipped, failed; retry by pressing Add again). One kind for the
+batch, an optional manufacturer for all, titles from file names (editable
+before adding). Nothing is processed: library uploads land submitted, the
+administrator's too, under "Your submissions", to open one by one. A single
+file still opens its page.
+
+**Moving a document's home** (migration 018). The administrator sees "Where
+it lives" on a document's page: library to private (to its contributor, or
+the administrator if that account is gone; picks and model links removed) or
+private to library (approved, former owner kept as contributor, shares with
+people and groups removed), with the kind chosen. `document_set_home()` is
+the only way, logged as `document_moved`; the same file is never held twice.
+The administrator can only move a private document they can see (their own,
+or one shared with them). `pipeline/document_home.py` still works.
 
 **Corpus search and the page reader** (K-2, K-3, K-7). `lib/search.ts`:
 keyword (`websearch_to_tsquery`) and meaning (Voyage query embedding,
@@ -331,11 +356,11 @@ sizes.
 
 ## 7. Next, in order
 
-0. Commit what is uncommitted (James): apply 017 with `pipeline/migrate.py`
-   first, then commit and push. Then: log a session in the app; from the
-   mobile app, test whether voice mode calls the connector (ask it to list
-   your study groups), then have a conversation and say "please document
-   this"; publish the draft on the Sessions tab.
+0. Commit what is uncommitted (James): apply 018 with `pipeline/migrate.py`
+   first, then commit and push. Then: log a session in the app; test whether
+   the mobile app's voice mode calls the connector; drop the HARDWARE folder on the Library's "Add documents" as library
+   manuals and work through "Your submissions"; try "Where it lives" on a
+   document.
 1. The decisions in §6, then build what is chosen.
 2. **State tab, your read** (S-15): a four-step scale per zone and part
    (empty, sketched, working, baked), each change dated.

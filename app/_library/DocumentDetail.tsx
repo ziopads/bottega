@@ -8,7 +8,7 @@ import { api, InlineEdit } from '@/app/_studio/controls';
 import { DetailGrid, MetaList, PageHeader, Section } from '@/app/_ui/layout';
 import { BUTTON, BUTTON_PRIMARY, FIELD, TEXT_ACTION, TEXT_DANGER } from '@/app/_ui/styles';
 import type { StudioDocument } from '@/lib/documentTypes';
-import { DOCUMENT_KIND_LABEL, REVIEW_LABEL, STATE_LABEL } from '@/lib/documentTypes';
+import { DOCUMENT_KIND_LABEL, DOCUMENT_KINDS, LIBRARY_KINDS, REVIEW_LABEL, STATE_LABEL, type DocumentKind } from '@/lib/documentTypes';
 import { formatBytes, levelAtLeast } from '@/lib/studioTypes';
 
 // One document: what it is, where it stands, and processing (REQUIREMENTS
@@ -57,6 +57,18 @@ export default function DocumentDetail({
     const r = await api<{ groups: Group[] }>(`/api/documents/${doc.id}/groups`, { method: share ? 'POST' : 'DELETE', body: JSON.stringify({ groupId }) });
     if (!r.ok) return setError(r.body.error || 'Could not change the sharing.');
     setGroups(r.data.groups);
+  }
+
+  async function moveHome(toLibrary: boolean, kind: DocumentKind) {
+    setError('');
+    const r = await api<{ document: StudioDocument | null; gone: boolean }>(`/api/documents/${doc.id}`, {
+      method: 'POST',
+      body: JSON.stringify({ op: 'move', library: toLibrary, kind }),
+    });
+    if (!r.ok) return setError(r.body.error || 'Could not move the document.');
+    if (r.data.gone || !r.data.document) return router.push('/library');
+    setDoc(r.data.document);
+    router.refresh();
   }
 
   async function patch(body: Record<string, unknown>): Promise<boolean> {
@@ -234,7 +246,8 @@ export default function DocumentDetail({
           ]}
         />
       </Section>
-      {!doc.library && doc.level === 'owner' && groups.length > 0 && (
+      {isAdmin && <MoveHome key={String(doc.library)} doc={doc} onMove={moveHome} />}
+    {!doc.library && doc.level === 'owner' && groups.length > 0 && (
         <Section label="Study groups">
           <ul className="t-body space-y-1">
             {groups.map((g) => (
@@ -353,5 +366,55 @@ function Delete({ onDelete }: { onDelete: () => void }) {
         </button>
       )}
     </div>
+  );
+}
+
+/**
+ * The platform administrator moves a document between the library and private
+ * documents (db/018). Library to private: it goes to its contributor, and
+ * picks and model links are removed. Private to library: it is approved, its
+ * former owner kept as contributor, and its shares removed. Pages stay.
+ */
+function MoveHome({ doc, onMove }: { doc: StudioDocument; onMove: (toLibrary: boolean, kind: DocumentKind) => void }) {
+  const toLibrary = !doc.library;
+  const kinds = toLibrary ? LIBRARY_KINDS : DOCUMENT_KINDS;
+  const [kind, setKind] = useState<DocumentKind>(kinds.includes(doc.kind) ? doc.kind : toLibrary ? 'manual' : 'book');
+  const [asking, setAsking] = useState(false);
+  const who = doc.library ? doc.contributorName || 'you' : doc.ownerName || 'its owner';
+  return (
+    <Section label="Where it lives">
+      <p className="t-body mb-2">
+        {doc.library ? 'In the library.' : `Private to ${doc.level === 'owner' ? 'you' : doc.ownerName}.`}
+      </p>
+      {!asking ? (
+        <button onClick={() => setAsking(true)} className={TEXT_ACTION}>
+          {toLibrary ? 'Move to the library…' : `Make it private to ${who}…`}
+        </button>
+      ) : (
+        <div className="t-body space-y-2">
+          <p className="text-[11px] text-muted">
+            {toLibrary
+              ? `Every account will read it, approved; ${who} stays its contributor. Its shares with people and study groups are removed.`
+              : `It becomes ${who}’s private document. Picks by other accounts and links to catalogue models are removed.`}{' '}
+            Its pages stay; nothing is processed again. The move is logged.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={kind} onChange={(e) => setKind(e.target.value as DocumentKind)} aria-label="Kind" className={FIELD}>
+              {kinds.map((k) => (
+                <option key={k} value={k}>
+                  {DOCUMENT_KIND_LABEL[k]}
+                </option>
+              ))}
+            </select>
+            <button onClick={() => onMove(toLibrary, kind)} className={BUTTON}>
+              Move
+            </button>
+            <button onClick={() => setAsking(false)} className={TEXT_ACTION}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </Section>
   );
 }
