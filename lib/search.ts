@@ -9,7 +9,9 @@ import { EmbedError, embedConfigured, embedQuery, vectorLiteral } from '@/lib/em
 // Scope. 'mine' (the default, K-7) is the person's private documents and
 // those shared with them, the library manuals they picked, and the library
 // manuals linked to the models of the gear they own. 'all' adds the rest of
-// the library. Either can be narrowed to given documents.
+// the library. Either can be narrowed to given documents. A study group's
+// scope (019) is that group's reading list and nothing else, for a member of
+// the group.
 //
 // Row-level security decides which chunks a person may read, but it filters
 // after the nearest-neighbour index has chosen its candidates: with most
@@ -49,13 +51,17 @@ export type SearchResult = {
 const CANDIDATES = 40;
 const RRF_K = 60;
 
-const SCOPE_SQL = `
+/** The documents in scope. $1 scope, $2 document ids; `group` names the placeholder of the study group id (or null). */
+const scopeSql = (group: string) => `
   select d.id, d.title, d.pages_done > 0 as searchable
     from documents d
    where document_rank(d.id) > 0
      and (d.review_status = 'approved' or not d.library)
      and (cardinality($2::bigint[]) = 0 or d.id = any($2::bigint[]))
-     and ($1 = 'all'
+     and (${group}::bigint is null
+          or d.id in (select sgd.document_id from study_group_documents sgd where sgd.group_id = ${group}::bigint))
+     and (${group}::bigint is not null
+          or $1 = 'all'
           or not d.library
           or exists (select 1 from library_picks p where p.document_id = d.id and p.user_id = app_user())
           or exists (select 1 from model_documents md join gear g on g.model_id = md.model_id
@@ -63,12 +69,13 @@ const SCOPE_SQL = `
 
 export async function searchCorpus(
   db: Scoped,
-  input: { query: string; scope?: SearchScope; documentIds?: number[]; limit?: number },
+  input: { query: string; scope?: SearchScope; documentIds?: number[]; limit?: number; groupId?: number | null },
 ): Promise<SearchResult> {
   const query = input.query.trim();
   const scope = input.scope ?? 'mine';
   const ids = (input.documentIds ?? []).filter((n) => Number.isInteger(n) && n > 0);
   const limit = Math.min(Math.max(input.limit ?? 8, 1), 20);
+  const groupId = input.groupId && Number.isInteger(input.groupId) && input.groupId > 0 ? input.groupId : null;
 
   let vector: string | null = null;
   if (embedConfigured()) {
@@ -85,10 +92,10 @@ export async function searchCorpus(
     // has no such setting, and nothing is set.
     { text: `select '[0]'::halfvec is not null as loaded` },
     { text: `select set_config(name, 'relaxed_order', true) from pg_settings where name = 'hnsw.iterative_scan'` },
-    { text: SCOPE_SQL, params: [scope, ids] },
+    { text: scopeSql('$3'), params: [scope, ids, groupId] },
     {
       text: `
-      with scope as (${SCOPE_SQL}),
+      with scope as (${scopeSql('$6')}),
       q as (select websearch_to_tsquery('english', $3) as ts),
       words as (
         select c.id, row_number() over (order by ts_rank_cd(c.tsv, q.ts) desc, c.id) as r
@@ -113,7 +120,7 @@ export async function searchCorpus(
              f.score, f.by_words, f.by_meaning
         from fused f join chunks c on c.id = f.id join documents d on d.id = c.document_id
        order by f.score desc`,
-      params: [scope, ids, query, vector, limit],
+      params: [scope, ids, query, vector, limit, groupId],
     },
   ]);
 

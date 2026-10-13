@@ -24,6 +24,7 @@ Latest commits, newest first:
 
 | Commit | What it did |
 |---|---|
+| `bbcc6ff` | Library: many documents by drop or folder; the administrator moves a document's home (018) |
 | `f1a04af` | Auth proxy passes only `get-session` to Neon Auth |
 | `a4193c4` | Study sessions and notes (017), group page tabs, connector tools |
 | `a41e987` | Sign-up page: anyone creates an account, which waits for approval |
@@ -45,13 +46,15 @@ Latest commits, newest first:
 The Learning slice and migration 016 were committed and pushed on 12
 October, then the PDF reader fixes, the sign-up page, study sessions and
 notes (017, `a4193c4`) and the narrowed auth proxy (`f1a04af`). **Not yet
-committed**: batch upload and the administrator's move between library and
-private (migration 018), checked with type check, lint, the access check and
-018's database tests, not seen in a browser. The commands are in §7.
+committed**: the study group's reading list with searches limited to it
+(migration 019); batch upload and the move between library and private
+(018) went in as `bbcc6ff`. Checked with type check,
+lint, the access check and the database tests; not seen in a browser. The
+commands are in §7.
 
 Migrations `db/001`–`016`, with test suites in `db/test/` for 002–016.
-001–017 are applied on Neon (017 presumably, with its push; check with
-`pipeline/migrate.py --status`); **018 is not yet**.
+001–017 are applied on Neon (check with `pipeline/migrate.py --status`);
+018 presumably with `bbcc6ff`; **019 is not yet**.
 
 Confirmed working on production: sign-in and accounts, gear, document upload
 and processing, the session page and its tabs, the workflow, the connector
@@ -163,6 +166,19 @@ batch, an optional manufacturer for all, titles from file names (editable
 before adding). Nothing is processed: library uploads land submitted, the
 administrator's too, under "Your submissions", to open one by one. A single
 file still opens its page.
+
+**A study group's reading list** (L-24, migration 019). The Resources tab
+shows the list (title, manufacturer and model, library manual or shared by
+its owner, how far searchable, lessons citing it), an "Add a document…"
+picker (library manuals for the custodian; one's own documents for any
+member, which shares them), Remove, and the documents cited but not listed.
+The aside shows the count. A document's page has the "Study groups" box for
+its owner (private) or for a custodian (approved library manual). Search
+takes `groupId` (`lib/search.ts`); the connector's `search` takes `group`,
+`get_study_group` returns `reading_list` and `cited_not_on_list`, and the
+instructions say to search with the group when working on it (server 0.6.0).
+Moving a document into the library keeps its listings; moving it out removes
+them (018's function, replaced in 019).
 
 **Moving a document's home** (migration 018). The administrator sees "Where
 it lives" on a document's page: library to private (to its contributor, or
@@ -356,8 +372,10 @@ sizes.
 
 ## 7. Next, in order
 
-0. Commit what is uncommitted (James): apply 018 with `pipeline/migrate.py`
-   first, then commit and push. Then: log a session in the app; test whether
+0. Commit what is uncommitted (James): apply 019 (and 018 if not yet) with
+   `pipeline/migrate.py` first, then commit and push. Put the MPC Bible
+   and the MPC manual on the MPC group's reading list (Resources tab), and
+   reconnect the connector so `search` shows its `group` option. Then: log a session in the app; test whether
    the mobile app's voice mode calls the connector; drop the HARDWARE folder on the Library's "Add documents" as library
    manuals and work through "Your submissions"; try "Where it lives" on a
    document.

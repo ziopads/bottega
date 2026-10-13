@@ -33,7 +33,7 @@ export default function DocumentDetail({
   isAdmin: boolean;
   /** Approved catalogue models, for linking a library manual. */
   models: Model[];
-  /** For the owner of a private document: their study groups, and which it is shared with (db/016). */
+  /** Study groups whose reading list the viewer may change for this document, and whether it is on each (db/016, 019). */
   groups?: Group[];
 }) {
   const router = useRouter();
@@ -247,7 +247,7 @@ export default function DocumentDetail({
         />
       </Section>
       {isAdmin && <MoveHome key={String(doc.library)} doc={doc} onMove={moveHome} />}
-    {!doc.library && doc.level === 'owner' && groups.length > 0 && (
+    {groups.length > 0 && ((!doc.library && doc.level === 'owner') || (doc.library && doc.reviewStatus === 'approved')) && (
         <Section label="Study groups">
           <ul className="t-body space-y-1">
             {groups.map((g) => (
@@ -259,7 +259,11 @@ export default function DocumentDetail({
               </li>
             ))}
           </ul>
-          <p className="mt-1 text-[11px] text-muted">A group’s members can read a document shared with it, and its lessons’ citations link to it, for as long as they are members.</p>
+          <p className="mt-1 text-[11px] text-muted">
+          {doc.library
+            ? 'On a group’s reading list, Claude searches it when working on that group. You keep these groups as custodian.'
+            : 'On a group’s reading list, every member can read it for as long as they are members, and Claude searches it when working on that group.'}
+        </p>
         </Section>
       )}
     </>

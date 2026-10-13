@@ -20,6 +20,6 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
   const models = doc.library
     ? (await listModels(db)).filter((m) => m.status === 'approved').map((m) => ({ id: m.id, manufacturer: m.manufacturer, model: m.model }))
     : [];
-  const groups = !doc.library && doc.level === 'owner' ? await documentGroups(db, id) : [];
+  const groups = (!doc.library && doc.level === 'owner') || (doc.library && doc.reviewStatus === 'approved') ? await documentGroups(db, id) : [];
   return <DocumentDetail initial={doc} viewerId={userId} isAdmin={isPlatformAdmin} models={models} groups={groups} />;
 }

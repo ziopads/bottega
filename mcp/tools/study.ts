@@ -127,17 +127,23 @@ export async function getStudyGroupTool(db: Scoped, origin: string, args: { id?:
         .filter((e) => e.review === 'proposed')
         .map((e) => ({ exercise_id: e.id, topic_id: e.topicId, task: e.task, asked_by: e.createdByName })),
     },
-    documents: g.documents
-      .filter((d) => d.sharedWithGroup || d.citedBy > 0)
+    reading_list: g.documents
+      .filter((d) => d.sharedWithGroup)
       .map((d) => ({
-        id: d.id,
+        document_id: d.id,
         title: titles.get(d.id) ?? '(not readable by you)',
-        shared_with_group: d.sharedWithGroup,
-        cited_in_lessons: d.citedBy,
+        about: d.about || undefined,
+        kind: d.library ? 'library manual' : 'shared by a member',
+        searchable: d.pagesDone === 0 ? 'not yet' : d.pageCount !== null && d.pagesDone < d.pageCount ? `pages 1–${d.pagesDone}` : 'yes',
+        cited_in_lessons: d.citedBy || undefined,
       })),
+    cited_not_on_list: g.documents
+      .filter((d) => !d.sharedWithGroup && d.citedBy > 0)
+      .map((d) => ({ document_id: d.id, title: titles.get(d.id) ?? '(not readable by you)', cited_in_lessons: d.citedBy })),
     note:
       'Topics, lessons and exercises under awaiting_review are proposals, not the group’s syllabus, until the custodian accepts them. ' +
-      'Pass topic (a topic_id) to include the full text of that topic’s lessons. Progress is each member’s own record.',
+      'Pass topic (a topic_id) to include the full text of that topic’s lessons. Progress is each member’s own record. ' +
+      'Search the reading list with search({ group: id }).',
   };
 }
 

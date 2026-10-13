@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.19
+**Version:** 0.20
 **Date:** 2026-10-12
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -9,6 +9,10 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.20** (2026-10-12) — A study group's reading list (L-24): library
+  manuals and members' documents the group studies from, which Claude's
+  searches for the group are limited to.
 
 - **0.19** (2026-10-12) — Adding many documents at once by drop or folder
   (K-11), and the administrator moving a document between the library and
@@ -604,6 +608,12 @@ travel to the database.
   over its topics) with when each was last touched, the topics not touched,
   and exercises done. First version built 12 October 2026 (tables; charts
   later).
+- **L-24** A study group has a reading list: the documents its study draws
+  on. The custodian adds and removes library manuals; a member adds or
+  removes their own private documents, which shares them with the group (L-16).
+  When Claude works on the group it searches the reading list only, unless
+  asked to search more widely. Lesson citations may still cite any document
+  the writer can read. Built 12 October 2026 (migration 019).
 - **L-23** (planned) Resources: videos, articles and pages any member adds,
   filed under topics, with notes pointing at moments in a video.
 - **L-17** Joining is by invitation only in the first slice; invitations go

@@ -1,6 +1,6 @@
 # Bottega — architecture
 
-**Version:** 0.9
+**Version:** 0.10
 **Date:** 2026-10-12
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
@@ -9,6 +9,10 @@ story IDs below (S-3, W-6 and so on) refer to it.
 ---
 
 ## Changelog
+
+- **0.10** (2026-10-12) — `study_group_documents` becomes a group's reading
+  list and takes approved library manuals (migration 019); corpus search
+  takes a study group as its scope (§6).
 
 - **0.9** (2026-10-12) — `document_set_home()` (migration 018, §11 The
   library): the administrator moves a document between the library and
@@ -392,6 +396,11 @@ them.
 | 1 | `list_documents` ✓, `search` ✓, `read_pages` ✓, `find_gear`, `get_gear`, `list_projects` ✓, `get_session` ✓ (named `get_project` in earlier drafts) |
 | 2 | `get_board`, `draft_card` ✓, `draft_criteria` ✓, `get_study_group` ✓ (syllabus, proposals and progress), `draft_topic` ✓, `draft_lesson` ✓, `draft_exercise` ✓, `record_study_session` ✓, `list_study_notes` ✓, `get_study_history` ✓ |
 | 3 | `get_analysis`, `compare_to_reference` |
+
+A study group's reading list (019) is a search scope of its own:
+`search({ group })`, for a member, searches only the documents on
+`study_group_documents` for that group, ignoring the person's picks and gear.
+The instructions tell Claude to use it whenever working on a group.
 
 Corpus tools (`mcp/tools/corpus.ts`, `lib/search.ts`): search scopes to the
 person's documents, picks and owned gear's manuals by default (K-7), lists

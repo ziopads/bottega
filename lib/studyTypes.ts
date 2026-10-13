@@ -129,11 +129,19 @@ export interface StudyExercise {
   progress: StudyProgress[];
 }
 
-/** A document the group's lessons (accepted or waiting) cite, or that is shared with the group. */
+/** A document on the group's reading list (019), or one its lessons, sessions or notes cite. */
 export interface StudyDocument {
   id: number;
   /** Null when the viewer cannot read it. */
   title: string | null;
+  /** A library manual (listed by the custodian), or a private document (shared by its owner). */
+  library: boolean;
+  /** "Akai MPC One", when known. */
+  about: string;
+  /** Pages searchable so far, and in all. */
+  pagesDone: number;
+  pageCount: number | null;
+  /** On the group's reading list: searched by Claude for the group, readable by every member. */
   sharedWithGroup: boolean;
   /** The viewer owns it, so may share it with the group or stop sharing it. */
   mine: boolean;

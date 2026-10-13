@@ -36,7 +36,7 @@ const iso = (v: unknown): string => (v instanceof Date ? v.toISOString() : Strin
 export class StudyError extends Error {}
 
 const READABLE =
-  /publishes it|stays published|session's topics belong|note's (session|topic|lesson|exercise)|stays with its group|custodian|already|no approved account|not a member|no invitation of yours|has already been answered|group is closed|accept its topic first|same topic|stays|only a proposal|open or closed|not shared; they are visible|cannot leave/;
+  /only an approved library manual|publishes it|stays published|session's topics belong|note's (session|topic|lesson|exercise)|stays with its group|custodian|already|no approved account|not a member|no invitation of yours|has already been answered|group is closed|accept its topic first|same topic|stays|only a proposal|open or closed|not shared; they are visible|cannot leave/;
 
 async function run<T>(fn: () => Promise<T>): Promise<T> {
   try {
@@ -279,7 +279,10 @@ export async function getGroup(db: Scoped, groupId: number): Promise<StudyGroup 
   }
   const docIds = Array.from(new Set([...shared, ...mentioned]));
   const docRows = docIds.length
-    ? await db.q('select id, title, owner_id from documents where id = any($1::bigint[])', [docIds])
+    ? await db.q(
+        'select id, title, owner_id, library, manufacturer, model, pages_done, page_count from documents where id = any($1::bigint[])',
+        [docIds],
+      )
     : [];
   const readable = new Map(docRows.map((r) => [num(r.id), r]));
   const documents: StudyDocument[] = docIds
@@ -288,6 +291,10 @@ export async function getGroup(db: Scoped, groupId: number): Promise<StudyGroup 
       return {
         id,
         title: r ? str(r.title) : null,
+        library: r ? r.library === true : false,
+        about: r ? [str(r.manufacturer), str(r.model)].filter(Boolean).join(' ') : '',
+        pagesDone: r ? num(r.pages_done) : 0,
+        pageCount: r ? numOrNull(r.page_count) : null,
         sharedWithGroup: shared.has(id),
         mine: r ? str(r.owner_id) === db.person.userId : false,
         citedBy: citedBy.get(id)?.size ?? 0,
@@ -328,11 +335,18 @@ export async function groupOf(db: Scoped, kind: 'topic' | 'lesson' | 'exercise' 
   return rows.length ? num(rows[0].group_id) : null;
 }
 
-/** The groups a person belongs to, and which of them a document is shared with (for the document page). */
+/**
+ * For the document page: the groups whose reading list the person may change
+ * for this document (their own private document: every group they belong
+ * to; a library manual: the groups they keep as custodian), and whether it is
+ * on each list.
+ */
 export async function documentGroups(db: Scoped, documentId: number): Promise<{ id: number; name: string; shared: boolean }[]> {
   const rows = await db.q(
     `select g.id, g.name, exists (select 1 from study_group_documents s where s.group_id = g.id and s.document_id = $1) as shared
-       from study_groups g where study_member(g.id) order by lower(g.name)`,
+       from study_groups g
+      where study_member(g.id) and (not document_is_library($1) or study_custodian(g.id))
+      order by lower(g.name)`,
     [documentId],
   );
   return rows.map((r) => ({ id: num(r.id), name: str(r.name), shared: r.shared === true }));
@@ -558,7 +572,7 @@ export async function unshareFromGroup(db: Scoped, documentId: number, groupId: 
   const rows = await run(() =>
     db.q('delete from study_group_documents where group_id = $1 and document_id = $2 returning group_id', [groupId, documentId]),
   );
-  if (!rows.length) throw new StudyError('Only the document’s owner stops sharing it.');
+  if (!rows.length) throw new StudyError('Only the document’s owner, or for a library manual the group’s custodian, takes it off the list.');
 }
 
 // ── Sessions and notes (db/017) ──────────────────────────────────────────────

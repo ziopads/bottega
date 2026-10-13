@@ -264,6 +264,10 @@ function describe(r: Row, subjectName: string, itemLabel: string | null): string
       return 'Viewed by the platform administrator';
     case 'document_moved':
       return after.library ? `Moved ${item} into the library` : `Moved ${item} out of the library, into private documents`;
+    case 'document_listed_for_group':
+      return `Put ${item} on the reading list of “${String(after.group ?? '')}”`;
+    case 'document_unlisted_for_group':
+      return `Took ${item} off the reading list of “${String(before.group ?? '')}”`;
     case 'document_shared_with_group':
       return `Shared ${item} with the study group “${String(after.group ?? '')}” (view)`;
     case 'document_unshared_from_group':

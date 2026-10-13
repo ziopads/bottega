@@ -38,16 +38,21 @@ import {
 // and Notes (Journal.tsx), Resources (next build), Progress. The aside is the
 // same on every tab, with the syllabus's contents on the Syllabus tab.
 
+export type ListCandidate = { id: number; title: string; about: string; library: boolean };
+
 export default function GroupView({
   initial,
   viewerId,
   models,
   initialTab,
+  candidates,
 }: {
   initial: StudyGroup;
   viewerId: string;
   models: StudyModel[];
   initialTab: GroupTab;
+  /** Documents the viewer could add to the reading list: approved library manuals, and their own private documents. */
+  candidates: ListCandidate[];
 }) {
   const router = useRouter();
   const [g, setG] = useState(initial);
@@ -190,11 +195,7 @@ export default function GroupView({
       {tab === 'sessions' && <SessionsTab g={g} viewerId={viewerId} titles={titles} call={call} busy={busy} />}
       {tab === 'notes' && <NotesTab g={g} viewerId={viewerId} titles={titles} call={call} busy={busy} />}
       {tab === 'resources' && (
-        <Section label="Resources">
-          <p className="t-body max-w-prose text-muted">
-            Coming next: videos, articles and pages any member adds, filed under topics, with notes pointing at moments in a video.
-          </p>
-        </Section>
+        <ReadingList g={g} viewerId={viewerId} candidates={candidates} busy={busy} setError={setError} reload={reload} />
       )}
       {tab === 'progress' && <ProgressTab g={g} />}
       {error && <p className="t-body mt-4 text-rust">{error}</p>}
@@ -206,7 +207,15 @@ export default function GroupView({
     <>
       {tab === 'syllabus' && accepted.length > 0 && <Contents g={g} viewerId={viewerId} />}
       <Members g={g} viewerId={viewerId} custodian={custodian} busy={busy} call={call} />
-      <Documents g={g} isCustodian={isCustodian} busy={busy} setError={setError} reload={reload} />
+      <Section label="Reading list">
+        <p className="t-body">
+          <button onClick={() => selectTab('resources')} className="hover:text-rust">
+            {g.documents.filter((d) => d.sharedWithGroup).length || 'No'}{' '}
+            {g.documents.filter((d) => d.sharedWithGroup).length === 1 ? 'document' : 'documents'}
+          </button>
+          <span className="text-muted"> · what Claude searches for this group</span>
+        </p>
+      </Section>
       <Section label="With Claude">
         <p className="t-body text-muted">
           Through the Bottega connector, Claude reads this group (get_study_group, list_study_notes, get_study_history), proposes
@@ -680,59 +689,153 @@ function Members({ g, viewerId, custodian, busy, call }: { g: StudyGroup; viewer
   );
 }
 
-function Documents({
+/**
+ * The group's reading list (019): the documents its study draws on, which
+ * Claude searches for the group and every member reads. The custodian adds
+ * and removes library manuals; a member adds or removes their own private
+ * documents, which shares them with the group. Below it, documents the
+ * lessons, sessions or notes cite that are not on the list.
+ */
+function ReadingList({
   g,
-  isCustodian,
+  viewerId,
+  candidates,
   busy,
   setError,
   reload,
 }: {
   g: StudyGroup;
-  isCustodian: boolean;
+  viewerId: string;
+  candidates: ListCandidate[];
   busy: boolean;
   setError: (s: string) => void;
   reload: () => Promise<void>;
 }) {
-  const docs = g.documents.filter((d) => d.sharedWithGroup || d.citedBy > 0);
-  async function toggle(id: number, share: boolean) {
+  const [adding, setAdding] = useState('');
+  const custodian = g.custodianId === viewerId && g.status === 'open';
+  const listed = g.documents.filter((d) => d.sharedWithGroup);
+  const cited = g.documents.filter((d) => !d.sharedWithGroup && d.citedBy > 0);
+  const onList = new Set(listed.map((d) => d.id));
+  const offer = candidates.filter((c) => !onList.has(c.id) && (c.library ? custodian : g.status === 'open'));
+
+  async function change(id: number, add: boolean) {
     setError('');
-    const r = await api(`/api/documents/${id}/groups`, { method: share ? 'POST' : 'DELETE', body: JSON.stringify({ groupId: g.id }) });
-    if (!r.ok) return setError(r.body.error || 'Could not change the sharing.');
+    const r = await api(`/api/documents/${id}/groups`, { method: add ? 'POST' : 'DELETE', body: JSON.stringify({ groupId: g.id }) });
+    if (!r.ok) return setError(r.body.error || 'Could not change the reading list.');
+    setAdding('');
     await reload();
   }
-  if (!docs.length && !isCustodian) return null;
+
+  const mayRemove = (d: StudyGroup['documents'][number]) => (d.library ? custodian : d.mine);
+
   return (
-    <Section label="Documents">
-      {docs.length === 0 ? (
-        <p className="t-body text-muted">The lessons cite no documents yet. Share a private book with the group from its page in the Library.</p>
-      ) : (
-        <ul className="t-body space-y-2">
-          {docs.map((d) => (
-            <li key={d.id}>
-              {d.title ? (
-                <Link href={`/library/${d.id}`} className="hover:text-rust">
-                  {d.title}
-                </Link>
-              ) : (
-                <span className="text-muted">Document {d.id} (not readable by you)</span>
+    <>
+      <Section label="Reading list">
+        <p className="t-body mb-3 max-w-prose text-muted">
+          What this group studies from. When Claude works on the group, it searches these documents only. Every member can read them.
+        </p>
+        {listed.length === 0 ? (
+          <p className="t-body text-muted">Nothing on the list yet.</p>
+        ) : (
+          <ul className="t-body divide-y divide-line border-y border-line">
+            {listed.map((d) => (
+              <li key={d.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2">
+                {d.title ? (
+                  <Link href={`/library/${d.id}`} className="font-medium hover:text-rust">
+                    {d.title}
+                  </Link>
+                ) : (
+                  <span className="text-muted">Document {d.id}</span>
+                )}
+                {d.about && <span className="text-muted">{d.about}</span>}
+                <span className="text-[11px] text-muted">{d.library ? 'library manual' : 'shared by its owner'}</span>
+                <span className="ml-auto text-[11px] text-muted">
+                  {[
+                    d.pagesDone === 0
+                      ? 'not searchable yet'
+                      : d.pageCount !== null && d.pagesDone < d.pageCount
+                        ? `searchable to p. ${d.pagesDone}`
+                        : `${d.pageCount ?? d.pagesDone} pages`,
+                    d.citedBy ? `cited in ${d.citedBy} ${d.citedBy === 1 ? 'lesson' : 'lessons'}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+                {mayRemove(d) && (
+                  <button onClick={() => change(d.id, false)} disabled={busy} className={`text-[11px] ${TEXT_DANGER}`}>
+                    Remove
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {offer.length > 0 && (
+          <div className="t-body mt-3 flex flex-wrap items-center gap-2">
+            <select value={adding} onChange={(e) => setAdding(e.target.value)} aria-label="Document to add" className={`${FIELD} min-w-0 max-w-full flex-1`}>
+              <option value="">Add a document…</option>
+              {offer.some((c) => c.library) && (
+                <optgroup label="Library manuals">
+                  {offer
+                    .filter((c) => c.library)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.title}
+                        {c.about ? ` · ${c.about}` : ''}
+                      </option>
+                    ))}
+                </optgroup>
               )}
-              <span className="block text-[11px] text-muted">
-                {[
-                  d.citedBy > 0 ? `cited in ${d.citedBy} ${d.citedBy === 1 ? 'lesson' : 'lessons'}` : null,
-                  d.sharedWithGroup ? 'shared with the group' : 'not shared with the group: members who cannot read it see the citation without its link',
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </span>
-              {d.mine && (
-                <button onClick={() => toggle(d.id, !d.sharedWithGroup)} disabled={busy} className={`text-[11px] ${d.sharedWithGroup ? TEXT_DANGER : TEXT_ACTION}`}>
-                  {d.sharedWithGroup ? 'Stop sharing with the group' : 'Share with the group'}
-                </button>
+              {offer.some((c) => !c.library) && (
+                <optgroup label="Your documents (shares them with the group)">
+                  {offer
+                    .filter((c) => !c.library)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.title}
+                      </option>
+                    ))}
+                </optgroup>
               )}
-            </li>
-          ))}
-        </ul>
+            </select>
+            <button onClick={() => adding && change(Number(adding), true)} disabled={busy || !adding} className={BUTTON}>
+              Add
+            </button>
+          </div>
+        )}
+        {!custodian && g.status === 'open' && (
+          <p className="mt-2 text-[11px] text-muted">{g.custodianName}, the custodian, adds library manuals; you can add your own documents.</p>
+        )}
+      </Section>
+
+      {cited.length > 0 && (
+        <Section label="Cited, not on the list">
+          <ul className="t-body space-y-1">
+            {cited.map((d) => (
+              <li key={d.id}>
+                {d.title ? (
+                  <Link href={`/library/${d.id}`} className="hover:text-rust">
+                    {d.title}
+                  </Link>
+                ) : (
+                  <span className="text-muted">Document {d.id} (not readable by you)</span>
+                )}
+                <span className="text-[11px] text-muted"> · cited in {d.citedBy} {d.citedBy === 1 ? 'lesson' : 'lessons'}</span>
+                {((d.library && custodian) || (!d.library && d.mine)) && (
+                  <button onClick={() => change(d.id, true)} disabled={busy} className={`ml-2 text-[11px] ${TEXT_ACTION}`}>
+                    Add to the list
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] text-muted">Members who cannot read a private one see its citations without links.</p>
+        </Section>
       )}
-    </Section>
+
+      <Section label="Videos and links">
+        <p className="t-body max-w-prose text-muted">Coming next: videos, articles and pages any member adds, filed under topics, with notes pointing at moments in a video.</p>
+      </Section>
+    </>
   );
 }

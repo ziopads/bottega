@@ -36,15 +36,22 @@ export async function listDocumentsTool(db: Scoped, origin: string) {
 export async function searchTool(
   db: Scoped,
   origin: string,
-  args: { query: string; scope?: SearchScope; documents?: number[]; limit?: number },
+  args: { query: string; scope?: SearchScope; documents?: number[]; limit?: number; group?: number },
 ) {
   const query = args.query.trim();
   if (!query) throw new ToolError('Give a query.');
   if (query.length > 500) throw new ToolError('Keep the query under 500 characters.');
-  const r = await searchCorpus(db, { query, scope: args.scope, documentIds: args.documents, limit: args.limit });
+  if (args.group !== undefined) {
+    const rows = await db.q('select study_member($1) as member, (select count(*) from study_group_documents where group_id = $1) as listed', [args.group]);
+    if (rows[0]?.member !== true) throw new ToolError(`No study group ${args.group} that you belong to. get_study_group lists yours.`);
+    if (Number(rows[0].listed) === 0) {
+      throw new ToolError('This group’s reading list is empty. Ask the custodian to add documents on its Resources tab, or search without group.');
+    }
+  }
+  const r = await searchCorpus(db, { query, scope: args.scope, documentIds: args.documents, limit: args.limit, groupId: args.group ?? null });
   return {
     query,
-    scope: args.scope ?? 'mine',
+    scope: args.group !== undefined ? `study group ${args.group}'s reading list` : (args.scope ?? 'mine'),
     matched_by: r.meaning ? 'words and meaning' : 'words only (the embedding service did not answer)',
     documents_searched: r.documents.map((d) => (d.searchable ? `${d.id} ${d.title}` : `${d.id} ${d.title} (not searchable yet)`)),
     results: r.hits.map((h) => ({

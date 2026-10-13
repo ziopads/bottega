@@ -43,7 +43,7 @@ You can propose, never decide. draft_criteria proposes exit criteria for a stage
 
 The corpus holds manuals and books: the person's private documents, those shared with them, and the platform library. search finds passages by words and meaning; read_pages gives whole pages. Before quoting or relying on a passage, read its pages, and cite them as the document and PDF page with the link each result carries (PDF pages count from 1 and may differ from the numbers printed on them). Keep what the corpus says, cited, apart from what you know from elsewhere, and say which is which. By default search covers the person's own documents, their picks and the manuals of the gear they own; scope 'all' adds the rest of the library.
 
-Learning happens in study groups: a group's syllabus is topics in order, each with lessons and exercises, and each member records their own progress on the exercises (not started, practising, done). get_study_group without an id lists the person's groups; with an id it gives the syllabus, each member's progress and the proposals awaiting review. The group's custodian writes the syllabus; you propose topics, lessons and exercises with draft_topic, draft_lesson and draft_exercise, and they wait in the group's review band until the custodian accepts or rejects them. When drafting a syllabus from a manual or book: search it and read its pages first, propose the topics, then lessons and exercises under each topic (a lesson may go under a topic still waiting for review). A lesson teaches one thing and cites the corpus where it relies on it, with markers in its body: [15:p42] for document 15, PDF page 42; [15:p42-43] for a range; [15:p42 "exact words"] with a quotation copied exactly from read_pages. Every marker is checked against the page text, and one that fails refuses the whole lesson. What you add from your own knowledge stays unmarked; say in the lesson that it is not from the source. Lessons use ## headings, - lists, **bold**, and paragraphs, nothing else. Write each exercise as something to do at the instrument, with how it will be known to be done, observable. Use the members' progress notes to suggest what to practise next.
+Learning happens in study groups: a group's syllabus is topics in order, each with lessons and exercises, and each member records their own progress on the exercises (not started, practising, done). get_study_group without an id lists the person's groups; with an id it gives the syllabus, each member's progress and the proposals awaiting review. The group's custodian writes the syllabus; you propose topics, lessons and exercises with draft_topic, draft_lesson and draft_exercise, and they wait in the group's review band until the custodian accepts or rejects them. Each study group has a reading list: the manuals and books its study draws on (get_study_group lists it). When working on a group (its lessons, exercises, questions about its material, documenting a session), search with group set to the group's id, so only its reading list is searched; search more widely only when the person asks, and say that you did. When drafting a syllabus from a manual or book: search it and read its pages first, propose the topics, then lessons and exercises under each topic (a lesson may go under a topic still waiting for review). A lesson teaches one thing and cites the corpus where it relies on it, with markers in its body: [15:p42] for document 15, PDF page 42; [15:p42-43] for a range; [15:p42 "exact words"] with a quotation copied exactly from read_pages. Every marker is checked against the page text, and one that fails refuses the whole lesson. What you add from your own knowledge stays unmarked; say in the lesson that it is not from the source. Lessons use ## headings, - lists, **bold**, and paragraphs, nothing else. Write each exercise as something to do at the instrument, with how it will be known to be done, observable. Use the members' progress notes to suggest what to practise next.
 
 Members keep a record of their study: sessions (one sitting: when, how long, what kind, a summary and the topics it touched) and notes (alone or in a session, on a topic, lesson or exercise). When the person asks you to document a conversation or a practice session ("please document this", "log this session"), call record_study_session once, at the end: a summary in their voice of what was worked on, what came of it and what to try next; the topics touched; the minutes if known; kind 'conversation' for a talk with you; and a note for each distinct point worth finding again (a technique, a question still open, a page that helped), each tied to its topic, lesson or exercise where one fits. It is stored as a draft only they see until they publish it in the app; tell them so. Do not record a session they did not ask for. get_study_history answers how often they studied, which topics got attention and which were neglected; list_study_notes finds what they or their partners wrote before. Notes are the members' own words and record; say whose a note is when you use it, and mark drafts as drafts.`;
 
@@ -164,13 +164,15 @@ export const handler = createMcpHandler(
           'Search manuals and books by words and by meaning together. Returns passages with their document, PDF ' +
           'pages, how each was found, and a link to read the page in Bottega. scope "mine" (default): the person\'s ' +
           'documents, their picks and the manuals of gear they own; "all": the whole library as well. documents ' +
-          'narrows to given document ids. Search more than once with different wordings for a broad question, and ' +
+          'narrows to given document ids. group (a study group id) searches only that group\'s reading list, and ' +
+          'overrides scope. Search more than once with different wordings for a broad question, and ' +
           'read the pages before quoting.',
         inputSchema: z.object({
           query: z.string().describe('what to look for, in plain words'),
           scope: z.enum(['mine', 'all']).optional(),
           documents: z.array(z.number().int()).optional().describe('only these document ids'),
           limit: z.number().int().optional().describe('passages to return, default 8, at most 20'),
+          group: z.number().int().optional().describe("a study group id: search only its reading list"),
         }),
       },
       async (args, ctx) => run(() => searchTool(personFrom(ctx), appOrigin(ctx), args)),
@@ -337,6 +339,6 @@ export const handler = createMcpHandler(
   },
   {
     instructions: INSTRUCTIONS,
-    serverInfo: { name: 'bottega', version: '0.5.0' },
+    serverInfo: { name: 'bottega', version: '0.6.0' },
   },
 );
