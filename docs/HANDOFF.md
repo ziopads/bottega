@@ -46,15 +46,20 @@ Latest commits, newest first:
 The Learning slice and migration 016 were committed and pushed on 12
 October, then the PDF reader fixes, the sign-up page, study sessions and
 notes (017, `a4193c4`) and the narrowed auth proxy (`f1a04af`). **Not yet
-committed**: the study group's reading list with searches limited to it
-(migration 019); batch upload and the move between library and private
-(018) went in as `bbcc6ff`. Checked with type check,
+committed** (check `git status`): the study group's reading list (019),
+videos and links (020), the sign-in attempt limit (021), printed page
+numbers and contents (022), and the search page; batch upload and the move
+between library and private (018) went in as `bbcc6ff`. All checked with
+type check, lint (no new findings; StudioProjects.tsx and controls.tsx carry
+earlier ones) and the access check, 019–022 with their database tests; none
+seen in a browser. Checked with type check,
 lint, the access check and the database tests; not seen in a browser. The
 commands are in §7.
 
 Migrations `db/001`–`016`, with test suites in `db/test/` for 002–016.
 001–017 are applied on Neon (check with `pipeline/migrate.py --status`);
-018 presumably with `bbcc6ff`; **019 is not yet**.
+018 presumably with `bbcc6ff`; **019 to 022 are not yet**, unless applied
+since.
 
 Confirmed working on production: sign-in and accounts, gear, document upload
 and processing, the session page and its tabs, the workflow, the connector
@@ -179,6 +184,37 @@ takes `groupId` (`lib/search.ts`); the connector's `search` takes `group`,
 instructions say to search with the group when working on it (server 0.6.0).
 Moving a document into the library keeps its listings; moving it out removes
 them (018's function, replaced in 019).
+
+**Videos and links** (L-23, migration 020). The Resources tab lists them
+above the reading list, grouped by topic ("Not filed" last), with Claude's
+drafts for the viewer at the top (Publish, Discard); "+ Add" takes a YouTube
+link or any https address (a title is needed for a link), why, and topics.
+`/learning/[id]/resources/[resourceId]` is the watch page: the video played
+in the page (`VideoPlayer.tsx`, IFrame Player API, youtube-nocookie.com),
+notes on it ordered by moment with the moment as a button that seeks the
+player, and a note form whose moment fills from the player ("now"); `?t=`
+starts the video there, which is how a note's moment links from the Notes
+tab. The adder edits why and topics; the adder or the custodian removes it.
+A session can name the video it was spent on. Connector (0.7.0):
+`add_study_resource` (a draft), `videos_and_links` in `get_study_group`,
+notes with `resource_id` and `at` in `record_study_session`, which also takes
+the session's `resource_id`.
+
+**Printed page numbers and contents** (K-13, K-14, migration 022). Read
+from the PDF on its first processing batch; "Read page numbers and contents
+from the PDF" on a document's page does it for one processed before; "Set
+printed numbers by hand" sets a range (arabic or roman from a number) or
+clears it. The reader's title shows "PDF page 824 · printed p. 812", the
+meta line "in <section>", and a Contents list; lesson, session and note
+citations show "p. 812 (PDF p. 824)"; the connector's `read_pages` gives
+`printed` and `section` per page, `search` gives `printed_page`.
+
+**Search page** (K-15). `/library/search?q=&scope=mine|all|group:ID`, with a
+search field on the Library page; the same `searchCorpus` as the connector,
+20 passages, each linking to the reader with the words marked.
+
+**Sign-in attempt limit** (AC-14, migration 021). The sign-in and sign-up
+actions ask `auth_attempt_wait()` first and record each attempt.
 
 **Moving a document's home** (migration 018). The administrator sees "Where
 it lives" on a document's page: library to private (to its contributor, or
@@ -318,61 +354,24 @@ sizes.
 
 ## 6. Decisions waiting on James
 
-00. **Sign-in attempt limit of our own** (raised 12 October). Neon Auth's
-   rate limit sees Vercel's address for every server-side call. Proposed: a
-   small table of failed attempts by email and by the caller's address
-   (`x-forwarded-for` on Vercel), checked in the sign-in and sign-up actions,
-   refusing for a while after a handful of failures. Migration 018.
-
-0. **Printed page numbers** (asked for 12 October). Citations and the reader
-   use PDF pages; the MPC Bible's printed numbers differ. Scriptorium keeps
-   page offsets per work, with page labels marked unverified until checked.
-   To design: offsets per document (one or several ranges), shown as "p. 812
-   (PDF 824)" in the reader, lesson citations and connector results.
-0a. **The PDF reader, properly** (option 2 of 12 October, agreed as the next
-   step after the quick fix): render pages with PDF.js (`pdfjs-dist`) from
-   byte ranges, so opening page 824 of a 94 MB book fetches only what that
-   page needs; our own zoom and no clipped toolbar; reads the outline for the
-   Contents list (item 1). Needs the package installed and a CORS rule on the
-   R2 files bucket allowing GET with the Range header and exposing
-   Content-Range and Accept-Ranges.
-1. **Bookmarks in the reader.** Proposed: read the PDF's outline with unpdf
-   during extraction into `document_sections` (rebuildable), plus a "Read the
-   contents" action for documents already processed; the reader gains a
-   Contents list and "In: chapter"; the connector names chapters. Alternatives:
-   read the outline in the browser only; or add Scriptorium's running-heads
-   inference for PDFs without an outline. Recommended: the first. Open
-   question: does the MPC Bible carry bookmarks?
-2. **Search box in the app** (search option 3), on the same `lib/search.ts`.
-3. **Learning, second slice: decided 12 October; (a) built, with a first
-   Progress tab; (b) resources next.**
-   Study sessions (one member, one sitting: date, minutes, kind at the MPC /
-   conversation / reading / video, summary, topics touched, optional lessons
-   and exercises) and notes (author and timestamp; optionally in a session,
-   on a topic, lesson, exercise, a book page by citation marker, or a
-   resource at a moment). Decisions: Claude's documented session is a draft
-   visible only to its author until they publish it (one click for the whole
-   session), labelled "documented by Claude"; sessions and notes are shared
-   with the group by default, private per item; a session records topics
-   touched plus total minutes, and Progress splits time evenly across them;
-   tabs Syllabus · Sessions · Notes · Resources · Progress (`?tab=`), members
-   and documents in the aside, a contents list beside the syllabus.
-   Connector: `record_study_session` (summary, topics and notes in one call,
-   for "please document it" at the end of a spoken conversation),
-   `list_study_notes`, `get_study_history`. Build order: (a) sessions, notes,
-   tabs, connector, migration 017; (b) resources (YouTube oEmbed for title,
-   channel, thumbnail; filed under topics; notes at moments open the video at
-   that time); (c) the Progress tab. To test early: whether the mobile app's
-   voice mode calls connector tools.
-4. **Learning, later** (first slice built 12 October). Candidates: asking to join and the directory of groups (L-8,
-   L-11); handing over custodianship; questions and answers (L-4); each
-   member's MPC model and firmware (L-6); challenges built on sessions (a
-   reference track, notes at moments, attempts as mixes); findings searchable
-   by Claude beside the corpus.
+1. **The PDF reader, properly** (option 2 of 12 October, agreed; waiting for
+   James): render pages with PDF.js (`pdfjs-dist`) from byte ranges, so
+   opening page 824 of a 94 MB book fetches only what that page needs; our
+   own zoom and no clipped toolbar. Needs `npm install pdfjs-dist` and the R2
+   files bucket's CORS rule to allow GET and HEAD with the Range header and
+   expose Content-Range, Accept-Ranges and Content-Length (beside the PUT it
+   already allows for uploads).
+2. **Learning, later** (first slice 12 October; sessions, notes, reading
+   list, videos and a first Progress tab since). Candidates: asking to join
+   and the directory of groups (L-8, L-11); handing over custodianship;
+   questions and answers (L-4); each member's MPC model and firmware (L-6);
+   challenges built on sessions (a reference track, notes at moments,
+   attempts as mixes); findings searchable by Claude beside the corpus;
+   charts on the Progress tab.
 
 ## 7. Next, in order
 
-0. Commit what is uncommitted (James): apply 019 (and 018 if not yet) with
+0. Commit what is uncommitted (James): apply 019 and 020 (and 018 if not yet) with
    `pipeline/migrate.py` first, then commit and push. Put the MPC Bible
    and the MPC manual on the MPC group's reading list (Resources tab), and
    reconnect the connector so `search` shows its `group` option. Then: log a session in the app; test whether

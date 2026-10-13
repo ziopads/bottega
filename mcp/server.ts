@@ -22,6 +22,7 @@ import {
   draftExerciseTool,
   draftLessonTool,
   draftTopicTool,
+  addStudyResourceTool,
   getStudyGroupTool,
   getStudyHistoryTool,
   listStudyNotesTool,
@@ -45,7 +46,7 @@ The corpus holds manuals and books: the person's private documents, those shared
 
 Learning happens in study groups: a group's syllabus is topics in order, each with lessons and exercises, and each member records their own progress on the exercises (not started, practising, done). get_study_group without an id lists the person's groups; with an id it gives the syllabus, each member's progress and the proposals awaiting review. The group's custodian writes the syllabus; you propose topics, lessons and exercises with draft_topic, draft_lesson and draft_exercise, and they wait in the group's review band until the custodian accepts or rejects them. Each study group has a reading list: the manuals and books its study draws on (get_study_group lists it). When working on a group (its lessons, exercises, questions about its material, documenting a session), search with group set to the group's id, so only its reading list is searched; search more widely only when the person asks, and say that you did. When drafting a syllabus from a manual or book: search it and read its pages first, propose the topics, then lessons and exercises under each topic (a lesson may go under a topic still waiting for review). A lesson teaches one thing and cites the corpus where it relies on it, with markers in its body: [15:p42] for document 15, PDF page 42; [15:p42-43] for a range; [15:p42 "exact words"] with a quotation copied exactly from read_pages. Every marker is checked against the page text, and one that fails refuses the whole lesson. What you add from your own knowledge stays unmarked; say in the lesson that it is not from the source. Lessons use ## headings, - lists, **bold**, and paragraphs, nothing else. Write each exercise as something to do at the instrument, with how it will be known to be done, observable. Use the members' progress notes to suggest what to practise next.
 
-Members keep a record of their study: sessions (one sitting: when, how long, what kind, a summary and the topics it touched) and notes (alone or in a session, on a topic, lesson or exercise). When the person asks you to document a conversation or a practice session ("please document this", "log this session"), call record_study_session once, at the end: a summary in their voice of what was worked on, what came of it and what to try next; the topics touched; the minutes if known; kind 'conversation' for a talk with you; and a note for each distinct point worth finding again (a technique, a question still open, a page that helped), each tied to its topic, lesson or exercise where one fits. It is stored as a draft only they see until they publish it in the app; tell them so. Do not record a session they did not ask for. get_study_history answers how often they studied, which topics got attention and which were neglected; list_study_notes finds what they or their partners wrote before. Notes are the members' own words and record; say whose a note is when you use it, and mark drafts as drafts.`;
+Members keep a record of their study: sessions (one sitting: when, how long, what kind, a summary and the topics it touched) and notes (alone or in a session, on a topic, lesson or exercise). When the person asks you to document a conversation or a practice session ("please document this", "log this session"), call record_study_session once, at the end: a summary in their voice of what was worked on, what came of it and what to try next; the topics touched; the minutes if known; kind 'conversation' for a talk with you; and a note for each distinct point worth finding again (a technique, a question still open, a page that helped), each tied to its topic, lesson or exercise where one fits. It is stored as a draft only they see until they publish it in the app; tell them so. Do not record a session they did not ask for. Groups also keep videos and links (get_study_group lists them under videos_and_links); you cannot watch a video or read its transcript, so what you know of one is its title, channel and the members' notes. A note can point at a moment in a video (resource_id and at, m:ss), which opens the video there; when the person mentions a moment, keep it. add_study_resource adds a video or link they give you, as a draft. get_study_history answers how often they studied, which topics got attention and which were neglected; list_study_notes finds what they or their partners wrote before. Notes are the members' own words and record; say whose a note is when you use it, and mark drafts as drafts.`;
 
 function json(value: unknown) {
   return { content: [{ type: 'text' as const, text: JSON.stringify(value, null, 2) }] };
@@ -292,14 +293,37 @@ export const handler = createMcpHandler(
                 topic: z.union([z.number().int(), z.string()]).optional(),
                 lesson_id: z.number().int().optional(),
                 exercise_id: z.number().int().optional(),
+                resource_id: z.number().int().optional().describe('a video or link from get_study_group'),
+                at: z.union([z.string(), z.number()]).optional().describe('a moment in that video, m:ss'),
               }),
             )
             .optional()
             .describe('at most 30'),
           private: z.boolean().optional().describe('true keeps it from the group even once published'),
+          resource_id: z.number().int().optional().describe('the video or link the session was spent on'),
         }),
       },
       async (args, ctx) => run(() => recordStudySessionTool(personFrom(ctx), appOrigin(ctx), args)),
+    );
+
+    server.registerTool(
+      'add_study_resource',
+      {
+        title: 'Add a video or link',
+        description:
+          'Add a YouTube video (played in the app; its title, channel and thumbnail come from YouTube) or another https ' +
+          'link (give a title) to a study group, optionally filed under topics (ids or titles) with why it is worth the ' +
+          'time. Stored as a draft only the person sees until they publish it on the Resources tab. Only when the person ' +
+          'asks and gives the address; you cannot watch a video, so describe it only from what the person says.',
+        inputSchema: z.object({
+          group_id: z.number().int().describe('a study group id'),
+          url: z.string().describe('the full address, https://'),
+          title: z.string().optional().describe('needed for a link that is not a YouTube video'),
+          why: z.string().optional().describe('why it is worth the time, in the person\'s words'),
+          topics: z.array(z.union([z.number().int(), z.string()])).optional(),
+        }),
+      },
+      async (args, ctx) => run(() => addStudyResourceTool(personFrom(ctx), appOrigin(ctx), args)),
     );
 
     server.registerTool(
@@ -339,6 +363,6 @@ export const handler = createMcpHandler(
   },
   {
     instructions: INSTRUCTIONS,
-    serverInfo: { name: 'bottega', version: '0.6.0' },
+    serverInfo: { name: 'bottega', version: '0.7.0' },
   },
 );

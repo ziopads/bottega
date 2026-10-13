@@ -3,8 +3,11 @@ import { NextResponse } from 'next/server';
 import { apiAccount } from '@/lib/access';
 import {
   addNote,
+  addResource,
   addTopic,
   createSession,
+  resourceFromUrl,
+  StudyError,
   getGroup,
   invite,
   leaveGroup,
@@ -19,6 +22,9 @@ import {
   parseIdList,
   parseMinutes,
   parseNoteBody,
+  parseResourceTitle,
+  parseResourceWhy,
+  parseSeconds,
   parseSessionKind,
   parseSessionSummary,
   parseStartedAt,
@@ -81,7 +87,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 //   { op: 'invite', email } | { op: 'withdraw', invitationId } | { op: 'remove', accountId } | { op: 'leave' }
 //   | { op: 'topic', title, summary?, modelId? }
 //   | { op: 'session', startedAt?, minutes?, kind?, summary?, private?, topicIds? }   the person's own, published
-//   | { op: 'note', body, sessionId?, topicId?, lessonId?, exerciseId?, private? }     the person's own
+//   | { op: 'note', body, sessionId?, topicId?, lessonId?, exerciseId?, resourceId?, at?, private? }   the person's own
+//   | { op: 'resource', url, title?, why?, topicIds? }   a YouTube video or a link
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const got = await load(ctx);
   if ('response' in got) return got.response;
@@ -128,6 +135,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       if ('error' in summary) return bad(summary.error);
       const topics = parseIdList(body.topicIds);
       if ('error' in topics) return bad(topics.error);
+      const resource = parseOptionalId(body.resourceId);
+      if ('error' in resource) return bad(resource.error);
       return answer(db, id, () =>
         createSession(
           db,
@@ -139,6 +148,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
             summary: summary.value,
             private: body.private === true,
             topicIds: topics.value,
+            resourceId: resource.value,
           },
           'human',
         ),
@@ -148,7 +158,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       const text = parseNoteBody(body.body);
       if ('error' in text) return bad(text.error);
       const ids: Record<string, number | null> = {};
-      for (const key of ['sessionId', 'topicId', 'lessonId', 'exerciseId']) {
+      const at = parseSeconds(body.at);
+      if ('error' in at) return bad(at.error);
+      for (const key of ['sessionId', 'topicId', 'lessonId', 'exerciseId', 'resourceId']) {
         const v = parseOptionalId(body[key]);
         if ('error' in v) return bad(v.error);
         ids[key] = v.value;
@@ -163,11 +175,30 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
             topicId: ids.topicId,
             lessonId: ids.lessonId,
             exerciseId: ids.exerciseId,
+            resourceId: ids.resourceId,
+            positionS: at.value,
             private: body.private === true,
           },
           'human',
         ),
       );
+    }
+    case 'resource': {
+      if (typeof body.url !== 'string' || !body.url.trim()) return bad('Give the address.');
+      const title = parseResourceTitle(body.title);
+      if ('error' in title) return bad(title.error);
+      const why = parseResourceWhy(body.why);
+      if ('error' in why) return bad(why.error);
+      const topics = parseIdList(body.topicIds);
+      if ('error' in topics) return bad(topics.error);
+      let input;
+      try {
+        input = await resourceFromUrl(body.url, { title: title.value, why: why.value, topicIds: topics.value });
+      } catch (err) {
+        if (err instanceof StudyError) return bad(err.message);
+        throw err;
+      }
+      return answer(db, id, () => addResource(db, id, input, 'human'));
     }
     default:
       return bad('Unknown operation');

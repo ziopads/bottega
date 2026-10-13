@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 
 import DocumentDetail from '@/app/_library/DocumentDetail';
 import { requireAccount } from '@/lib/access';
-import { getDocument } from '@/lib/documents';
+import { getDocument, structureSummary } from '@/lib/documents';
 import { listModels } from '@/lib/gear';
 import { documentGroups } from '@/lib/study';
 
@@ -21,5 +21,6 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
     ? (await listModels(db)).filter((m) => m.status === 'approved').map((m) => ({ id: m.id, manufacturer: m.manufacturer, model: m.model }))
     : [];
   const groups = (!doc.library && doc.level === 'owner') || (doc.library && doc.reviewStatus === 'approved') ? await documentGroups(db, id) : [];
-  return <DocumentDetail initial={doc} viewerId={userId} isAdmin={isPlatformAdmin} models={models} groups={groups} />;
+  const structure = doc.pagesExtracted > 0 ? await structureSummary(db, id) : null;
+  return <DocumentDetail initial={doc} viewerId={userId} isAdmin={isPlatformAdmin} models={models} groups={groups} structure={structure} />;
 }

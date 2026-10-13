@@ -27,6 +27,7 @@ export default function DocumentDetail({
   isAdmin,
   models,
   groups: initialGroups = [],
+  structure = null,
 }: {
   initial: StudioDocument;
   viewerId: string;
@@ -35,6 +36,8 @@ export default function DocumentDetail({
   models: Model[];
   /** Study groups whose reading list the viewer may change for this document, and whether it is on each (db/016, 019). */
   groups?: Group[];
+  /** Printed page numbers and contents (db/022), once text has been read. */
+  structure?: { labelled: number; hand: number; sections: number } | null;
 }) {
   const router = useRouter();
   const [doc, setDoc] = useState(initial);
@@ -246,7 +249,8 @@ export default function DocumentDetail({
           ]}
         />
       </Section>
-      {isAdmin && <MoveHome key={String(doc.library)} doc={doc} onMove={moveHome} />}
+      {structure && <PagesAndContents doc={doc} structure={structure} canEdit={canEdit} onDone={() => router.refresh()} setError={setError} />}
+    {isAdmin && <MoveHome key={String(doc.library)} doc={doc} onMove={moveHome} />}
     {groups.length > 0 && ((!doc.library && doc.level === 'owner') || (doc.library && doc.reviewStatus === 'approved')) && (
         <Section label="Study groups">
           <ul className="t-body space-y-1">
@@ -418,6 +422,92 @@ function MoveHome({ doc, onMove }: { doc: StudioDocument; onMove: (toLibrary: bo
             </button>
           </div>
         </div>
+      )}
+    </Section>
+  );
+}
+
+/**
+ * Printed page numbers and the PDF's contents (db/022). Read from the PDF
+ * when it is processed; read again here for a document processed before; and
+ * printed numbers set by hand for a range of pages, for a PDF without its own.
+ */
+function PagesAndContents({
+  doc,
+  structure,
+  canEdit,
+  onDone,
+  setError,
+}: {
+  doc: StudioDocument;
+  structure: { labelled: number; hand: number; sections: number };
+  canEdit: boolean;
+  onDone: () => void;
+  setError: (s: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState(doc.pageCount ? String(doc.pageCount) : '');
+  const [first, setFirst] = useState('1');
+  const [style, setStyle] = useState<'arabic' | 'roman' | 'none'>('arabic');
+
+  async function post(body: Record<string, unknown>) {
+    setError('');
+    setBusy(true);
+    const r = await api(`/api/documents/${doc.id}`, { method: 'POST', body: JSON.stringify(body) });
+    setBusy(false);
+    if (!r.ok) return setError(r.body.error || 'That did not go through.');
+    onDone();
+  }
+
+  return (
+    <Section label="Pages and contents">
+      <p className="t-body">
+        {structure.labelled
+          ? `${structure.labelled} pages carry a printed number${structure.hand ? ` (${structure.hand} set by hand)` : ''}.`
+          : 'No printed page numbers: pages are cited by their place in the PDF.'}{' '}
+        {structure.sections ? `The contents has ${structure.sections} entries.` : 'No contents (the PDF has no bookmarks, or they have not been read).'}
+      </p>
+      {canEdit && (
+        <>
+          <button onClick={() => post({ op: 'contents' })} disabled={busy} className={`t-body mt-2 ${TEXT_ACTION}`}>
+            {busy ? 'Reading…' : 'Read page numbers and contents from the PDF'}
+          </button>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              post({ op: 'labels', from, to, first: style === 'none' ? null : first, style });
+            }}
+            className="t-body mt-3 space-y-2"
+          >
+            <p className="t-label">Set printed numbers by hand</p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span>PDF pages</span>
+              <input value={from} onChange={(e) => setFrom(e.target.value)} inputMode="numeric" placeholder="13" aria-label="From PDF page" className={`${FIELD} t-num w-16`} />
+              <span>to</span>
+              <input value={to} onChange={(e) => setTo(e.target.value)} inputMode="numeric" aria-label="To PDF page" className={`${FIELD} t-num w-16`} />
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <select value={style} onChange={(e) => setStyle(e.target.value as 'arabic' | 'roman' | 'none')} aria-label="Numerals" className={FIELD}>
+                <option value="arabic">are printed 1, 2, 3…</option>
+                <option value="roman">are printed i, ii, iii…</option>
+                <option value="none">clear what was set by hand</option>
+              </select>
+              {style !== 'none' && (
+                <>
+                  <span>starting at</span>
+                  <input value={first} onChange={(e) => setFirst(e.target.value)} inputMode="numeric" aria-label="First printed number" className={`${FIELD} t-num w-16`} />
+                </>
+              )}
+              <button disabled={busy || !from || !to} className={BUTTON}>
+                Set
+              </button>
+            </div>
+            <p className="text-[11px] text-muted">
+              Check one page in the reader: if PDF page 824 shows 812 at its foot, the range starting at PDF page 13 is printed from 1.
+            </p>
+          </form>
+        </>
       )}
     </Section>
   );

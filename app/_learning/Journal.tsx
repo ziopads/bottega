@@ -8,9 +8,11 @@ import LessonBody from '@/app/_learning/LessonBody';
 import { formatWhen } from '@/app/_studio/Notes';
 import { Section } from '@/app/_ui/layout';
 import { BUTTON, BUTTON_PRIMARY, FIELD, TEXT_ACTION, TEXT_DANGER } from '@/app/_ui/styles';
+import { formatTime } from '@/lib/youtube';
 import {
   formatMinutes,
   lessonHref,
+  resourceHref,
   SESSION_KIND_LABEL,
   SESSION_KINDS,
   studyHistory,
@@ -146,6 +148,7 @@ export function NoteItem({
   const lesson = n.lessonId ? g.lessons.find((l) => l.id === n.lessonId) : null;
   const exercise = n.exerciseId ? g.exercises.find((e) => e.id === n.exerciseId) : null;
   const session = n.sessionId ? g.sessions.find((s) => s.id === n.sessionId) : null;
+  const resource = n.resourceId ? g.resources.find((r) => r.id === n.resourceId) : null;
 
   return (
     <li id={`note-${n.id}`} className="py-2">
@@ -159,6 +162,12 @@ export function NoteItem({
           </Link>
         )}
         {showContext && exercise && <span>· exercise: {exercise.task.slice(0, 60)}</span>}
+        {showContext && resource && (
+          <Link href={resourceHref(g.id, resource.id, n.positionS)} className="hover:text-rust">
+            · {resource.title}
+            {n.positionS !== null ? ` at ${formatTime(n.positionS)}` : ''}
+          </Link>
+        )}
         {showContext && session && (
           <Link href={tabHref(g.id, 'sessions', `session-${session.id}`)} className="hover:text-rust">
             · session of {dayOf(session.startedAt)}
@@ -184,7 +193,7 @@ export function NoteItem({
         </div>
       ) : (
         <div className="mt-0.5">
-          <LessonBody body={n.body} titles={titles} compact />
+          <LessonBody body={n.body} titles={titles} labels={g.pageLabels} compact />
         </div>
       )}
     </li>
@@ -212,13 +221,16 @@ function SessionForm({
   const [summary, setSummary] = useState(initial?.summary ?? '');
   const [topicIds, setTopicIds] = useState<number[]>(initial?.topicIds ?? []);
   const [isPrivate, setPrivate] = useState(initial?.private ?? false);
+  const [resourceId, setResourceId] = useState(initial?.resourceId ? String(initial.resourceId) : '');
   const topics = g.topics.filter((t) => t.review === 'accepted');
+  const resources = g.resources.filter((r) => r.published);
 
   return (
     <form
       onSubmit={async (e) => {
         e.preventDefault();
         const payload = {
+          resourceId: resourceId || null,
           startedAt: new Date(when).toISOString(),
           minutes: minutes || null,
           kind,
@@ -252,6 +264,16 @@ function SessionForm({
             </option>
           ))}
         </select>
+        {resources.length > 0 && (
+          <select value={resourceId} onChange={(e) => setResourceId(e.target.value)} aria-label="Spent on" className={`${FIELD} max-w-60`}>
+            <option value="">Not on a video</option>
+            {resources.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.title}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       {topics.length > 0 && (
         <fieldset className="flex flex-wrap gap-x-4 gap-y-1">
@@ -298,6 +320,7 @@ function SessionItem({ s, g, viewerId, titles, call, busy }: { s: StudySession; 
   const mine = s.authorId === viewerId && g.status === 'open';
   const notes = g.notes.filter((n) => n.sessionId === s.id).slice().reverse();
   const topicNames = s.topicIds.map((id) => g.topics.find((t) => t.id === id)?.title).filter(Boolean);
+  const spentOn = s.resourceId ? g.resources.find((r) => r.id === s.resourceId) : null;
 
   return (
     <li id={`session-${s.id}`} className="py-3">
@@ -330,6 +353,14 @@ function SessionItem({ s, g, viewerId, titles, call, busy }: { s: StudySession; 
         )}
       </div>
       {topicNames.length > 0 && <p className="text-[11px] text-muted">Topics: {topicNames.join(', ')}</p>}
+      {spentOn && (
+        <p className="text-[11px] text-muted">
+          On{' '}
+          <Link href={resourceHref(g.id, spentOn.id)} className="hover:text-rust">
+            {spentOn.title}
+          </Link>
+        </p>
+      )}
       {editing ? (
         <div className="mt-2">
           <SessionForm g={g} call={call} busy={busy} initial={s} onDone={() => setEditing(false)} />
@@ -337,7 +368,7 @@ function SessionItem({ s, g, viewerId, titles, call, busy }: { s: StudySession; 
       ) : (
         s.summary && (
           <div className="mt-1">
-            <LessonBody body={s.summary} titles={titles} compact />
+            <LessonBody body={s.summary} titles={titles} labels={g.pageLabels} compact />
           </div>
         )
       )}

@@ -1,6 +1,8 @@
 import { CITATION_SPAN_MAX, citationLabel, parseCitations, quoteFound } from '@/lib/citations';
 import type { Scoped } from '@/lib/db';
+import { pageLabels } from '@/lib/documents';
 import { accountNames, nameOf } from '@/lib/names';
+import { fetchVideoDetails, parseYouTubeId, watchUrl } from '@/lib/youtube';
 import type {
   PendingInvitation,
   Review,
@@ -14,6 +16,7 @@ import type {
   SessionKind,
   StudyNote,
   StudyProgressStatus,
+  StudyResource,
   StudySession,
   StudyTopic,
 } from '@/lib/studyTypes';
@@ -36,7 +39,7 @@ const iso = (v: unknown): string => (v instanceof Date ? v.toISOString() : Strin
 export class StudyError extends Error {}
 
 const READABLE =
-  /only an approved library manual|publishes it|stays published|session's topics belong|note's (session|topic|lesson|exercise)|stays with its group|custodian|already|no approved account|not a member|no invitation of yours|has already been answered|group is closed|accept its topic first|same topic|stays|only a proposal|open or closed|not shared; they are visible|cannot leave/;
+  /resource's topics belong|resource belongs|resource keeps|published resource|publishes a resource|only an approved library manual|publishes it|stays published|session's topics belong|note's (session|topic|lesson|exercise)|stays with its group|custodian|already|no approved account|not a member|no invitation of yours|has already been answered|group is closed|accept its topic first|same topic|stays|only a proposal|open or closed|not shared; they are visible|cannot leave/;
 
 async function run<T>(fn: () => Promise<T>): Promise<T> {
   try {
@@ -105,7 +108,8 @@ export async function listMyGroups(db: Scoped): Promise<{ groups: StudyGroupSumm
 
 /** One group with its whole syllabus, or null when the person is not a member. */
 export async function getGroup(db: Scoped, groupId: number): Promise<StudyGroup | null> {
-  const [groupRows, memberRows, inviteRows, topicRows, lessonRows, exerciseRows, progressRows, sharedRows, sessionRows, noteRows] = await db.tx([
+  const [groupRows, memberRows, inviteRows, topicRows, lessonRows, exerciseRows, progressRows, sharedRows, sessionRows, noteRows, resourceRows] =
+    await db.tx([
     {
       text: `select id, name, description, status, custodian_id, created_at from study_groups where id = $1 and study_member(id)`,
       params: [groupId],
@@ -143,14 +147,21 @@ export async function getGroup(db: Scoped, groupId: number): Promise<StudyGroup 
     },
     { text: 'select document_id from study_group_documents where group_id = $1', params: [groupId] },
     {
-      text: `select s.id, s.author_id, s.started_at, s.minutes, s.kind, s.summary, s.private, s.origin, s.published, s.created_at,
+      text: `select s.id, s.author_id, s.started_at, s.minutes, s.kind, s.summary, s.private, s.origin, s.published, s.created_at, s.resource_id,
                     coalesce((select array_agg(st.topic_id order by st.topic_id) from study_session_topics st where st.session_id = s.id), '{}') as topic_ids
                from study_sessions s where s.group_id = $1 order by s.started_at desc, s.id desc`,
       params: [groupId],
     },
     {
-      text: `select id, author_id, session_id, topic_id, lesson_id, exercise_id, body, private, origin, published, created_at, updated_at
+      text: `select id, author_id, session_id, topic_id, lesson_id, exercise_id, resource_id, position_s, body, private, origin, published,
+                    created_at, updated_at
                from study_notes where group_id = $1 order by created_at desc, id desc`,
+      params: [groupId],
+    },
+    {
+      text: `select r.id, r.kind, r.url, r.youtube_id, r.title, r.channel, r.thumbnail_url, r.why, r.added_by, r.origin, r.published, r.created_at,
+                    coalesce((select array_agg(rt.topic_id order by rt.topic_id) from study_resource_topics rt where rt.resource_id = r.id), '{}') as topic_ids
+               from study_resources r where r.group_id = $1 order by r.created_at desc, r.id desc`,
       params: [groupId],
     },
   ]);
@@ -166,6 +177,7 @@ export async function getGroup(db: Scoped, groupId: number): Promise<StudyGroup 
     ...progressRows.map((r) => str(r.account_id)),
     ...sessionRows.map((r) => str(r.author_id)),
     ...noteRows.map((r) => str(r.author_id)),
+    ...resourceRows.map((r) => str(r.added_by)),
   ]);
 
   const members: StudyMember[] = memberRows.map((r) => ({
@@ -241,6 +253,23 @@ export async function getGroup(db: Scoped, groupId: number): Promise<StudyGroup 
     origin: r.origin === 'assistant' ? 'assistant' : 'human',
     published: r.published === true,
     topicIds: ((r.topic_ids as unknown[]) ?? []).map(num),
+    resourceId: numOrNull(r.resource_id),
+    createdAt: iso(r.created_at),
+  }));
+  const resources: StudyResource[] = resourceRows.map((r) => ({
+    id: num(r.id),
+    kind: r.kind === 'link' ? 'link' : 'video',
+    url: str(r.url),
+    youtubeId: r.youtube_id === null ? null : str(r.youtube_id),
+    title: str(r.title),
+    channel: str(r.channel),
+    thumbnailUrl: str(r.thumbnail_url),
+    why: str(r.why),
+    addedById: str(r.added_by),
+    addedByName: nameOf(who, str(r.added_by)),
+    origin: r.origin === 'assistant' ? 'assistant' : 'human',
+    published: r.published === true,
+    topicIds: ((r.topic_ids as unknown[]) ?? []).map(num),
     createdAt: iso(r.created_at),
   }));
   const notes: StudyNote[] = noteRows.map((r) => ({
@@ -251,6 +280,8 @@ export async function getGroup(db: Scoped, groupId: number): Promise<StudyGroup 
     topicId: numOrNull(r.topic_id),
     lessonId: numOrNull(r.lesson_id),
     exerciseId: numOrNull(r.exercise_id),
+    resourceId: numOrNull(r.resource_id),
+    positionS: numOrNull(r.position_s),
     body: str(r.body),
     private: r.private === true,
     origin: r.origin === 'assistant' ? 'assistant' : 'human',
@@ -274,9 +305,14 @@ export async function getGroup(db: Scoped, groupId: number): Promise<StudyGroup 
       citedBy.set(c.documentId, set);
     }
   }
-  for (const text of [...sessions.map((x) => x.summary), ...notes.map((x) => x.body)]) {
-    for (const c of parseCitations(text)) mentioned.add(c.documentId);
+  const citedPages: { documentId: number; page: number }[] = [];
+  for (const text of [...lessons.filter((l) => l.review !== 'rejected').map((l) => l.body), ...sessions.map((x) => x.summary), ...notes.map((x) => x.body)]) {
+    for (const c of parseCitations(text)) {
+      mentioned.add(c.documentId);
+      for (let p = c.from; p <= Math.min(c.to, c.from + 10); p++) citedPages.push({ documentId: c.documentId, page: p });
+    }
   }
+  const labels = await pageLabels(db, citedPages);
   const docIds = Array.from(new Set([...shared, ...mentioned]));
   const docRows = docIds.length
     ? await db.q(
@@ -318,11 +354,13 @@ export async function getGroup(db: Scoped, groupId: number): Promise<StudyGroup 
     documents,
     sessions,
     notes,
+    resources,
+    pageLabels: Object.fromEntries(labels),
   };
 }
 
 /** The group a topic, lesson or exercise belongs to, or null when the person cannot see it. */
-export async function groupOf(db: Scoped, kind: 'topic' | 'lesson' | 'exercise' | 'invitation' | 'session' | 'note', id: number): Promise<number | null> {
+export async function groupOf(db: Scoped, kind: 'topic' | 'lesson' | 'exercise' | 'invitation' | 'session' | 'note' | 'resource', id: number): Promise<number | null> {
   const sql = {
     topic: 'select group_id from study_topics where id = $1',
     lesson: 'select t.group_id from study_lessons l join study_topics t on t.id = l.topic_id where l.id = $1',
@@ -330,6 +368,7 @@ export async function groupOf(db: Scoped, kind: 'topic' | 'lesson' | 'exercise' 
     invitation: 'select group_id from study_group_invitations where id = $1',
     session: 'select group_id from study_sessions where id = $1',
     note: 'select group_id from study_notes where id = $1',
+    resource: 'select group_id from study_resources where id = $1',
   }[kind];
   const rows = await db.q(sql, [id]);
   return rows.length ? num(rows[0].group_id) : null;
@@ -582,6 +621,8 @@ export interface NoteInput {
   topicId?: number | null;
   lessonId?: number | null;
   exerciseId?: number | null;
+  resourceId?: number | null;
+  positionS?: number | null;
   private?: boolean;
 }
 
@@ -592,6 +633,7 @@ export interface SessionInput {
   summary: string;
   private: boolean;
   topicIds: number[];
+  resourceId?: number | null;
 }
 
 const SESSION_ID = `currval(pg_get_serial_sequence('study_sessions', 'id'))`;
@@ -607,18 +649,28 @@ export async function createSession(db: Scoped, groupId: number, s: SessionInput
   const results = await run(() =>
     db.tx([
       {
-        text: `insert into study_sessions (group_id, started_at, minutes, kind, summary, private, origin)
-               values ($1, coalesce($2::timestamptz, now()), $3, $4, $5, $6, $7) returning id`,
-        params: [groupId, s.startedAt, s.minutes, s.kind, s.summary, s.private, origin],
+        text: `insert into study_sessions (group_id, started_at, minutes, kind, summary, private, origin, resource_id)
+               values ($1, coalesce($2::timestamptz, now()), $3, $4, $5, $6, $7, $8) returning id`,
+        params: [groupId, s.startedAt, s.minutes, s.kind, s.summary, s.private, origin, s.resourceId ?? null],
       },
       {
         text: `insert into study_session_topics (session_id, topic_id) select ${SESSION_ID}, t from unnest($1::bigint[]) as t`,
         params: [Array.from(new Set(s.topicIds))],
       },
       ...notes.map((n) => ({
-        text: `insert into study_notes (group_id, session_id, topic_id, lesson_id, exercise_id, body, private, origin)
-               values ($1, ${SESSION_ID}, $2, $3, $4, $5, $6, $7)`,
-        params: [groupId, n.topicId ?? null, n.lessonId ?? null, n.exerciseId ?? null, n.body, n.private ?? false, origin],
+        text: `insert into study_notes (group_id, session_id, topic_id, lesson_id, exercise_id, resource_id, position_s, body, private, origin)
+               values ($1, ${SESSION_ID}, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        params: [
+          groupId,
+          n.topicId ?? null,
+          n.lessonId ?? null,
+          n.exerciseId ?? null,
+          n.resourceId ?? null,
+          n.positionS ?? null,
+          n.body,
+          n.private ?? false,
+          origin,
+        ],
       })),
     ]),
   );
@@ -627,7 +679,14 @@ export async function createSession(db: Scoped, groupId: number, s: SessionInput
 
 export async function updateSession(db: Scoped, id: number, patch: Partial<SessionInput>): Promise<void> {
   if (typeof patch.summary === 'string') await citationsOk(db, patch.summary);
-  const cols: Record<string, string> = { startedAt: 'started_at', minutes: 'minutes', kind: 'kind', summary: 'summary', private: 'private' };
+  const cols: Record<string, string> = {
+    startedAt: 'started_at',
+    minutes: 'minutes',
+    kind: 'kind',
+    summary: 'summary',
+    private: 'private',
+    resourceId: 'resource_id',
+  };
   const sets: string[] = [];
   const params: unknown[] = [id];
   for (const [key, col] of Object.entries(cols)) {
@@ -666,9 +725,20 @@ export async function addNote(db: Scoped, groupId: number, n: NoteInput & { sess
   await citationsOk(db, n.body);
   const rows = await run(() =>
     db.q(
-      `insert into study_notes (group_id, session_id, topic_id, lesson_id, exercise_id, body, private, origin)
-       values ($1, $2, $3, $4, $5, $6, $7, $8) returning id`,
-      [groupId, n.sessionId ?? null, n.topicId ?? null, n.lessonId ?? null, n.exerciseId ?? null, n.body, n.private ?? false, origin],
+      `insert into study_notes (group_id, session_id, topic_id, lesson_id, exercise_id, resource_id, position_s, body, private, origin)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id`,
+      [
+        groupId,
+        n.sessionId ?? null,
+        n.topicId ?? null,
+        n.lessonId ?? null,
+        n.exerciseId ?? null,
+        n.resourceId ?? null,
+        n.positionS ?? null,
+        n.body,
+        n.private ?? false,
+        origin,
+      ],
     ),
   );
   return num(rows[0].id);
@@ -676,7 +746,15 @@ export async function addNote(db: Scoped, groupId: number, n: NoteInput & { sess
 
 export async function updateNote(db: Scoped, id: number, patch: Partial<NoteInput>): Promise<void> {
   if (typeof patch.body === 'string') await citationsOk(db, patch.body);
-  const cols: Record<string, string> = { body: 'body', topicId: 'topic_id', lessonId: 'lesson_id', exerciseId: 'exercise_id', private: 'private' };
+  const cols: Record<string, string> = {
+    body: 'body',
+    topicId: 'topic_id',
+    lessonId: 'lesson_id',
+    exerciseId: 'exercise_id',
+    resourceId: 'resource_id',
+    positionS: 'position_s',
+    private: 'private',
+  };
   const sets: string[] = [];
   const params: unknown[] = [id];
   for (const [key, col] of Object.entries(cols)) {
@@ -694,4 +772,116 @@ export async function updateNote(db: Scoped, id: number, patch: Partial<NoteInpu
 export async function discardNote(db: Scoped, id: number): Promise<void> {
   const rows = await run(() => db.q('delete from study_notes where id = $1 returning id', [id]));
   if (!rows.length) throw new StudyError('Only a draft note can be discarded, by its author.');
+}
+
+// ── Resources (db/020) ───────────────────────────────────────────────────────
+
+export interface ResourceInput {
+  kind: 'video' | 'link';
+  url: string;
+  youtubeId: string | null;
+  title: string;
+  channel: string;
+  thumbnailUrl: string;
+  why: string;
+  topicIds: number[];
+}
+
+const RESOURCE_ID = `currval(pg_get_serial_sequence('study_resources', 'id'))`;
+
+/** Adds a video or link to a group, with its topics; origin 'assistant' makes it a draft. Returns its id. */
+export async function addResource(db: Scoped, groupId: number, r: ResourceInput, origin: Origin): Promise<number> {
+  try {
+    const results = await run(() =>
+      db.tx([
+        {
+          text: `insert into study_resources (group_id, kind, url, youtube_id, title, channel, thumbnail_url, why, origin)
+                 values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning id`,
+          params: [groupId, r.kind, r.url, r.youtubeId, r.title, r.channel, r.thumbnailUrl, r.why, origin],
+        },
+        {
+          text: `insert into study_resource_topics (resource_id, topic_id) select ${RESOURCE_ID}, t from unnest($1::bigint[]) as t`,
+          params: [Array.from(new Set(r.topicIds))],
+        },
+      ]),
+    );
+    return num(results[0][0].id);
+  } catch (err) {
+    const msg = (err as { message?: string })?.message ?? '';
+    if (/study_resources_group_video/.test(msg)) throw new StudyError('That video is already in this group.');
+    throw err;
+  }
+}
+
+/** The person's own resource: its title, why, and topics. */
+export async function updateResource(db: Scoped, id: number, patch: { title?: string; why?: string; topicIds?: number[] }): Promise<void> {
+  const sets: string[] = [];
+  const params: unknown[] = [id];
+  if (patch.title !== undefined) {
+    params.push(patch.title);
+    sets.push(`title = $${params.length}`);
+  }
+  if (patch.why !== undefined) {
+    params.push(patch.why);
+    sets.push(`why = $${params.length}`);
+  }
+  const statements = [{ text: `update study_resources set ${sets.length ? sets.join(', ') : 'why = why'} where id = $1 returning id`, params }];
+  if (patch.topicIds) {
+    statements.push(
+      { text: 'delete from study_resource_topics where resource_id = $1 returning resource_id', params: [id] },
+      {
+        text: 'insert into study_resource_topics (resource_id, topic_id) select $1, t from unnest($2::bigint[]) as t returning resource_id',
+        params: [id, Array.from(new Set(patch.topicIds))],
+      },
+    );
+  }
+  const results = await run(() => db.tx(statements));
+  if (!results[0].length) throw new StudyError('Only the member who added it changes a resource, while the group is open.');
+}
+
+export async function publishResource(db: Scoped, id: number): Promise<void> {
+  await run(() => db.q('select study_resource_publish($1)', [id]));
+}
+
+/** Its adder or the custodian removes a resource; its notes stay, without it. */
+export async function removeResource(db: Scoped, id: number): Promise<void> {
+  const rows = await run(() => db.q('delete from study_resources where id = $1 returning id', [id]));
+  if (!rows.length) throw new StudyError('Only the member who added it, or the custodian, removes a resource.');
+}
+
+/**
+ * What to store for an address someone gave: a YouTube video (its id, and
+ * title, channel and thumbnail from oEmbed; a title given wins), or a link,
+ * which needs a title. Refusals are worded to be shown.
+ */
+export async function resourceFromUrl(
+  rawUrl: string,
+  given: { title: string; why: string; topicIds: number[] },
+): Promise<ResourceInput> {
+  const url = rawUrl.trim();
+  if (!/^https:\/\//i.test(url) || url.length > 2000) throw new StudyError('Give the full address, starting https://.');
+  try {
+    new URL(url);
+  } catch {
+    throw new StudyError('That is not a web address.');
+  }
+  const youtubeId = parseYouTubeId(url);
+  if (youtubeId) {
+    const details = await fetchVideoDetails(youtubeId);
+    if (!details && !given.title) {
+      throw new StudyError('YouTube did not describe that video (private, removed, or not embeddable). Give it a title to add it anyway.');
+    }
+    return {
+      kind: 'video',
+      url: watchUrl(youtubeId),
+      youtubeId,
+      title: given.title || details?.title || 'Untitled video',
+      channel: details?.channel ?? '',
+      thumbnailUrl: details?.thumbnailUrl ?? `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg`,
+      why: given.why,
+      topicIds: given.topicIds,
+    };
+  }
+  if (!given.title) throw new StudyError('For a link that is not a YouTube video, give a title.');
+  return { kind: 'link', url, youtubeId: null, title: given.title, channel: '', thumbnailUrl: '', why: given.why, topicIds: given.topicIds };
 }

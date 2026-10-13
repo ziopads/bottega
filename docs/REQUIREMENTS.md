@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.20
+**Version:** 0.22
 **Date:** 2026-10-12
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -9,6 +9,13 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.22** (2026-10-12) — Printed page numbers and a document's contents
+  (K-13, K-14); searching from the app (K-15); a limit on sign-in and
+  sign-up attempts (AC-14).
+
+- **0.21** (2026-10-12) — Videos and links in a study group (L-23 built):
+  YouTube videos played in the app, notes at moments in them.
 
 - **0.20** (2026-10-12) — A study group's reading list (L-24): library
   manuals and members' documents the group studies from, which Claude's
@@ -214,6 +221,11 @@ place they left.
   reason. Entries cannot be edited or deleted.
 - **AC-12** Owners see the log entries that concern their own items and
   account; the platform administrator sees all of it.
+- **AC-14** Sign-in and sign-up attempts are limited by Bottega itself:
+  after 5 failed sign-ins for one email, or 20 from one address, within 15
+  minutes, or 5 sign-ups from one address within an hour, further attempts
+  wait. Only hashes of emails and addresses are kept, for a day. Built 12
+  October 2026 (migration 021).
 - **AC-13** A person manages their own account from the account page: the
   display name others see (the change is logged), their artists (add,
   rename, delete one nothing is credited to), every share they have granted
@@ -502,6 +514,20 @@ there may be lost in the move.
   model links; moving in approves it and removes its shares. Pages are kept,
   and every move is logged. Built 12 October 2026 (migration 018).
 
+- **K-13** Printed page numbers. A page's printed number is read from the
+  PDF's own page labels when it has them, or set by hand for a range of PDF
+  pages (arabic or roman, starting at a given number), which takes precedence
+  and can be cleared. The reader, lesson citations and the connector show it
+  beside the PDF page: "p. 812 (PDF p. 824)". Citations stay by PDF page.
+  Built 12 October 2026 (migration 022).
+- **K-14** Contents. The PDF's outline (bookmarks) is read when the document
+  is processed, or on request for one processed before; the reader lists it
+  and names the section a page is in, and so does the connector's read_pages.
+  Built 12 October 2026 (migration 022).
+- **K-15** Searching from the app: the same search Claude uses, over the
+  person's documents and gear manuals, the whole library, or a study group's
+  reading list, each passage linking to the page reader. Built 12 October 2026.
+
 ## 9. Analysis (A)
 
 Runs on the studio machine, where the sessions and audio live. Only the results
@@ -614,8 +640,13 @@ travel to the database.
   When Claude works on the group it searches the reading list only, unless
   asked to search more widely. Lesson citations may still cite any document
   the writer can read. Built 12 October 2026 (migration 019).
-- **L-23** (planned) Resources: videos, articles and pages any member adds,
-  filed under topics, with notes pointing at moments in a video.
+- **L-23** Resources: any member adds a YouTube video (played in the app;
+  title, channel and thumbnail from YouTube) or another link, filed under
+  topics, with why it is worth the time. Notes can point at a moment in a
+  video, which opens it there; a session can name the video it was spent on.
+  Claude adds one when asked, as a draft its member publishes. The member who
+  added it, or the custodian, removes it; its notes stay. Built 12 October
+  2026 (migration 020).
 - **L-17** Joining is by invitation only in the first slice; invitations go
   to approved accounts by email, and the invitee accepts or declines on the
   Learning page. The custodian cannot leave or be removed until handover

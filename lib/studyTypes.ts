@@ -162,8 +162,33 @@ export interface StudySession {
   origin: 'human' | 'assistant';
   published: boolean;
   topicIds: number[];
+  /** The video or link the session was spent on (020). */
+  resourceId: number | null;
   createdAt: string;
 }
+
+/** A video (YouTube, played in the app) or a link a member added to the group (db/020). */
+export interface StudyResource {
+  id: number;
+  kind: 'video' | 'link';
+  url: string;
+  youtubeId: string | null;
+  title: string;
+  channel: string;
+  thumbnailUrl: string;
+  why: string;
+  addedById: string;
+  addedByName: string;
+  origin: 'human' | 'assistant';
+  /** False for Claude's draft, seen only by the member it acted for. */
+  published: boolean;
+  topicIds: number[];
+  createdAt: string;
+}
+
+export const RESOURCE_WHY_MAX = 1000;
+export const resourceHref = (groupId: number, resourceId: number, at?: number | null) =>
+  `/learning/${groupId}/resources/${resourceId}${at !== undefined && at !== null ? `?t=${Math.floor(at)}` : ''}`;
 
 /** A member's note, alone or in one of their sessions (db/017). */
 export interface StudyNote {
@@ -174,6 +199,9 @@ export interface StudyNote {
   topicId: number | null;
   lessonId: number | null;
   exerciseId: number | null;
+  /** A video and the moment in it the note is about (020). */
+  resourceId: number | null;
+  positionS: number | null;
   body: string;
   private: boolean;
   origin: 'human' | 'assistant';
@@ -200,6 +228,10 @@ export interface StudyGroup {
   /** Newest first: the viewer's own (drafts included) and others' published, shared ones. */
   sessions: StudySession[];
   notes: StudyNote[];
+  /** Newest first: published ones, and the viewer's own drafts. */
+  resources: StudyResource[];
+  /** Printed page numbers of the pages cited anywhere in the group, "docId:page" → label (db/022). */
+  pageLabels: Record<string, string>;
 }
 
 export function isCustodian(g: Pick<StudyGroup, 'custodianId'>, viewerId: string): boolean {

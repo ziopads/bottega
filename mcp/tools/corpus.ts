@@ -4,7 +4,7 @@
 // person can check it.
 
 import type { Scoped } from '@/lib/db';
-import { getDocument, listDocuments, readPages } from '@/lib/documents';
+import { getDocument, listDocuments, pageContext, pageLabels, readPages } from '@/lib/documents';
 import { DOCUMENT_KIND_LABEL } from '@/lib/documentTypes';
 import { MAX_PAGES, searchCorpus, type SearchScope } from '@/lib/search';
 import { ToolError } from '@/mcp/context';
@@ -49,6 +49,7 @@ export async function searchTool(
     }
   }
   const r = await searchCorpus(db, { query, scope: args.scope, documentIds: args.documents, limit: args.limit, groupId: args.group ?? null });
+  const printed = await pageLabels(db, r.hits.map((h) => ({ documentId: h.documentId, page: h.firstPage })));
   return {
     query,
     scope: args.group !== undefined ? `study group ${args.group}'s reading list` : (args.scope ?? 'mine'),
@@ -59,6 +60,7 @@ export async function searchTool(
       document: h.title,
       about: [h.manufacturer, h.model].filter(Boolean).join(' ') || null,
       pages: h.firstPage === h.lastPage ? `${h.firstPage}` : `${h.firstPage}–${h.lastPage}`,
+      printed_page: printed.get(`${h.documentId}:${h.firstPage}`),
       found_by: h.by.join(' and '),
       text: h.text,
       read: readerUrl(origin, h.documentId, h.firstPage, query),
@@ -76,14 +78,21 @@ export async function readPagesTool(db: Scoped, origin: string, args: { document
   const from = Math.max(1, Math.floor(args.from));
   const to = Math.min(Math.floor(args.to ?? from), from + MAX_PAGES - 1, total || from);
   if (total && from > total) throw new ToolError(`${doc.title} has ${total} pages.`);
-  const pages = await readPages(db, doc.id, from, to);
+  const [pages, context] = await Promise.all([readPages(db, doc.id, from, to), pageContext(db, doc.id, from, to)]);
   return {
     document_id: doc.id,
     document: doc.title,
     pages_in_document: total || null,
-    pages: pages.map((p) => ({ page: p.page, text: p.text, read: readerUrl(origin, doc.id, p.page) })),
+    pages: pages.map((p) => ({
+      page: p.page,
+      printed: context.get(p.page)?.label ?? undefined,
+      section: context.get(p.page)?.section ?? undefined,
+      text: p.text,
+      read: readerUrl(origin, doc.id, p.page),
+    })),
     note:
       (to - from + 1 < (args.to ?? from) - from + 1 ? `At most ${MAX_PAGES} pages per call. ` : '') +
-      'Pages are PDF pages, from 1; printed page numbers may differ. Cite them as "PDF p." with the link.',
+      'Pages are PDF pages, from 1; printed is the number on the page itself where known. Cite by PDF page (the markers ' +
+      'and links use it), and give the printed number beside it when there is one: "p. 812 (PDF p. 824)".',
   };
 }

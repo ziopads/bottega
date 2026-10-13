@@ -87,3 +87,16 @@ export function parseIdList(raw: unknown): Parsed<number[]> {
   const ids = raw.map(Number);
   return ids.every((n) => Number.isInteger(n) && n > 0) ? { value: ids } : { error: 'Invalid id in the list.' };
 }
+
+export const parseResourceWhy = (raw: unknown) => longText(raw, 'Why it is worth the time', 1000, false);
+export const parseResourceTitle = (raw: unknown) => text(raw, 'The title', 300, false);
+
+/** A moment, as seconds or "4:32"; null when absent. */
+export function parseSeconds(raw: unknown): Parsed<number | null> {
+  if (raw === undefined || raw === null || raw === '') return { value: null };
+  if (typeof raw === 'number') return raw >= 0 && raw < 86400 ? { value: raw } : { error: 'That moment is out of range.' };
+  if (typeof raw !== 'string') return { error: 'Give the moment as m:ss.' };
+  const t = raw.trim();
+  const n = /^\d+(\.\d+)?$/.test(t) ? Number(t) : t.split(':').every((p) => /^\d+$/.test(p)) && t.includes(':') ? t.split(':').reduce((a, p) => a * 60 + Number(p), 0) : NaN;
+  return Number.isFinite(n) && n >= 0 && n < 86400 ? { value: n } : { error: `"${raw}" is not a moment; write it as m:ss, such as 4:32.` };
+}

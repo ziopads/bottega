@@ -12,13 +12,28 @@
 
 import type { Scoped } from '@/lib/db';
 import { listModels } from '@/lib/gear';
-import { addExercise, addLesson, addTopic, checkCitations, createSession, getGroup, groupOf, listMyGroups, StudyError } from '@/lib/study';
+import {
+  addExercise,
+  addLesson,
+  addResource,
+  addTopic,
+  checkCitations,
+  createSession,
+  getGroup,
+  groupOf,
+  listMyGroups,
+  resourceFromUrl,
+  StudyError,
+} from '@/lib/study';
 import {
   parseExerciseDone,
   parseLessonBody,
   parseLessonTitle,
   parseMinutes,
   parseNoteBody,
+  parseResourceTitle,
+  parseResourceWhy,
+  parseSeconds,
   parseSessionKind,
   parseSessionSummary,
   parseStartedAt,
@@ -26,7 +41,8 @@ import {
   parseTopicSummary,
   parseTopicTitle,
 } from '@/lib/studyInput';
-import { lessonHref, studyHistory, tabHref, type StudyGroup } from '@/lib/studyTypes';
+import { lessonHref, resourceHref, studyHistory, tabHref, type StudyGroup } from '@/lib/studyTypes';
+import { formatTime } from '@/lib/youtube';
 import { ToolError } from '@/mcp/context';
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -136,6 +152,20 @@ export async function getStudyGroupTool(db: Scoped, origin: string, args: { id?:
         kind: d.library ? 'library manual' : 'shared by a member',
         searchable: d.pagesDone === 0 ? 'not yet' : d.pageCount !== null && d.pagesDone < d.pageCount ? `pages 1–${d.pagesDone}` : 'yes',
         cited_in_lessons: d.citedBy || undefined,
+      })),
+    videos_and_links: g.resources
+      .filter((r) => r.published || r.addedById === me)
+      .map((r) => ({
+        resource_id: r.id,
+        kind: r.kind,
+        title: r.title,
+        channel: r.channel || undefined,
+        topics: r.topicIds.map((t) => g.topics.find((x) => x.id === t)?.title),
+        why: r.why || undefined,
+        added_by: r.addedByName,
+        notes: g.notes.filter((n) => n.resourceId === r.id).length || undefined,
+        draft: !r.published || undefined,
+        link: `${origin}${resourceHref(g.id, r.id)}`,
       })),
     cited_not_on_list: g.documents
       .filter((d) => !d.sharedWithGroup && d.citedBy > 0)
@@ -260,11 +290,19 @@ export async function recordStudySessionTool(
     minutes?: number;
     started_at?: string;
     topics?: (string | number)[];
-    notes?: { body: string; topic?: string | number; lesson_id?: number; exercise_id?: number }[];
+    notes?: { body: string; topic?: string | number; lesson_id?: number; exercise_id?: number; resource_id?: number; at?: string | number }[];
     private?: boolean;
+    resource_id?: number;
   },
 ) {
   const g = await memberGroup(db, args.group_id);
+  const resourceOf = (id: number | undefined, where: string) => {
+    if (id === undefined) return null;
+    const r = g.resources.find((x) => x.id === id);
+    if (!r) throw new ToolError(`${where}: no video or link ${id} in ${g.name}; get_study_group lists them.`);
+    return r;
+  };
+  const spentOn = resourceOf(args.resource_id, 'resource_id');
   const summary = clean(parseSessionSummary(args.summary));
   if (!summary) throw new ToolError('Give the session a summary: what was worked on, what came of it, what to try next.');
   const kind = clean(parseSessionKind(args.kind));
@@ -280,7 +318,13 @@ export async function recordStudySessionTool(
     if (n.lesson_id !== undefined && !lesson) throw new ToolError(`Note ${i + 1}: no lesson ${n.lesson_id} in ${g.name}.`);
     const exercise = n.exercise_id === undefined ? null : g.exercises.find((e) => e.id === n.exercise_id && e.review !== 'rejected');
     if (n.exercise_id !== undefined && !exercise) throw new ToolError(`Note ${i + 1}: no exercise ${n.exercise_id} in ${g.name}.`);
+    const resource = resourceOf(n.resource_id, `Note ${i + 1}`);
+    const at = parseSeconds(n.at);
+    if ('error' in at) throw new ToolError(`Note ${i + 1}: ${at.error}`);
+    if (at.value !== null && !resource) throw new ToolError(`Note ${i + 1}: a moment needs resource_id, the video it is in.`);
     return {
+      resourceId: resource?.id ?? null,
+      positionS: at.value,
       body: body.value,
       topicId: n.topic !== undefined ? topicId(g, n.topic) : (lesson?.topicId ?? exercise?.topicId ?? null),
       lessonId: lesson?.id ?? null,
@@ -288,7 +332,13 @@ export async function recordStudySessionTool(
     };
   });
   const id = await readable(() =>
-    createSession(db, g.id, { startedAt, minutes, kind, summary, private: args.private === true, topicIds }, 'assistant', notes),
+    createSession(
+      db,
+      g.id,
+      { startedAt, minutes, kind, summary, private: args.private === true, topicIds, resourceId: spentOn?.id ?? null },
+      'assistant',
+      notes,
+    ),
   );
   return {
     recorded: {
@@ -337,6 +387,10 @@ export async function listStudyNotesTool(
       lesson: title(n.lessonId, g.lessons),
       exercise: n.exerciseId === null ? undefined : g.exercises.find((e) => e.id === n.exerciseId)?.task,
       session_id: n.sessionId ?? undefined,
+      video:
+        n.resourceId === null
+          ? undefined
+          : `${g.resources.find((r) => r.id === n.resourceId)?.title ?? n.resourceId}${n.positionS !== null ? ` at ${formatTime(n.positionS)}` : ''}`,
       text: n.body,
       draft: !n.published || undefined,
       private: n.private || undefined,
@@ -386,5 +440,25 @@ export async function getStudyHistoryTool(db: Scoped, origin: string, args: { gr
     note:
       'Counts published sessions the person can see; minutes of a session are split evenly over the topics it touched. ' +
       'list_study_notes gives the notes behind a session or topic.',
+  };
+}
+
+export async function addStudyResourceTool(
+  db: Scoped,
+  origin: string,
+  args: { group_id: number; url: string; title?: string; why?: string; topics?: (string | number)[] },
+) {
+  const g = await memberGroup(db, args.group_id);
+  const title = clean(parseResourceTitle(args.title ?? ''));
+  const why = clean(parseResourceWhy(args.why ?? ''));
+  const topicIds = (args.topics ?? []).map((t) => topicId(g, t));
+  const input = await readable(() => resourceFromUrl(args.url, { title, why, topicIds }));
+  const id = await readable(() => addResource(db, g.id, input, 'assistant'));
+  return {
+    added: { resource_id: id, kind: input.kind, title: input.title, channel: input.channel || undefined, topics: topicIds.length || undefined },
+    link: `${origin}${resourceHref(g.id, id)}`,
+    next:
+      'Stored as a draft only the person sees, marked as added by Claude. Tell them it waits on the Resources tab to publish or discard. ' +
+      'Notes can now point at moments in it (record_study_session notes with resource_id and at).',
   };
 }

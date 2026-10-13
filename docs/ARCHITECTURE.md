@@ -1,6 +1,6 @@
 # Bottega — architecture
 
-**Version:** 0.10
+**Version:** 0.12
 **Date:** 2026-10-12
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
@@ -9,6 +9,14 @@ story IDs below (S-3, W-6 and so on) refer to it.
 ---
 
 ## Changelog
+
+- **0.12** (2026-10-12) — `auth_attempts` (021); `document_page_labels` and
+  `document_sections` (022), read with PDF.js through unpdf during
+  processing; the search page.
+
+- **0.11** (2026-10-12) — Study resources (migration 020): videos and links,
+  notes at moments, YouTube's IFrame Player API in the app; connector tool
+  `add_study_resource` (§6).
 
 - **0.10** (2026-10-12) — `study_group_documents` becomes a group's reading
   list and takes approved library manuals (migration 019); corpus search
@@ -336,9 +344,17 @@ moved, so two open pages cannot process the same pages twice.
   note in a session also needs the session visible: `study_session_visible()`).
   A session and its notes are written in one transaction, the notes taking
   the new session's id from `currval(pg_get_serial_sequence(...))`.
-- Later: question and answer notes, `study_resources` (video, article, page;
-  topics; notes at a moment), `instruments` (member, MPC model, firmware),
-  join requests.
+- Built (020): `study_resources` (group, kind video or link, https url,
+  YouTube id unique per group, title, channel, thumbnail, why, added by,
+  origin, published), `study_resource_topics`; `study_notes.resource_id` and
+  `position_s` (a moment, cleared without a resource); `study_sessions.resource_id`.
+  Claude's resources arrive unpublished; `study_resource_publish()`. Title,
+  channel and thumbnail come from YouTube's oEmbed endpoint when added
+  (`lib/youtube.ts`, no key); the watch page plays the video through the
+  IFrame Player API from youtube-nocookie.com (`app/_learning/VideoPlayer.tsx`),
+  reading the current time for "note at" and seeking to a note's moment.
+- Later: question and answer notes, `instruments` (member, MPC model,
+  firmware), join requests.
 - Citations are not stored apart from the lesson body: `lib/citations.ts`
   parses the markers (`[15:p42]`, `[15:p42-43]`, `[15:p42 "words"]`) for the
   checker (`checkCitations()` in `lib/study.ts`, run on every save, by a
@@ -394,7 +410,7 @@ them.
 | Phase | Tools |
 |---|---|
 | 1 | `list_documents` ✓, `search` ✓, `read_pages` ✓, `find_gear`, `get_gear`, `list_projects` ✓, `get_session` ✓ (named `get_project` in earlier drafts) |
-| 2 | `get_board`, `draft_card` ✓, `draft_criteria` ✓, `get_study_group` ✓ (syllabus, proposals and progress), `draft_topic` ✓, `draft_lesson` ✓, `draft_exercise` ✓, `record_study_session` ✓, `list_study_notes` ✓, `get_study_history` ✓ |
+| 2 | `get_board`, `draft_card` ✓, `draft_criteria` ✓, `get_study_group` ✓ (syllabus, proposals and progress), `draft_topic` ✓, `draft_lesson` ✓, `draft_exercise` ✓, `record_study_session` ✓, `list_study_notes` ✓, `get_study_history` ✓, `add_study_resource` ✓ |
 | 3 | `get_analysis`, `compare_to_reference` |
 
 A study group's reading list (019) is a search scope of its own:
@@ -736,6 +752,26 @@ for the contributor if rejected); a private document takes the project rules:
 | `processing_usage` | your own; the administrator all | only through `claim_pages()` and `record_tokens()` | never |
 
 `shares` gains `document_id`, with the same rules as projects and gear.
+
+### Printed page numbers and contents (migration 022)
+
+- `document_page_labels` — document, PDF page, `pdf_label` (from the PDF's
+  /PageLabels, kept only where it differs from the page's place) and
+  `hand_label` (set for a range by `document_label_range()`); the hand label
+  wins, `page_label()` answers for one page.
+- `document_sections` — the outline, in order: level, title, start page.
+- Both are read in one pass by `readPdfStructure()` (`lib/pdf.ts`, PDF.js's
+  `getPageLabels` and `getOutline` through unpdf) on the first processing
+  batch, and again on request (`POST /api/documents/[id]` `op: 'contents'`).
+  Policies follow `document_rank`: read at 1, written at 3.
+
+### Sign-in attempts (migration 021)
+
+`auth_attempts` keeps, for a day, each sign-in or sign-up attempt with
+SHA-256 hashes of the email and of the caller's address (`x-forwarded-for`).
+`auth_attempt_wait()` and `auth_attempt_record()` are the only access; the
+sign-in and sign-up actions call them as the application role with no
+person set (`lib/authAttempts.ts`).
 
 ### Allowances and the usage ledger
 

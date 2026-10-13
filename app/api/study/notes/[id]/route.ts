@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { apiAccount } from '@/lib/access';
 import { discardNote, groupOf, StudyError, updateNote, type NoteInput } from '@/lib/study';
-import { parseNoteBody } from '@/lib/studyInput';
+import { parseNoteBody, parseSeconds } from '@/lib/studyInput';
 import { answer, bad, parsePositiveId, readBody } from '@/lib/studyRoutes';
 import { parseOptionalId } from '@/lib/workflowInput';
 
@@ -21,7 +21,7 @@ async function load(ctx: { params: Promise<{ id: string }> }) {
   return { account, id, groupId };
 }
 
-// PATCH /api/study/notes/:id   { body?, topicId?, lessonId?, exerciseId?, private? }
+// PATCH /api/study/notes/:id   { body?, topicId?, lessonId?, exerciseId?, resourceId?, at?, private? }
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const got = await load(ctx);
   if ('response' in got) return got.response;
@@ -35,7 +35,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       if ('error' in v) throw new StudyError(v.error);
       patch.body = v.value;
     }
-    for (const key of ['topicId', 'lessonId', 'exerciseId'] as const) {
+    if (body.at !== undefined) {
+      const v = parseSeconds(body.at);
+      if ('error' in v) throw new StudyError(v.error);
+      patch.positionS = v.value;
+    }
+    for (const key of ['topicId', 'lessonId', 'exerciseId', 'resourceId'] as const) {
       if (body[key] === undefined) continue;
       const v = parseOptionalId(body[key]);
       if ('error' in v) throw new StudyError(v.error);

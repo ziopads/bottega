@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react';
 import Exercise, { type Call } from '@/app/_learning/Exercise';
 import { NotesTab, ProgressTab, SessionsTab } from '@/app/_learning/Journal';
 import LessonBody, { titlesOf } from '@/app/_learning/LessonBody';
+import { VideosSection } from '@/app/_learning/Resources';
 import { api, InlineEdit } from '@/app/_studio/controls';
 import { formatWhen } from '@/app/_studio/Notes';
 import { DetailGrid, PageHeader, Section, TabBar } from '@/app/_ui/layout';
@@ -137,7 +138,7 @@ export default function GroupView({
             <details>
               <summary className="cursor-pointer">{l.title}</summary>
               <div className="mt-2 border-l-2 border-line pl-3">
-                <LessonBody body={l.body} titles={titles} compact />
+                <LessonBody body={l.body} titles={titles} labels={g.pageLabels} compact />
               </div>
             </details>
           </ReviewRow>
@@ -165,6 +166,7 @@ export default function GroupView({
   const tabCount: Partial<Record<GroupTab, number>> = {
     sessions: g.sessions.filter((x) => x.published).length,
     notes: g.notes.filter((n) => n.published || n.authorId === viewerId).length,
+    resources: g.resources.filter((r) => r.published).length,
   };
 
   // ── Main column: the syllabus ───────────────────────────────────────────────
@@ -195,7 +197,10 @@ export default function GroupView({
       {tab === 'sessions' && <SessionsTab g={g} viewerId={viewerId} titles={titles} call={call} busy={busy} />}
       {tab === 'notes' && <NotesTab g={g} viewerId={viewerId} titles={titles} call={call} busy={busy} />}
       {tab === 'resources' && (
-        <ReadingList g={g} viewerId={viewerId} candidates={candidates} busy={busy} setError={setError} reload={reload} />
+        <>
+          <VideosSection g={g} viewerId={viewerId} call={call} busy={busy} />
+          <ReadingList g={g} viewerId={viewerId} candidates={candidates} busy={busy} setError={setError} reload={reload} />
+        </>
       )}
       {tab === 'progress' && <ProgressTab g={g} />}
       {error && <p className="t-body mt-4 text-rust">{error}</p>}
@@ -833,9 +838,6 @@ function ReadingList({
         </Section>
       )}
 
-      <Section label="Videos and links">
-        <p className="t-body max-w-prose text-muted">Coming next: videos, articles and pages any member adds, filed under topics, with notes pointing at moments in a video.</p>
-      </Section>
     </>
   );
 }
