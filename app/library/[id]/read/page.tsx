@@ -1,9 +1,10 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import PageNav from '@/app/_library/PageNav';
 import { PageHeader, Section } from '@/app/_ui/layout';
 import { requireAccount } from '@/lib/access';
-import { getDocument, readPages } from '@/lib/documents';
+import { getDocument, getSections, pageContext, readPages } from '@/lib/documents';
 
 // The page reader (REQUIREMENTS K-3): one page of a document's text as
 // Bottega extracted it, with the PDF itself at that page beside it on
@@ -38,16 +39,42 @@ export default async function ReadPage({ params, searchParams }: Props) {
   const asked = Math.floor(Number(sp.page) || 1);
   const page = Math.min(Math.max(1, asked), Math.max(1, total));
   const q = (sp.q ?? '').slice(0, 200);
-  const [text] = await readPages(db, id, page, page);
+  const [[text], sections, context] = await Promise.all([readPages(db, id, page, page), getSections(db, id), pageContext(db, id, page, page)]);
+  const here = context.get(page);
+  // The section this page is in: the last one starting at or before it.
+  const current = sections.reduce<number>((at, s, i) => (s.page <= page ? i : at), -1);
 
   return (
     <div>
       <PageHeader
         back={{ href: `/library/${id}`, label: doc.title }}
-        title={`${doc.title}, PDF page ${page}`}
-        meta={[total ? `${total} pages` : null, 'PDF pages count from 1; printed numbers may differ', q ? `marking “${q}”` : null]}
+        title={`${doc.title}, PDF page ${page}${here?.label ? ` · printed p. ${here.label}` : ''}`}
+        meta={[
+          here?.section ? `in ${here.section}` : null,
+          total ? `${total} pages` : null,
+          here?.label ? 'PDF pages count from 1' : 'PDF pages count from 1; printed numbers may differ',
+          q ? `marking “${q}”` : null,
+        ]}
       />
       <PageNav documentId={id} page={page} total={total} q={q} />
+      {sections.length > 0 && (
+        <details className="t-body mb-4">
+          <summary className="cursor-pointer text-muted hover:text-ink">Contents ({sections.length})</summary>
+          <ol className="mt-2 max-h-80 space-y-0.5 overflow-y-auto border-l border-line pl-3">
+            {sections.map((s, i) => (
+              <li key={i} style={{ paddingLeft: `${(s.level - 1) * 12}px` }}>
+                <Link
+                  href={`/library/${id}/read?page=${s.page}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                  className={`flex gap-2 ${i === current ? 'text-rust' : 'hover:text-rust'}`}
+                >
+                  <span className="min-w-0 flex-1">{s.title}</span>
+                  <span className="t-num text-[11px] text-muted">{s.page}</span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
       <Section label="Text">
         {text ? (
           <div className="t-body max-w-prose whitespace-pre-wrap break-words leading-relaxed">{marked(text.text, q)}</div>

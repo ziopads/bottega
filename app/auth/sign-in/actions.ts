@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 
 import { auth } from '@/lib/auth/server';
+import { attemptWait, callerAddress, recordAttempt, waitMessage } from '@/lib/authAttempts';
 
 export async function signInWithEmail(
   _prev: { error: string } | null,
@@ -15,7 +16,13 @@ export async function signInWithEmail(
     return { error: 'Email and password are both required.' };
   }
 
+  // Our own limit first (db/021): Neon Auth sees Vercel's address for everyone.
+  const address = await callerAddress();
+  const wait = await attemptWait('sign-in', email, address);
+  if (wait > 0) return { error: waitMessage(wait) };
+
   const { error } = await auth.signIn.email({ email, password });
+  await recordAttempt('sign-in', email, address, !error);
 
   if (error) {
     // Logged server-side (Vercel's logs, or the dev terminal) so a refusal that

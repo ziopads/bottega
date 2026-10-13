@@ -5,16 +5,22 @@ import {
   deleteDocument,
   getDocument,
   reviewDocument,
+  getDocumentFile,
   setDocumentHome,
+  setLabelRange,
+  storeStructure,
   setPicked,
   updateDocument,
   type DocumentPatch,
 } from '@/lib/documents';
 import { DOCUMENT_KINDS, LIBRARY_KINDS, type DocumentKind, type ReviewStatus } from '@/lib/documentTypes';
-import { deleteFile } from '@/lib/files';
+import { deleteFile, getFileBytes } from '@/lib/files';
+import { readPdfStructure } from '@/lib/pdf';
 import { levelAtLeast } from '@/lib/studioTypes';
 
 export const dynamic = 'force-dynamic';
+// Reading a large PDF's contents again downloads the whole file.
+export const maxDuration = 300;
 
 function parseId(raw: string): number | null {
   const id = Number(raw);
@@ -83,9 +89,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   return NextResponse.json({ document: await getDocument(db, id) });
 }
 
-// POST /api/documents/:id   { op: 'move', library: boolean, kind }
-// The platform administrator moves a document between the library and private
-// documents (db/018); the database refuses anyone else, and logs the move.
+// POST /api/documents/:id
+//   { op: 'move', library: boolean, kind }   the platform administrator moves a
+//     document between the library and private documents (db/018)
+//   { op: 'contents' }   read the PDF's page labels and outline again (db/022), edit access
+//   { op: 'labels', from, to, first, style }   printed numbers for a range of pages, edit access
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const account = await apiAccount();
   if (account instanceof NextResponse) return account;
@@ -98,6 +106,31 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
+  }
+  if (body.op === 'contents') {
+    if (!levelAtLeast(doc.level, 'edit')) return NextResponse.json({ error: 'That needs edit access.' }, { status: 403 });
+    const file = await getDocumentFile(account.db, id);
+    if (!file) return NOT_FOUND();
+    try {
+      await storeStructure(account.db, id, await readPdfStructure(await getFileBytes(file.key)));
+    } catch (err) {
+      console.error('[documents] contents', { id, err });
+      return NextResponse.json({ error: 'The PDF could not be read for its contents.' }, { status: 500 });
+    }
+    return NextResponse.json({ document: await getDocument(account.db, id) });
+  }
+  if (body.op === 'labels') {
+    const from = Number(body.from);
+    const to = Number(body.to);
+    const style = body.style;
+    const first = body.first === null || body.first === undefined || body.first === '' ? null : Number(body.first);
+    if (!Number.isInteger(from) || !Number.isInteger(to) || (first !== null && !Number.isInteger(first))) {
+      return NextResponse.json({ error: 'Give whole page numbers.' }, { status: 400 });
+    }
+    if (style !== 'arabic' && style !== 'roman' && style !== 'none') return NextResponse.json({ error: 'Choose arabic, roman, or none.' }, { status: 400 });
+    const refusal = await setLabelRange(account.db, id, { from, to, first, style });
+    if (refusal) return NextResponse.json({ error: refusal }, { status: 400 });
+    return NextResponse.json({ document: await getDocument(account.db, id) });
   }
   if (body.op !== 'move' || typeof body.library !== 'boolean') return NextResponse.json({ error: 'Unknown operation' }, { status: 400 });
   if (!account.isPlatformAdmin) {

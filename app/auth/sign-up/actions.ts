@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 
 import { auth } from '@/lib/auth/server';
+import { attemptWait, callerAddress, recordAttempt, waitMessage } from '@/lib/authAttempts';
 
 // Creating an account (REQUIREMENTS AC-1). Neon Auth creates the identity;
 // the first request after it registers the account in Bottega as pending
@@ -26,7 +27,13 @@ export async function signUpWithEmail(_prev: SignUpState, form: FormData): Promi
   if (password.length < PASSWORD_MIN) return { error: `Use a password of at least ${PASSWORD_MIN} characters.` };
   if (password !== confirm) return { error: 'The two passwords differ.' };
 
+  // Our own limit (db/021): a handful of sign-ups per address an hour.
+  const address = await callerAddress();
+  const wait = await attemptWait('sign-up', email, address);
+  if (wait > 0) return { error: waitMessage(wait) };
+
   const { error } = await auth.signUp.email({ email, password, name });
+  await recordAttempt('sign-up', email, address, !error);
   if (error) {
     // Logged server-side so a refusal that is not an existing account (an
     // untrusted origin, a password rule) names its cause. Never the password.

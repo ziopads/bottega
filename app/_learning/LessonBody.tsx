@@ -9,10 +9,19 @@ import { citationLabel, parseBody, readerHref, type Citation, type Inline } from
 // with the group. No hooks: server and client components both use it.
 
 type Titles = Map<number, string | null>;
+type Labels = Record<string, string> | undefined;
 
-function Cite({ citation, n, titles }: { citation: Citation; n: number; titles: Titles }) {
+/** "p. 812 (PDF p. 824)" when the printed number is known, else "PDF p. 824". */
+function pagesText(c: Citation, labels: Labels): string {
+  const a = labels?.[`${c.documentId}:${c.from}`];
+  const b = labels?.[`${c.documentId}:${c.to}`];
+  if (!a) return citationLabel(c);
+  return c.from === c.to ? `p. ${a} (${citationLabel(c)})` : `pp. ${a}–${b ?? '?'} (${citationLabel(c)})`;
+}
+
+function Cite({ citation, n, titles, labels }: { citation: Citation; n: number; titles: Titles; labels: Labels }) {
   const title = titles.get(citation.documentId);
-  const label = `${title ?? `Document ${citation.documentId}`}, ${citationLabel(citation)}`;
+  const label = `${title ?? `Document ${citation.documentId}`}, ${pagesText(citation, labels)}`;
   if (!title) {
     return (
       <sup className="t-num text-muted" title={`${label} (not readable by you)`}>
@@ -29,20 +38,31 @@ function Cite({ citation, n, titles }: { citation: Citation; n: number; titles: 
   );
 }
 
-function Line({ parts, titles }: { parts: Inline[]; titles: Titles }) {
+function Line({ parts, titles, labels }: { parts: Inline[]; titles: Titles; labels: Labels }) {
   return (
     <>
       {parts.map((p, i) => {
         if (p.kind === 'bold') return <strong key={i}>{p.text}</strong>;
         if (p.kind === 'code') return <code key={i} className="rounded bg-card px-1 font-mono text-[12px]">{p.text}</code>;
-        if (p.kind === 'cite') return <Cite key={i} citation={p.citation} n={p.n} titles={titles} />;
+        if (p.kind === 'cite') return <Cite key={i} citation={p.citation} n={p.n} titles={titles} labels={labels} />;
         return <span key={i}>{p.text}</span>;
       })}
     </>
   );
 }
 
-export default function LessonBody({ body, titles, compact = false }: { body: string; titles: Titles; compact?: boolean }) {
+export default function LessonBody({
+  body,
+  titles,
+  labels,
+  compact = false,
+}: {
+  body: string;
+  titles: Titles;
+  /** Printed page numbers, "docId:page" → label. */
+  labels?: Record<string, string>;
+  compact?: boolean;
+}) {
   const { blocks, sources } = parseBody(body);
   return (
     <div className={`t-body max-w-prose leading-relaxed ${compact ? 'space-y-2' : 'space-y-3'}`}>
@@ -50,11 +70,11 @@ export default function LessonBody({ body, titles, compact = false }: { body: st
         if (b.kind === 'heading') {
           return b.level === 2 ? (
             <h3 key={i} className="t-lead mt-5 font-semibold">
-              <Line parts={b.inline} titles={titles} />
+              <Line parts={b.inline} titles={titles} labels={labels} />
             </h3>
           ) : (
             <h4 key={i} className="mt-4 font-semibold">
-              <Line parts={b.inline} titles={titles} />
+              <Line parts={b.inline} titles={titles} labels={labels} />
             </h4>
           );
         }
@@ -64,7 +84,7 @@ export default function LessonBody({ body, titles, compact = false }: { body: st
             <Tag key={i} className={`${b.ordered ? 'list-decimal' : 'list-disc'} space-y-1 pl-5`}>
               {b.items.map((item, j) => (
                 <li key={j}>
-                  <Line parts={item} titles={titles} />
+                  <Line parts={item} titles={titles} labels={labels} />
                 </li>
               ))}
             </Tag>
@@ -72,7 +92,7 @@ export default function LessonBody({ body, titles, compact = false }: { body: st
         }
         return (
           <p key={i}>
-            <Line parts={b.inline} titles={titles} />
+            <Line parts={b.inline} titles={titles} labels={labels} />
           </p>
         );
       })}
@@ -89,11 +109,11 @@ export default function LessonBody({ body, titles, compact = false }: { body: st
                   <span className="min-w-0">
                     {title ? (
                       <Link href={readerHref(citation)} className="hover:text-rust">
-                        {title}, {citationLabel(citation)}
+                        {title}, {pagesText(citation, labels)}
                       </Link>
                     ) : (
                       <span className="text-muted">
-                        Document {citation.documentId}, {citationLabel(citation)} · not readable by you
+                        Document {citation.documentId}, {pagesText(citation, labels)} · not readable by you
                       </span>
                     )}
                     {citation.quote && <span className="text-muted"> · “{citation.quote}”</span>}

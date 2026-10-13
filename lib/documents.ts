@@ -331,3 +331,105 @@ export async function commitBatch(
   ]);
   return results[2].length > 0;
 }
+
+// ── Printed page numbers and contents (db/022) ───────────────────────────────
+
+/** Replaces the PDF's own labels and outline for a document; hand-set labels stay. */
+export async function storeStructure(
+  db: Scoped,
+  id: number,
+  structure: { labels: (string | null)[]; outline: { level: number; title: string; page: number }[] },
+): Promise<void> {
+  const pages: number[] = [];
+  const labels: string[] = [];
+  structure.labels.forEach((l, i) => {
+    if (l) {
+      pages.push(i + 1);
+      labels.push(l);
+    }
+  });
+  await db.tx([
+    // The PDF's labels are replaced; hand-set ones stay.
+    { text: 'delete from document_page_labels where document_id = $1 and hand_label is null', params: [id] },
+    { text: 'update document_page_labels set pdf_label = null where document_id = $1 and pdf_label is not null', params: [id] },
+    {
+      text: `insert into document_page_labels (document_id, page, pdf_label)
+             select $1, p, l from unnest($2::int[], $3::text[]) as x(p, l)
+             on conflict (document_id, page) do update set pdf_label = excluded.pdf_label`,
+      params: [id, pages, labels],
+    },
+    { text: 'delete from document_sections where document_id = $1', params: [id] },
+    {
+      text: `insert into document_sections (document_id, position, level, title, page)
+             select $1, ord, lv, t, p from unnest($2::int[], $3::text[], $4::int[]) with ordinality as x(lv, t, p, ord)`,
+      params: [id, structure.outline.map((o) => o.level), structure.outline.map((o) => o.title), structure.outline.map((o) => o.page)],
+    },
+  ]);
+}
+
+export interface DocumentSection {
+  level: number;
+  title: string;
+  page: number;
+}
+
+export async function getSections(db: Scoped, id: number): Promise<DocumentSection[]> {
+  const rows = await db.q('select level, title, page from document_sections where document_id = $1 order by position', [id]);
+  return rows.map((r) => ({ level: num(r.level), title: str(r.title), page: num(r.page) }));
+}
+
+/** Printed labels for some pages of some documents: "docId:page" → label. */
+export async function pageLabels(db: Scoped, pairs: { documentId: number; page: number }[]): Promise<Map<string, string>> {
+  if (!pairs.length) return new Map();
+  const rows = await db.q(
+    `select l.document_id, l.page, coalesce(l.hand_label, l.pdf_label) as label
+       from document_page_labels l
+      where (l.document_id, l.page) in (select * from unnest($1::bigint[], $2::int[]))`,
+    [pairs.map((p) => p.documentId), pairs.map((p) => p.page)],
+  );
+  return new Map(rows.map((r) => [`${num(r.document_id)}:${num(r.page)}`, str(r.label)]));
+}
+
+/** The printed label of each page in from..to, and the section each page falls in. */
+export async function pageContext(
+  db: Scoped,
+  id: number,
+  from: number,
+  to: number,
+): Promise<Map<number, { label: string | null; section: string | null }>> {
+  const rows = await db.q(
+    `select p as page,
+            (select coalesce(hand_label, pdf_label) from document_page_labels l where l.document_id = $1 and l.page = p) as label,
+            (select title from document_sections s where s.document_id = $1 and s.page <= p order by s.page desc, s.position desc limit 1) as section
+       from generate_series($2::int, $3::int) as p`,
+    [id, from, to],
+  );
+  return new Map(rows.map((r) => [num(r.page), { label: strOrNull(r.label), section: strOrNull(r.section) }]));
+}
+
+/** Sets printed numbers by hand for pages from..to (style 'none' clears them). Returns a refusal to show, or null. */
+export async function setLabelRange(
+  db: Scoped,
+  id: number,
+  range: { from: number; to: number; first: number | null; style: 'arabic' | 'roman' | 'none' },
+): Promise<string | null> {
+  try {
+    await db.q('select document_label_range($1, $2, $3, $4, $5)', [id, range.from, range.to, range.first, range.style]);
+    return null;
+  } catch (err) {
+    const msg = (err as { message?: string })?.message ?? '';
+    if (/needs edit access|give a range|arabic or roman/.test(msg)) return msg.charAt(0).toUpperCase() + msg.slice(1) + '.';
+    throw err;
+  }
+}
+
+/** How many pages carry a printed label, and how many sections the contents has. */
+export async function structureSummary(db: Scoped, id: number): Promise<{ labelled: number; hand: number; sections: number }> {
+  const rows = await db.q(
+    `select (select count(*) from document_page_labels where document_id = $1) as labelled,
+            (select count(*) from document_page_labels where document_id = $1 and hand_label is not null) as hand,
+            (select count(*) from document_sections where document_id = $1) as sections`,
+    [id],
+  );
+  return { labelled: num(rows[0].labelled), hand: num(rows[0].hand), sections: num(rows[0].sections) };
+}

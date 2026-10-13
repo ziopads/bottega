@@ -79,7 +79,7 @@ export default function LessonView({ initial, lessonId, viewerId }: { initial: S
           onSave={async (title, body) => (await call(url, 'PATCH', { title, body })) && setEditing(false)}
         />
       ) : (
-        <LessonBody body={lesson.body} titles={titles} />
+        <LessonBody body={lesson.body} titles={titles} labels={g.pageLabels} />
       )}
       {error && <p className="t-body mt-4 text-rust">{error}</p>}
 

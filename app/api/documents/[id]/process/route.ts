@@ -14,11 +14,12 @@ import {
   recordTokens,
   setProcessingState,
   storePages,
+  storeStructure,
 } from '@/lib/documents';
 import type { StudioDocument } from '@/lib/documentTypes';
 import { embedConfigured, embedDocuments, EmbedError } from '@/lib/embed';
 import { deleteFile, getFileBytes } from '@/lib/files';
-import { looksScanned, readPdfPages, sha256Hex } from '@/lib/pdf';
+import { looksScanned, readPdfPages, readPdfStructure, sha256Hex } from '@/lib/pdf';
 import { levelAtLeast } from '@/lib/studioTypes';
 
 export const dynamic = 'force-dynamic';
@@ -101,6 +102,16 @@ async function extract(db: Db, doc: StudioDocument): Promise<NextResponse> {
 
   const from = doc.pagesExtracted + 1;
   const { pageCount, pages } = await readPdfPages(bytes, from, from + EXTRACT_PAGES - 1);
+
+  // The first batch also reads the PDF's own page labels and outline (db/022).
+  // A failure here costs the contents, not the processing.
+  if (from === 1) {
+    try {
+      await storeStructure(db, doc.id, await readPdfStructure(bytes));
+    } catch (err) {
+      console.error('[process] page labels and contents', { id: doc.id, err });
+    }
+  }
 
   if (pageCount === 0) {
     await setProcessingState(db, doc.id, { state: 'failed', detail: 'The PDF has no pages.', pageCount });
