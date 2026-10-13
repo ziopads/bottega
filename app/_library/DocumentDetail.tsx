@@ -308,7 +308,6 @@ export default function DocumentDetail({
 }
 
 function ModelLinks({ doc, models, onLink }: { doc: StudioDocument; models: Model[]; onLink: (id: number, on: boolean) => void }) {
-  const [choice, setChoice] = useState('');
   const linked = new Set(doc.models.map((m) => m.id));
   const available = models.filter((m) => !linked.has(m.id));
   return (
@@ -328,26 +327,20 @@ function ModelLinks({ doc, models, onLink }: { doc: StudioDocument; models: Mode
         </ul>
       )}
       {available.length > 0 && (
-        <div className="flex gap-2">
-          <select value={choice} onChange={(e) => setChoice(e.target.value)} className={FIELD}>
-            <option value="">Link to a model…</option>
-            {available.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.manufacturer} {m.model}
-              </option>
-            ))}
-          </select>
-          <button
-            disabled={!choice}
-            onClick={() => {
-              onLink(Number(choice), true);
-              setChoice('');
-            }}
-            className={BUTTON}
-          >
-            Link
-          </button>
-        </div>
+        // Choosing a model links it at once; Remove above undoes it.
+        <select
+          value=""
+          onChange={(e) => e.target.value && onLink(Number(e.target.value), true)}
+          aria-label="Link to a model"
+          className={FIELD}
+        >
+          <option value="">{doc.models.length ? 'Link another model…' : 'Link to a model…'}</option>
+          {available.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.manufacturer} {m.model}
+            </option>
+          ))}
+        </select>
       )}
       </div>
     </Section>
