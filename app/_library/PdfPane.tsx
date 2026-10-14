@@ -66,6 +66,14 @@ export default function PdfPane({ documentId }: { documentId: number }) {
   const total = doc?.numPages ?? 0;
   const page = total ? Math.min(asked, total) : asked;
 
+  // The page field: typed freely, sent on Enter, back to the page shown on leaving it or when the page changes.
+  const [field, setField] = useState(String(page));
+  const [fieldFor, setFieldFor] = useState(page);
+  if (fieldFor !== page) {
+    setFieldFor(page);
+    setField(String(page));
+  }
+
   // Open the document: the signed link, then PDF.js reads the file's structure by range.
   useEffect(() => {
     let gone = false;
@@ -156,10 +164,23 @@ export default function PdfPane({ documentId }: { documentId: number }) {
           >
             ‹
           </button>
-          <span className="t-num">
-            page {page}
-            {total ? ` of ${total}` : ''}
-          </span>
+          <input
+            type="number"
+            value={field}
+            min={1}
+            max={total || undefined}
+            onChange={(e) => setField(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return;
+              e.preventDefault();
+              const n = Number.parseInt(field, 10);
+              if (!Number.isNaN(n)) go(n);
+            }}
+            onBlur={() => setField(String(page))}
+            className="t-num w-16 rounded border border-line bg-card px-1.5 py-0.5 text-center text-ink outline-none focus:border-rust"
+            aria-label="Go to PDF page"
+          />
+          <span className="t-num">{total ? `of ${total}` : ''}</span>
           <button
             type="button"
             onClick={() => go(page + 1)}
