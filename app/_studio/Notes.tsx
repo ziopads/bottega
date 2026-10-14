@@ -192,6 +192,7 @@ export function NoteComposer({
   fixedTrackId,
   moment,
   placeholder = 'What do you hear? Timings, levels, arrangement…',
+  initialAt,
   onAdded,
 }: {
   projectId: number;
@@ -201,11 +202,13 @@ export function NoteComposer({
   /** Beside a mix: where its player is now, in seconds. */
   moment?: () => number;
   placeholder?: string;
+  /** Opened from the player bar's "Note at 1:35": the moment, filled in, and the box ready to type in. */
+  initialAt?: number;
   onAdded: (n: StudioNote) => void;
 }) {
   const [draft, setDraft] = useState('');
   const [about, setAbout] = useState<number | 'project'>(fixedTrackId ?? tracks[0]?.id ?? 'project');
-  const [at, setAt] = useState('');
+  const [at, setAt] = useState(initialAt !== undefined ? formatMoment(initialAt) : '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -255,6 +258,7 @@ export function NoteComposer({
     <div className="t-body">
       <textarea
         value={draft}
+        autoFocus={initialAt !== undefined}
         onFocus={() => fromPlayer(true)}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => {

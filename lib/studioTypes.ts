@@ -114,6 +114,8 @@ export type LatestTrack = {
   version: number;
   /** "v3", or "Radio edit v1" for a variant (db/013). */
   label: string;
+  /** '' for the main mix, else the variant's name (db/015). */
+  variant: string;
   durationS: number | null;
   uploadedAt: string;
   /** How many versions the project has. */

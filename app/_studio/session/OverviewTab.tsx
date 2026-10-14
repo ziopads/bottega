@@ -11,7 +11,7 @@ import type { StudioName, StudioNote, StudioProject, StudioRelease, StudioShare,
 import { formatDuration } from '@/lib/studioTypes';
 import type { Workflow } from '@/lib/workflowTypes';
 
-import { audioUrl, formatDate } from './audioUpload';
+import { formatDate } from './audioUpload';
 import { TEXT_LINK } from '@/app/_ui/styles';
 
 // The Overview tab (REQUIREMENTS S-1, S-2): the current mix to play, where
@@ -82,12 +82,20 @@ export default function OverviewTab({
               {current.originalFilename}
             </p>
             <Player
-              src={audioUrl(current)}
+              item={{
+                trackId: current.id,
+                projectId: project.id,
+                code: `${project.artist.code} ${project.canonicalId}`,
+                title: project.workingName,
+                label: current.label,
+                kind: 'mix',
+                variant: current.variant,
+                durationS: current.durationS,
+              }}
               peaks={current.peaks}
               durationS={current.durationS}
               markers={markers}
               height={56}
-              preload="metadata"
               onDuration={(s) => onLength(current.id, s)}
             />
           </>

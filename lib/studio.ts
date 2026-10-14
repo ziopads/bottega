@@ -138,6 +138,7 @@ export async function listProjects(db: Scoped): Promise<StudioProject[]> {
           trackId: num(current.id),
           version: num(current.version),
           label: mixLabel(String(current.variant ?? ''), num(current.version)),
+          variant: String(current.variant ?? ''),
           durationS: numOrNull(current.duration_s),
           uploadedAt: iso(current.uploaded_at),
           count: list.length,

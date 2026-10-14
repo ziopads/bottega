@@ -1,7 +1,7 @@
 # Bottega — requirements
 
-**Version:** 0.23
-**Date:** 2026-10-13
+**Version:** 0.24
+**Date:** 2026-10-14
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
 built is in `ARCHITECTURE.md`.
@@ -9,6 +9,10 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.24** (2026-10-14) — One player for the whole site, in a bar at the foot
+  of the window, that keeps playing between pages and leads back to the mix
+  for a note (S-17).
 
 - **0.23** (2026-10-13) — The Library page in tabs, the library's manuals
   browsed by type, manufacturer and model (K-16).
@@ -380,6 +384,13 @@ there may be lost in the move.
   waveform, and plays the mix from there when clicked.
 - **S-12** One volume for the whole app, set from the header or any player,
   kept between visits in the browser.
+- **S-17** One player for the whole site. Starting a mix or reference anywhere
+  plays it in a bar at the foot of the window, which stays as the person moves
+  from page to page; the players on a page control it and show its progress.
+  The bar names the session and mix and links back to the mix on its session
+  page; "Note at 1:35" opens that page with the note box ready at that
+  moment, while the sound carries on. Next and previous follow the list the
+  mix was started from. Built 14 October 2026.
 - **S-13** The session page has five tabs, under a one-line header (working
   name, canonical ID, artist, rating). Overview: its details and sharing in
   the narrow column on the left; the current mix, where the session stands

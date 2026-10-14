@@ -4,6 +4,7 @@ import { Geist_Mono, Instrument_Sans } from 'next/font/google';
 import './globals.css';
 
 import { signOut } from '@/app/auth/sign-in/actions';
+import SitePlayer from '@/app/_ui/audio/SitePlayer';
 import VolumeControl from '@/app/_ui/audio/VolumeControl';
 import { getAccount } from '@/lib/access';
 
@@ -69,6 +70,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </header>
 
         <main className="mx-auto w-full max-w-7xl flex-1 px-5 py-4">{children}</main>
+        {/* The site's one player: stays mounted across pages, so a mix plays on (S-17). */}
+        {user ? <SitePlayer /> : null}
       </body>
     </html>
   );

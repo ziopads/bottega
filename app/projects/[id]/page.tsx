@@ -23,7 +23,7 @@ import { listVariants } from '@/lib/variants';
 // One music project, as the signed-in person may see it: a project they can
 // neither own nor see is not found (its existence is not disclosed).
 
-type Params = { params: Promise<{ id: string }>; searchParams?: Promise<{ tab?: string; variant?: string }> };
+type Params = { params: Promise<{ id: string }>; searchParams?: Promise<{ tab?: string; variant?: string; track?: string; at?: string }> };
 
 function parseId(raw: string): number | null {
   const id = Number(raw);
@@ -88,6 +88,8 @@ export default async function ProjectPage({ params, searchParams }: Params) {
         initialSessionState={sessionState}
         initialVariants={variants}
         initialVariant={variant}
+        initialTrackId={Number.isInteger(Number(query.track)) && Number(query.track) > 0 ? Number(query.track) : null}
+        initialAt={query.at !== undefined && Number.isFinite(Number(query.at)) && Number(query.at) >= 0 ? Number(query.at) : null}
       />
     </div>
   );

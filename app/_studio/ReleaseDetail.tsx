@@ -6,9 +6,8 @@ import { useMemo, useState } from 'react';
 import type { ReleaseKind, StudioArtist, StudioProject, StudioRelease, StudioShare } from '@/lib/studioTypes';
 import { RELEASE_KIND_LABEL, RELEASE_KINDS, formatDuration, levelAtLeast } from '@/lib/studioTypes';
 import { api, InlineEdit } from './controls';
-import PlayerBar from './PlayerBar';
 import Sharing from './Sharing';
-import { usePlayer } from './usePlayer';
+import { itemOfProject, toggle as deckToggle, useDeck, type PlayItem } from '@/app/_ui/audio/deck';
 import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
 
 // One release: its details, its running order (each entry plays that
@@ -40,7 +39,13 @@ export default function ReleaseDetail({
   const [search, setSearch] = useState('');
   const [armed, setArmed] = useState(false);
 
-  const player = usePlayer(tracks, tracks);
+  // The site's one player (deck.ts), with the running order as its queue.
+  const deck = useDeck();
+  const queue = useMemo(() => tracks.map(itemOfProject).filter((x): x is PlayItem => x !== null), [tracks]);
+  const playOrPause = (p?: StudioProject) => {
+    const it = p ? itemOfProject(p) : null;
+    if (it) deckToggle(it, queue);
+  };
 
   const total = tracks.reduce((s, p) => s + (p.latest?.durationS ?? 0), 0);
 
@@ -103,8 +108,7 @@ export default function ReleaseDetail({
   const sel = 'rounded border border-line bg-card px-2 py-1 t-body outline-none focus:border-rust';
 
   return (
-    <div className={`mt-4 ${player.current ? 'pb-28' : ''}`}>
-      <audio {...player.audioProps} />
+    <div className="mt-4">
 
       {canEdit ? (
         <InlineEdit
@@ -173,7 +177,7 @@ export default function ReleaseDetail({
           {total > 0 && ` · ${formatDuration(total)}`}
         </span>
         {tracks.some((t) => t.latest) && (
-          <button onClick={() => player.toggle(tracks.find((t) => t.latest))} className={BUTTON_PRIMARY}>
+          <button onClick={() => playOrPause(tracks.find((t) => t.latest))} className={BUTTON_PRIMARY}>
             ▶ Play all
           </button>
         )}
@@ -184,19 +188,19 @@ export default function ReleaseDetail({
       <ol className="mt-6 divide-y divide-line rounded-lg border border-line bg-card">
         {tracks.length === 0 && <li className="px-4 py-6 t-body text-muted">No tracks yet.</li>}
         {tracks.map((p, i) => {
-          const isCurrent = p.id === player.currentId;
+          const isCurrent = p.id === deck.item?.projectId;
           return (
             <li key={p.id} className={`flex items-center gap-3 px-4 py-2 t-body ${isCurrent ? 'bg-ink/5' : ''}`}>
               <span className="w-6 text-right tabular-nums text-muted">{i + 1}</span>
               {p.latest ? (
                 <button
-                  onClick={() => player.toggle(p)}
-                  aria-label={isCurrent && player.playing ? 'Pause' : 'Play'}
+                  onClick={() => playOrPause(p)}
+                  aria-label={isCurrent && deck.playing ? 'Pause' : 'Play'}
                   className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] ${
                     isCurrent ? 'border-ink bg-ink text-parchment' : 'border-line hover:border-ink'
                   }`}
                 >
-                  {isCurrent && player.playing ? '❚❚' : '▶'}
+                  {isCurrent && deck.playing ? '❚❚' : '▶'}
                 </button>
               ) : (
                 <span className="h-7 w-7 shrink-0" title="No reference track yet" />
@@ -292,20 +296,6 @@ export default function ReleaseDetail({
       </div>
       )}
 
-      {player.current && (
-        <PlayerBar
-          project={player.current}
-          playing={player.playing}
-          time={player.time}
-          duration={player.duration}
-          autoAdvance={player.autoAdvance}
-          onToggle={() => player.toggle()}
-          onPrev={() => player.step(-1)}
-          onNext={() => player.step(1)}
-          onSeek={player.seek}
-          onAutoAdvance={player.setAutoAdvance}
-        />
-      )}
     </div>
   );
 }

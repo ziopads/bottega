@@ -1,14 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { StudioArtist, StudioProject, StudioRelease } from '@/lib/studioTypes';
 import { RATING_MAX, formatDuration } from '@/lib/studioTypes';
 import { api, GenreSelect, InlineEdit, Stars } from './controls';
 import NewProject from './NewProject';
-import PlayerBar from './PlayerBar';
-import { usePlayer } from './usePlayer';
 import { BUTTON } from '@/app/_ui/styles';
+import { get as deckState, itemOfProject, setRater, toggle as deckToggle, useDeck, type PlayItem } from '@/app/_ui/audio/deck';
 
 // The sessions list: a sortable table with inline editing, multi-select with
 // bulk changes, filters, and one shared player that steps through the rows as
@@ -265,7 +264,37 @@ export default function StudioProjects({
   }
 
   // ── Player ────────────────────────────────────────────────────────────────
-  const player = usePlayer(shown, projects, rate);
+  // The site's one player (deck.ts) plays a session's current mix, with the
+  // list as sorted and filtered as its queue; its bar sits at the foot of
+  // every page. While this page is open the bar can rate the playing session.
+  const deck = useDeck();
+  const queue = useMemo(() => shown.map(itemOfProject).filter((x): x is PlayItem => x !== null), [shown]);
+  const latest = useRef({ projects, rate });
+  useEffect(() => {
+    latest.current = { projects, rate };
+  });
+  useEffect(() => {
+    setRater({
+      ratingOf: (id) => projects.find((p) => p.id === id)?.rating ?? 0,
+      rate: (id, n) => {
+        const p = latest.current.projects.find((x) => x.id === id);
+        if (p) void latest.current.rate(p, n);
+      },
+    });
+  }, [projects]);
+  useEffect(() => () => setRater(null), []);
+  // Space with nothing loaded starts the list; once something plays, the bar has the keys.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const t = e.target as HTMLElement | null;
+      if (e.key !== ' ' || deckState().item || !queue.length || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(t.tagName))) return;
+      e.preventDefault();
+      deckToggle(queue[0], queue);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [queue]);
 
   const th = 'px-2 py-2 text-left text-[11px] font-normal uppercase tracking-wide text-muted';
   const SortHead = ({ k, children, className = '' }: { k: SortKey; children: React.ReactNode; className?: string }) => (
@@ -278,8 +307,7 @@ export default function StudioProjects({
   );
 
   return (
-    <div className={player.current ? 'pb-28' : undefined}>
-      <audio {...player.audioProps} />
+    <div>
 
       <div className="flex flex-wrap items-center gap-3">
         <NewProject
@@ -412,9 +440,12 @@ export default function StudioProjects({
                   project={p}
                   selected={selected.has(p.id)}
                   onSelect={(shift) => clickSelect(p, shift)}
-                  isCurrent={p.id === player.currentId}
-                  playing={p.id === player.currentId && player.playing}
-                  onPlay={() => player.toggle(p)}
+                  isCurrent={p.id === deck.item?.projectId}
+                  playing={p.id === deck.item?.projectId && deck.playing}
+                  onPlay={() => {
+                    const it = itemOfProject(p);
+                    if (it) deckToggle(it, queue);
+                  }}
                   genres={genres}
                   releaseTitles={(p.releaseIds ?? []).map((id) => releaseTitle.get(id) ?? '').filter(Boolean)}
                   onAddGenre={addGenre}
@@ -427,21 +458,6 @@ export default function StudioProjects({
         </div>
       )}
 
-      {player.current && (
-        <PlayerBar
-          project={player.current}
-          playing={player.playing}
-          time={player.time}
-          duration={player.duration}
-          autoAdvance={player.autoAdvance}
-          onToggle={() => player.toggle()}
-          onPrev={() => player.step(-1)}
-          onNext={() => player.step(1)}
-          onSeek={player.seek}
-          onRate={(n) => player.current && rate(player.current, n)}
-          onAutoAdvance={player.setAutoAdvance}
-        />
-      )}
 
       <p className="mt-3 text-[11px] text-muted">
         Click a column heading to sort, again to reverse. Shift-click checkboxes to select a range.

@@ -1,9 +1,10 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { api, InlineEdit } from '@/app/_studio/controls';
 import { formatMoment, NoteComposer, NoteItem } from '@/app/_studio/Notes';
+import type { PlayItem } from '@/app/_ui/audio/deck';
 import Player, { type PlayerHandle } from '@/app/_ui/audio/Player';
 import type { Marker } from '@/app/_ui/audio/Waveform';
 import { DetailGrid, Section } from '@/app/_ui/layout';
@@ -20,8 +21,14 @@ import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
 
 type Upload = { name: string; progress: number; error?: string };
 
+/** The session as the site's player bar names it. */
+type Session = { code: string; title: string };
+
 export default function MixesTab({
   projectId,
+  session,
+  initialTrackId,
+  initialAt,
   tracks,
   variant,
   setTracks,
@@ -41,6 +48,11 @@ export default function MixesTab({
   onLength,
 }: {
   projectId: number;
+  session: Session;
+  /** The mix to open on (?track=, from the player bar); otherwise the current one. */
+  initialTrackId: number | null;
+  /** The note box opens at this moment on that mix (?at=, the bar's "Note at 1:35"). */
+  initialAt: number | null;
   /** The chosen variant's mixes, newest first. */
   tracks: StudioTrack[];
   /** The variant chosen above the tabs, where uploads go: '' is the main mix (db/015). */
@@ -61,7 +73,9 @@ export default function MixesTab({
   onDelete: (t: StudioTrack) => void;
   onLength: (id: number, seconds: number) => void;
 }) {
-  const [selected, setSelected] = useState<number | null>(currentId ?? tracks[0]?.id ?? null);
+  const [selected, setSelected] = useState<number | null>(
+    initialTrackId !== null && tracks.some((t) => t.id === initialTrackId) ? initialTrackId : (currentId ?? tracks[0]?.id ?? null),
+  );
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState('');
@@ -69,6 +83,26 @@ export default function MixesTab({
   const players = useRef(new Map<number, PlayerHandle>());
 
   const selectedTrack = tracks.find((t) => t.id === selected) ?? null;
+  // Each mix as the site's player plays it; the variant's mixes are its queue.
+  const itemOf = (t: StudioTrack): PlayItem => ({
+    trackId: t.id,
+    projectId,
+    code: session.code,
+    title: session.title,
+    label: t.label,
+    kind: 'mix',
+    variant: t.variant,
+    durationS: t.durationS,
+  });
+  const queue = tracks.map(itemOf);
+
+  // The moment from the bar has been used once the box opens: a reload should not open it again.
+  useEffect(() => {
+    if (initialAt === null) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('at');
+    window.history.replaceState(null, '', url);
+  }, [initialAt]);
   const notesFor = (id: number) => notes.filter((n) => n.trackId === id);
   const markersFor = (id: number): Marker[] =>
     notesFor(id)
@@ -122,6 +156,8 @@ export default function MixesTab({
             <MixRow
               key={t.id}
               track={t}
+              item={itemOf(t)}
+              queue={queue}
               current={t.id === currentId}
               chosenByHand={chosenByHand && t.id === currentId}
               selected={t.id === selected}
@@ -202,6 +238,7 @@ export default function MixesTab({
 
       <References
         projectId={projectId}
+        session={session}
         references={references}
         setReferences={setReferences}
         canContribute={canContribute}
@@ -221,6 +258,7 @@ export default function MixesTab({
           tracks={tracks}
           fixedTrackId={selectedTrack.id}
           moment={() => players.current.get(selectedTrack.id)?.currentTime() ?? 0}
+          initialAt={selectedTrack.id === initialTrackId && initialAt !== null ? initialAt : undefined}
           placeholder="Play the mix and write what you hear; the note is pinned to the moment."
           onAdded={(n) => setNotes((l) => [n, ...l])}
         />
@@ -258,6 +296,8 @@ export default function MixesTab({
 
 function MixRow({
   track: t,
+  item,
+  queue,
   current,
   chosenByHand,
   selected,
@@ -274,6 +314,8 @@ function MixRow({
   onMarker,
 }: {
   track: StudioTrack;
+  item: PlayItem;
+  queue: PlayItem[];
   current: boolean;
   chosenByHand: boolean;
   selected: boolean;
@@ -340,12 +382,12 @@ function MixRow({
       </div>
       <Player
         ref={register}
-        src={audioUrl(t)}
+        item={item}
+        queue={queue}
         peaks={t.peaks}
         durationS={t.durationS}
         markers={markers}
         height={current ? 44 : 32}
-        preload={current ? 'metadata' : 'none'}
         onDuration={onLength}
         onMarker={onMarker}
       />
@@ -362,6 +404,7 @@ function MixRow({
  */
 function References({
   projectId,
+  session,
   references,
   setReferences,
   canContribute,
@@ -370,6 +413,7 @@ function References({
   onLength,
 }: {
   projectId: number;
+  session: Session;
   references: StudioReference[];
   setReferences: React.Dispatch<React.SetStateAction<StudioReference[]>>;
   canContribute: boolean;
@@ -379,6 +423,16 @@ function References({
 }) {
   const [credit, setCredit] = useState('');
   const [busy, setBusy] = useState<number | null>(null);
+  const refItem = (r: StudioReference): PlayItem => ({
+    trackId: r.id,
+    projectId,
+    code: session.code,
+    title: session.title,
+    label: r.credit || r.originalFilename,
+    kind: 'reference',
+    variant: '',
+    durationS: r.durationS,
+  });
   const [error, setError] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -448,7 +502,14 @@ function References({
                 {canDelete && <ConfirmButton label="Remove" onConfirm={() => remove(r)} />}
               </span>
             </div>
-            <Player src={audioUrl(r)} peaks={r.peaks} durationS={r.durationS} height={28} onDuration={(s) => onLength(r.id, s)} />
+            <Player
+              item={refItem(r)}
+              queue={references.map(refItem)}
+              peaks={r.peaks}
+              durationS={r.durationS}
+              height={28}
+              onDuration={(s) => onLength(r.id, s)}
+            />
           </li>
         ))}
       </ul>

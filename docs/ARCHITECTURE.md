@@ -1,6 +1,6 @@
 # Bottega — architecture
 
-**Version:** 0.14
+**Version:** 0.15
 **Date:** 2026-10-13
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
@@ -10,6 +10,10 @@ story IDs below (S-3, W-6 and so on) refer to it.
 
 ## Changelog
 
+- **0.15** (2026-10-14) — The site's one player (S-17): `app/_ui/audio/deck.ts`
+  holds the audio element and queue in a module, `SitePlayer.tsx` is its bar in
+  the root layout, `Player.tsx` controls it; `PlayerBar.tsx` and
+  `usePlayer.ts` go (§4, Audio).
 - **0.14** (2026-10-14) — The page reader's PDF drawn with PDF.js
   (`pdfjs-dist`) one page at a time from byte ranges, with its own page and
   zoom controls. The Library page in tabs; library manuals by
@@ -171,6 +175,19 @@ a real foreign key.
 - `genres` — the extendable list.
 
 ### Audio (Phase 0, as built)
+
+- Playback (S-17, 14 October): one `Audio` element for the tab, made on first
+  use and held in `app/_ui/audio/deck.ts` with what is loaded, the queue and
+  whether it plays, read through `useSyncExternalStore` (`useDeck`, and
+  `useDeckTime` for the position). A client module stays loaded across
+  client-side navigation, so the sound continues from page to page; a full
+  reload stops it, so in-app forms that only navigate use `next/form`. The bar
+  (`SitePlayer.tsx`) is mounted in `app/layout.tsx` for active accounts. Its
+  links go to `/projects/:id?tab=mixes&track=:trackId[&variant=][&at=s]`;
+  the Mixes tab opens on that mix and, with `at`, opens the note box at that
+  moment, then drops `at` from the address. A file with no length on record
+  reports it once played (it used to on page load, from each row's own
+  element).
 
 - `audio` — project, `role` (`mix` or `reference`), `version`, `r2_key`
   (unique), original filename, bytes, `duration_s`, `credit`, uploaded by and

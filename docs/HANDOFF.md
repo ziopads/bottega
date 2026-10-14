@@ -45,8 +45,19 @@ Latest commits, newest first (`main` and `origin/main` both at `ce160ec` on
   check, lint on those files and access check pass. Not yet seen in a
   browser; the query change (two more fields in the linked models) is not
   tested against a database.
-- `package.json` and `package-lock.json`: `pdfjs-dist` 6.4.299, installed for
-  the PDF.js reader and held to go in with it.
+- The PDF.js reader (§4, the reader): `app/_library/PdfPane.tsx`, with
+  `package.json` and `package-lock.json` (`pdfjs-dist` 6.4.299). Seen working
+  on localhost 14 October; page field added after.
+- The site's one player (§4, "The site's player"; REQUIREMENTS 0.24 S-17,
+  ARCHITECTURE 0.15): `app/_ui/audio/deck.ts`, `SitePlayer.tsx`,
+  `Player.tsx`, `app/layout.tsx`, `app/_studio/StudioProjects.tsx`,
+  `ReleaseDetail.tsx`, `Notes.tsx`, `ProjectDetail.tsx`,
+  `session/MixesTab.tsx`, `session/OverviewTab.tsx`,
+  `app/projects/[id]/page.tsx`, `lib/studio.ts`, `lib/studioTypes.ts`; the
+  Library and search forms moved to `next/form`; `PlayerBar.tsx` and
+  `usePlayer.ts` to be removed with `git rm`. Type check, lint (only the old
+  `StudioProjects.tsx` errors) and access check pass. Not yet seen in a
+  browser.
 - This handoff.
 
 Migrations `db/001`–`022`, with test suites in `db/test/` for 002–022; all
@@ -335,6 +346,18 @@ it is linked to (`groupOfModel()`), so linking a manual on its page files it;
 one linked to two models stands under both. `?tab=`, `?type=` and `?maker=`
 are kept with `history.replaceState`.
 
+**The site's player** (S-17, 14 October, uncommitted). One audio element for
+the tab in `app/_ui/audio/deck.ts`; the bar `SitePlayer.tsx` in the root
+layout shows ‹ ▶ ›, the session and mix (a link to
+`/projects/:id?tab=mixes&track=:id`), a scrubber, "Note at 1:35" (the same
+page with `&at=`, which opens the note box at that moment), stars while the
+sessions list is open, volume, "continue" when there is a queue, and × to
+stop. Keys: Space, N, P, and 1–5/0 on the sessions list. Every `Player` row
+(mixes, references, the Overview's current mix) controls the one player and
+shows its progress; the queue is the list it was started from. A full page
+load stops the sound: variant rename (`reloadWith`) and removing a video
+(`Resources.tsx`) still use `window.location.assign`.
+
 **Controls** (13 October). Every action is drawn as a button
 with an outline or a fill, all at one size (11px text, tight padding; James
 chose the look of the small Remove button for all of them): `BUTTON`
@@ -395,12 +418,19 @@ gear model links it at once (`c819354`).
 
 ## 7. Next, in order
 
-0. **Commit the Library tabs** (James), after looking at them: screenshots
-   of the Library tab on All and on one type, Not filed, and Your documents.
+0. **Commit** (James), after looking at each on localhost: the Library tabs
+   (screenshots: Library on All and on one type, Not filed, Your
+   documents); the reader; the site's player (play a mix, move to the
+   Library, use "Note at", step through the sessions list).
 
    ```
-   git add app/_library/Library.tsx app/library/page.tsx lib/gearGroups.ts lib/documentTypes.ts lib/documents.ts docs/REQUIREMENTS.md docs/ARCHITECTURE.md docs/HANDOFF.md
+   git add app/_library/Library.tsx app/library/page.tsx app/library/search/page.tsx lib/gearGroups.ts lib/documentTypes.ts lib/documents.ts
    git commit -m "Library in tabs: manuals by type, manufacturer and model; your documents, shared and submissions on their own tabs"
+   git add app/_library/PdfPane.tsx package.json package-lock.json
+   git commit -m "Page reader: the PDF drawn with PDF.js from byte ranges, one page at a time, with its own page field and zoom"
+   git rm app/_studio/PlayerBar.tsx app/_studio/usePlayer.ts
+   git add app/_ui/audio/deck.ts app/_ui/audio/SitePlayer.tsx app/_ui/audio/Player.tsx app/layout.tsx app/_studio/StudioProjects.tsx app/_studio/ReleaseDetail.tsx app/_studio/Notes.tsx app/_studio/ProjectDetail.tsx app/_studio/session/MixesTab.tsx app/_studio/session/OverviewTab.tsx 'app/projects/[id]/page.tsx' lib/studio.ts lib/studioTypes.ts docs/REQUIREMENTS.md docs/ARCHITECTURE.md docs/HANDOFF.md
+   git commit -m "One player for the whole site: a bar that keeps playing between pages and opens a note at the moment on the mix's page"
    git push
    ```
 1. **The PDF reader, properly** (agreed 12 October; both prerequisites done

@@ -65,6 +65,8 @@ export default function ProjectDetail({
   initialSessionState,
   initialVariants,
   initialVariant,
+  initialTrackId,
+  initialAt,
 }: {
   initialTab: SessionTab;
   initialProject: StudioProject;
@@ -83,6 +85,10 @@ export default function ProjectDetail({
   initialVariants: StudioVariant[];
   /** '' is the main mix. */
   initialVariant: string;
+  /** ?track=: the mix the Mixes tab opens on (the player bar links here). */
+  initialTrackId: number | null;
+  /** ?at=: the note box opens at this moment (the bar's "Note at 1:35"). */
+  initialAt: number | null;
 }) {
   const [tab, setTab] = useState<SessionTab>(initialTab);
   const [project, setProject] = useState(initialProject);
@@ -299,6 +305,9 @@ export default function ProjectDetail({
         <MixesTab
           key={variant}
           projectId={project.id}
+          session={{ code: `${project.artist.code} ${project.canonicalId}`, title: project.workingName }}
+          initialTrackId={initialTrackId}
+          initialAt={initialAt}
           tracks={variantTracks}
           variant={variant}
           setTracks={setTracks}
