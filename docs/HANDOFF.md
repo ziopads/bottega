@@ -227,16 +227,19 @@ nearest-neighbour candidates; pgvector 0.8's iterative scan is switched on
 where it exists. Without an embedding the search runs on words alone and
 says so. The reader, `/library/[id]/read?page=N&q=…`: a page's extracted
 text with the query's words marked, Scriptorium's navigation (‹ ›, arrow
-keys, a page field, a scrubber that moves on release), and the PDF at that
-page on request. The PDF pane lives in the reader's `layout.tsx`, which
-stays mounted across page turns, and reads the page from the address. It asks `/api/documents/[id]/file?reader=1` once
-for a link signed for a fixed six-hour window (`signReaderGet()` in
-`lib/files.ts`, valid twelve hours, `Cache-Control: private`), so repeated
-requests get the same address and the browser can cache the file; turning the
-page changes only the frame's `#page=` and the viewer moves without
-refetching. The viewer's toolbar is hidden (`toolbar=0`); a link opens the
-PDF in a new tab with its tools. Pages are PDF pages
-from 1; printed numbers may differ. Documents with text show "Read the
+keys, a page field, a scrubber that moves on release), and beside it the PDF
+at that page (14 October, uncommitted): `app/_library/PdfPane.tsx` draws one
+page at a time with PDF.js (`pdfjs-dist` 6.4.299, its worker loaded with
+`new Worker(new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url))`)
+from byte ranges of the reader link (`signReaderGet()`, signed for a fixed
+six-hour window), with `disableStream` and `disableAutoFetch`, so only what
+the page needs is fetched. The pane lives in the reader's `layout.tsx`, which
+stays mounted across page turns, keeps the open document, and follows
+`?page=`; its own ‹ › turn the page through the address too. Each page is
+drawn to a new canvas at the column's width times the zoom (50% to 300%; Fit
+width by default) and swapped in when done. No text layer yet; "Open in a
+new tab" gives the browser's viewer. Pages are PDF pages from 1; printed
+numbers may differ. Documents with text show "Read the
 pages".
 
 **Sessions** (§6). Tabs: Overview, Mixes, State, Workflow, Notes, History.
@@ -407,15 +410,20 @@ gear model links it at once (`c819354`).
    to the reader's `?page=`, no clipped toolbar. Keep the pane in
    `app/library/[id]/read/layout.tsx` and the signed reader link from
    `signReaderGet()`; check that R2 answers a `Range` request from the site
-   with 206. Commit `package.json` and `package-lock.json` with it. Agreed
-   13 October: one page drawn on a canvas in the existing pane, our own row
+   with 206. Commit `package.json` and `package-lock.json` with it. Built
+   14 October (uncommitted; see §4, the reader), not yet seen in a browser.
+   Agreed 13 October: one page drawn on a canvas in the existing pane, our own row
    of controls (zoom out, zoom in, fit width), no text layer in this slice;
    the new tab keeps the browser's viewer for printing and search. James's
    13 October screenshot shows the current pane in Firefox's viewer, which
    ignores `toolbar=0` and opens at 100%, wider than the column. Before
    building: James pastes the R2 files bucket's CORS rule, to confirm it
    exposes `Accept-Ranges`, `Content-Range` and `Content-Length` (without
-   them PDF.js quietly downloads the whole file).
+   them PDF.js quietly downloads the whole file). Checked 14 October with
+   `scripts/r2-link-test.mjs` (not committed): every link answers a range
+   with 206 and the rule exposes all three headers. The same test found
+   `.env.local` holding a stale `R2_SECRET_ACCESS_KEY` (every local R2 call
+   failed with SignatureDoesNotMatch); James replaced it.
 2. **State tab, your read** (S-15): a four-step scale per zone and part
    (empty, sketched, working, baked), each change dated.
 3. **Connector analysis tool**: the latest snapshot, changes since the

@@ -10,7 +10,9 @@ story IDs below (S-3, W-6 and so on) refer to it.
 
 ## Changelog
 
-- **0.14** (2026-10-13) — The Library page in tabs; library manuals by
+- **0.14** (2026-10-14) — The page reader's PDF drawn with PDF.js
+  (`pdfjs-dist`) one page at a time from byte ranges, with its own page and
+  zoom controls. The Library page in tabs; library manuals by
   type from their catalogue model's group (`groupOfModel()` in
   `lib/gearGroups.ts`), then manufacturer and model (§11, The library).
 - **0.13** (2026-10-13) — Every action drawn as a button, all at one size:
@@ -430,7 +432,9 @@ those documents first and searches only their chunks, so row-level security
 never empties the nearest-neighbour candidates; pgvector's iterative scan is
 turned on where available. Results and pages carry links to the page reader,
 `/library/[id]/read?page=N&q=…`, which shows a page's extracted text with the
-query marked and, on request, the PDF at that page. Pages are PDF pages from 1.
+query marked and, beside it, the PDF at that page, drawn by PDF.js from byte
+ranges of the signed reader link (`app/_library/PdfPane.tsx`), so a page of a
+large book fetches only what that page needs. Pages are PDF pages from 1.
 
 ## 7. Migration from Vivarium (Phase 0)
 
