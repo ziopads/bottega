@@ -10,7 +10,7 @@ import LessonBody, { titlesOf } from '@/app/_learning/LessonBody';
 import { api, InlineEdit } from '@/app/_studio/controls';
 import { formatWhen } from '@/app/_studio/Notes';
 import { DetailGrid, PageHeader, Section } from '@/app/_ui/layout';
-import { TEXT_ACTION } from '@/app/_ui/styles';
+import { BUTTON_SMALL } from '@/app/_ui/styles';
 import { lessonHref, type StudyGroup } from '@/lib/studyTypes';
 
 // One lesson of a group's syllabus: its body with the citations linked to
@@ -147,7 +147,7 @@ export default function LessonView({ initial, lessonId, viewerId }: { initial: S
         ]}
         actions={
           custodian && !editing ? (
-            <button onClick={() => setEditing(true)} className={TEXT_ACTION}>
+            <button onClick={() => setEditing(true)} className={BUTTON_SMALL}>
               Edit the lesson
             </button>
           ) : undefined

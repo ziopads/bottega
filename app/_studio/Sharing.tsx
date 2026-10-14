@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { SHARE_LEVEL_LABEL, SHARE_LEVELS, type ShareLevel, type StudioShare } from '@/lib/studioTypes';
 import { api } from './controls';
+import { BUTTON, BUTTON_SMALL_DANGER } from '@/app/_ui/styles';
 
 // Who a project is shared with, for its owner (REQUIREMENTS AC-5). Sharing is
 // by the other person's email; they need an approved account first. Every
@@ -93,7 +94,7 @@ export default function Sharing({
                   </option>
                 ))}
               </select>
-              <button onClick={() => revoke(s)} className="text-[11px] text-muted hover:text-rust">
+              <button onClick={() => revoke(s)} className={BUTTON_SMALL_DANGER}>
                 Stop sharing
               </button>
             </li>
@@ -124,7 +125,7 @@ export default function Sharing({
         </select>
         <button
           disabled={busy || !email.trim()}
-          className="rounded border border-line px-3 py-1 hover:border-ink disabled:opacity-50"
+          className={BUTTON}
         >
           {busy ? 'Sharing…' : 'Share'}
         </button>

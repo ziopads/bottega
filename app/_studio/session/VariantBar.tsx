@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { api } from '@/app/_studio/controls';
 import { COMMON_VARIANTS, type StudioVariant } from '@/lib/studioTypes';
+import { BUTTON_SMALL, BUTTON_SMALL_DANGER, BUTTON_SMALL_PRIMARY } from '@/app/_ui/styles';
 
 // The session's variants as chips in its header (REQUIREMENTS S-14, S-16;
 // db/015): Main, then each named variant. The chosen one decides what the
@@ -120,7 +121,7 @@ export default function VariantBar({
             + Add variant
           </button>
           {selected && (
-            <button type="button" onClick={() => open({ mode: 'edit', v: selected })} className="px-1 text-muted hover:text-ink">
+            <button type="button" onClick={() => open({ mode: 'edit', v: selected })} className={BUTTON_SMALL}>
               Edit
             </button>
           )}
@@ -154,7 +155,7 @@ export default function VariantBar({
             maxLength={60}
             className={`${field} w-32`}
           />
-          <button type="button" onClick={() => void submit()} disabled={busy || !name.trim()} className="text-ink underline disabled:opacity-50">
+          <button type="button" onClick={() => void submit()} disabled={busy || !name.trim()} className={BUTTON_SMALL_PRIMARY}>
             {form.mode === 'add' ? 'Add' : 'Save'}
           </button>
           {form.mode === 'edit' && isOwner && (
@@ -163,12 +164,12 @@ export default function VariantBar({
               onClick={() => void remove(form.v)}
               disabled={busy || form.v.mixes > 0}
               title={form.v.mixes > 0 ? 'Delete its mixes first' : 'Its saves return to the name rules'}
-              className="text-muted hover:text-rust disabled:opacity-40"
+              className={BUTTON_SMALL_DANGER}
             >
               Remove
             </button>
           )}
-          <button type="button" onClick={() => setForm(null)} className="text-muted hover:text-ink">
+          <button type="button" onClick={() => setForm(null)} className={BUTTON_SMALL}>
             Cancel
           </button>
         </span>

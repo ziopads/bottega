@@ -17,6 +17,7 @@ import { getAccount } from '@/lib/access';
 import { AUTHORIZE_FIELDS, checkAuthorize, originFrom, readAuthorizeParams } from '@/lib/oauth';
 
 import { allow, deny } from './actions';
+import { BUTTON, BUTTON_PRIMARY } from '@/app/_ui/styles';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Connect Claude · Bottega' };
@@ -69,13 +70,13 @@ export default async function AuthorizePage({
       <div className="flex gap-3">
         <form action={allow}>
           {hidden}
-          <button type="submit" className="t-body rounded border border-ink px-4 py-1.5 hover:bg-ink hover:text-parchment">
+          <button type="submit" className={BUTTON_PRIMARY}>
             Allow
           </button>
         </form>
         <form action={deny}>
           {hidden}
-          <button type="submit" className="t-body rounded border border-line px-4 py-1.5 text-muted hover:text-ink">
+          <button type="submit" className={BUTTON}>
             Deny
           </button>
         </form>

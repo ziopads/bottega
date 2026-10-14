@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { requirePlatformAdmin } from '@/lib/access';
 import { setAccount } from './actions';
+import { BUTTON } from '@/app/_ui/styles';
 
 // Accounts and the access log, for the platform administrator (REQUIREMENTS
 // AC-2, AC-11, AC-12). New sign-ups appear here as pending; approving one
@@ -109,7 +110,7 @@ export default async function AccountsPage() {
                       placeholder="reason (kept in the log)"
                       className="w-56 rounded border border-line bg-card px-2 py-1"
                     />
-                    <button type="submit" className="rounded border border-line px-3 py-1 hover:border-ink">
+                    <button type="submit" className={BUTTON}>
                       Save
                     </button>
                   </form>

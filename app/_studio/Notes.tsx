@@ -5,6 +5,7 @@ import { useState } from 'react';
 import type { StudioNote, StudioTrack } from '@/lib/studioTypes';
 import { formatDuration } from '@/lib/studioTypes';
 import { api } from './controls';
+import { BUTTON_PRIMARY, BUTTON_SMALL, BUTTON_SMALL_DANGER, BUTTON_SMALL_PRIMARY } from '@/app/_ui/styles';
 
 // Notes on a session (REQUIREMENTS S-4, S-11): one note's display and editing,
 // and the box that writes a new one. The tabs decide which notes to show;
@@ -92,7 +93,7 @@ export function NoteItem({
         {settled && <span className="text-ink">settled</span>}
         <span className="ml-auto flex gap-3">
           {onSettle && !settled && !editing && (
-            <button onClick={onSettle} className="hover:text-ink" title="Make this note a settled decision on the Workflow tab">
+            <button onClick={onSettle} className={BUTTON_SMALL} title="Make this note a settled decision on the Workflow tab">
               Settle
             </button>
           )}
@@ -103,7 +104,7 @@ export function NoteItem({
                 setAbout(n.trackId ?? 'project');
                 setEditing(true);
               }}
-              className="hover:text-ink"
+              className={BUTTON_SMALL}
             >
               Edit
             </button>
@@ -111,15 +112,15 @@ export function NoteItem({
           {canDelete &&
             (armed ? (
               <>
-                <button onClick={onDelete} className="text-rust underline">
+                <button onClick={onDelete} className={BUTTON_SMALL_PRIMARY}>
                   Confirm
                 </button>
-                <button onClick={() => setArmed(false)} className="hover:text-ink">
+                <button onClick={() => setArmed(false)} className={BUTTON_SMALL}>
                   cancel
                 </button>
               </>
             ) : (
-              <button onClick={() => setArmed(true)} className="hover:text-rust">
+              <button onClick={() => setArmed(true)} className={BUTTON_SMALL_DANGER}>
                 Delete
               </button>
             ))}
@@ -148,10 +149,10 @@ export function NoteItem({
               ))}
               <option value="project">the whole session</option>
             </select>
-            <button onClick={save} disabled={busy || !draft.trim()} className="rounded bg-rust px-3 py-0.5 text-white disabled:opacity-50">
+            <button onClick={save} disabled={busy || !draft.trim()} className={BUTTON_SMALL_PRIMARY}>
               {busy ? 'Saving…' : 'Save'}
             </button>
-            <button onClick={() => setEditing(false)} className="text-muted hover:text-ink">
+            <button onClick={() => setEditing(false)} className={BUTTON_SMALL}>
               Cancel
             </button>
           </div>
@@ -302,7 +303,7 @@ export function NoteComposer({
               className="t-num w-16 rounded border border-line bg-parchment px-1.5 py-0.5 text-ink outline-none focus:border-rust"
             />
             {moment && (
-              <button type="button" onClick={() => fromPlayer(false)} className="underline hover:text-ink">
+              <button type="button" onClick={() => fromPlayer(false)} className={BUTTON_SMALL}>
                 now
               </button>
             )}
@@ -312,7 +313,7 @@ export function NoteComposer({
           type="button"
           onClick={submit}
           disabled={busy || !draft.trim()}
-          className="ml-auto rounded bg-rust px-3 py-1 text-white disabled:opacity-50"
+          className={`ml-auto ${BUTTON_PRIMARY}`}
         >
           {busy ? 'Saving…' : 'Add note'}
         </button>

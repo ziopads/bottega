@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { use, useActionState } from 'react';
 
 import { signInWithEmail } from './actions';
+import { BUTTON_PRIMARY } from '@/app/_ui/styles';
 
 // Signing in. New accounts are created at /auth/sign-up and wait for the
 // platform administrator's approval (REQUIREMENTS AC-1).
@@ -41,7 +42,7 @@ export default function SignInPage({
       <button
         type="submit"
         disabled={pending}
-        className="border border-rust px-4 py-1.5 t-body text-rust hover:bg-rust hover:text-parchment disabled:opacity-50"
+        className={BUTTON_PRIMARY}
       >
         {pending ? 'Signing in…' : 'Sign in'}
       </button>

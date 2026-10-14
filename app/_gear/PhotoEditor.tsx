@@ -7,6 +7,7 @@ import type { GearFile, GearFileRole, Rotation } from '@/lib/gearTypes';
 import { FILE_ROLE_LABEL, FILE_ROLES } from '@/lib/gearTypes';
 
 import RotatedImage from './RotatedImage';
+import { BUTTON, BUTTON_PRIMARY, BUTTON_SMALL, BUTTON_SMALL_DANGER, BUTTON_SMALL_PRIMARY } from '@/app/_ui/styles';
 
 // The edit screen for one image on a unit (REQUIREMENTS G-9): turn it, say
 // whether people the unit is shared with see it, caption it, say what it is,
@@ -84,7 +85,6 @@ export default function PhotoEditor({
     onDeleted();
   }
 
-  const button = 'rounded border border-line px-3 py-1 t-body hover:border-ink disabled:opacity-40';
 
   return (
     <div
@@ -108,10 +108,10 @@ export default function PhotoEditor({
         {isOwner ? (
           <div className="mt-4 space-y-3 t-body" style={{ width: box.width }}>
             <div className="flex flex-wrap items-center gap-2">
-              <button onClick={() => turn(-90)} className={button} aria-label="Rotate left">
+              <button onClick={() => turn(-90)} className={BUTTON} aria-label="Rotate left">
                 ⟲ Rotate left
               </button>
-              <button onClick={() => turn(90)} className={button} aria-label="Rotate right">
+              <button onClick={() => turn(90)} className={BUTTON} aria-label="Rotate right">
                 Rotate right ⟳
               </button>
               <select value={role} onChange={(e) => setRole(e.target.value as GearFileRole)} className="ml-auto rounded border border-line bg-card px-2 py-1">
@@ -139,10 +139,10 @@ export default function PhotoEditor({
               aria-label="Caption"
             />
             <div className="flex flex-wrap items-center gap-3">
-              <button onClick={save} disabled={!dirty || busy} className="rounded bg-rust px-4 py-1.5 text-white disabled:opacity-40">
+              <button onClick={save} disabled={!dirty || busy} className={BUTTON_PRIMARY}>
                 {busy ? 'Saving…' : 'Save'}
               </button>
-              <button onClick={onClose} className="text-muted hover:text-ink">
+              <button onClick={onClose} className={BUTTON}>
                 Cancel
               </button>
               <a href={`/api/gear-files/${file.id}?download=1`} className="text-muted hover:text-ink">
@@ -151,15 +151,15 @@ export default function PhotoEditor({
               <span className="ml-auto">
                 {armed ? (
                   <span className="flex gap-3">
-                    <button onClick={remove} disabled={busy} className="text-rust underline">
+                    <button onClick={remove} disabled={busy} className={BUTTON_SMALL_PRIMARY}>
                       Confirm delete
                     </button>
-                    <button onClick={() => setArmed(false)} className="text-muted">
+                    <button onClick={() => setArmed(false)} className={BUTTON_SMALL}>
                       cancel
                     </button>
                   </span>
                 ) : (
-                  <button onClick={() => setArmed(true)} className="text-muted hover:text-rust">
+                  <button onClick={() => setArmed(true)} className={BUTTON_SMALL_DANGER}>
                     Delete
                   </button>
                 )}
@@ -170,7 +170,7 @@ export default function PhotoEditor({
         ) : (
           <div className="mt-3 flex items-baseline gap-3 t-body" style={{ width: box.width }}>
             <span className="min-w-0 flex-1 truncate text-muted">{file.caption || file.filename}</span>
-            <button onClick={onClose} className="text-muted hover:text-ink">
+            <button onClick={onClose} className={BUTTON}>
               Close
             </button>
           </div>

@@ -17,6 +17,7 @@ import {
 import { GEAR_GROUPS, groupLabel, groupOf, type GearGroup } from '@/lib/gearGroups';
 import { CapabilityInput } from './CapabilityEditor';
 import RotatedImage from './RotatedImage';
+import { BUTTON_PRIMARY, BUTTON_SMALL } from '@/app/_ui/styles';
 
 // The viewer's gear: their own units by status, with a filter by capability
 // ("which of my sound sources can hold a non-equal-tempered scale?" is: sound
@@ -117,7 +118,7 @@ export default function GearList({
             <span className="text-[11px] text-muted">or more</span>
           )}
         </span>
-        <button onClick={() => setAdding((a) => !a)} className="ml-auto rounded bg-rust px-3 py-1 text-white">
+        <button onClick={() => setAdding((a) => !a)} className={`ml-auto ${BUTTON_PRIMARY}`}>
           {adding ? 'Close' : 'Add gear'}
         </button>
       </div>
@@ -286,7 +287,7 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
             {model.manufacturer} {model.model}
           </span>{' '}
           <span className="text-muted">· {model.category}</span>{' '}
-          <button type="button" onClick={() => setModel(null)} className="text-[11px] text-muted underline hover:text-ink">
+          <button type="button" onClick={() => setModel(null)} className={BUTTON_SMALL}>
             change
           </button>
         </p>
@@ -327,7 +328,7 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
               </select>
             </>
           )}
-          <button type="button" onClick={() => setManual(false)} className="text-[11px] text-muted underline hover:text-ink">
+          <button type="button" onClick={() => setManual(false)} className={BUTTON_SMALL}>
             search the catalogue instead
           </button>
         </div>
@@ -380,7 +381,7 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
             <option value="owned">Owned</option>
             <option value="wishlist">Wishlist</option>
           </select>
-          <button disabled={busy} className="rounded bg-rust px-4 py-1.5 text-white disabled:opacity-50">
+          <button disabled={busy} className={BUTTON_PRIMARY}>
             {busy ? 'Adding…' : 'Add'}
           </button>
         </div>

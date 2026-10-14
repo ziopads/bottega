@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 
 import { api } from '@/app/_studio/controls';
-import { BUTTON } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_PRIMARY, BUTTON_SMALL_DANGER } from '@/app/_ui/styles';
 import type { DocumentKind, FingerprintMatch, StudioDocument } from '@/lib/documentTypes';
 import { DOCUMENT_CONTENT_TYPE, DOCUMENT_KIND_LABEL, DOCUMENT_KINDS, LIBRARY_KINDS } from '@/lib/documentTypes';
 import { formatBytes } from '@/lib/studioTypes';
@@ -343,7 +343,7 @@ export default function Upload() {
                         {x.link.label === 'Open' ? 'Open' : 'Open it'}
                       </Link>
                     ) : x.status !== 'working' && !running ? (
-                      <button onClick={() => setItems((list) => list.filter((y) => y.key !== x.key))} className="w-12 text-[11px] text-muted hover:text-rust">
+                      <button onClick={() => setItems((list) => list.filter((y) => y.key !== x.key))} className={BUTTON_SMALL_DANGER}>
                         Remove
                       </button>
                     ) : (
@@ -357,11 +357,11 @@ export default function Upload() {
               </ul>
 
               <div className="flex flex-wrap items-center gap-3">
-                <button onClick={run} disabled={running || waiting === 0} className="rounded bg-rust px-4 py-1.5 text-white disabled:opacity-40">
+                <button onClick={run} disabled={running || waiting === 0} className={BUTTON_PRIMARY}>
                   {running ? 'Adding…' : waiting === 1 ? 'Add 1 document' : `Add ${waiting} documents`}
                 </button>
                 {!running && (
-                  <button onClick={() => setItems([])} className="text-muted hover:text-ink">
+                  <button onClick={() => setItems([])} className={BUTTON}>
                     Clear the list
                   </button>
                 )}

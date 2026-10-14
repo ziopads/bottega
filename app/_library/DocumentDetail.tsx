@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { api, InlineEdit } from '@/app/_studio/controls';
 import { DetailGrid, MetaList, PageHeader, Section } from '@/app/_ui/layout';
-import { BUTTON, BUTTON_PRIMARY, FIELD, TEXT_ACTION, TEXT_DANGER } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_PRIMARY, BUTTON_SMALL, BUTTON_SMALL_DANGER, FIELD, TEXT_LINK } from '@/app/_ui/styles';
 import type { StudioDocument } from '@/lib/documentTypes';
 import { DOCUMENT_KIND_LABEL, DOCUMENT_KINDS, LIBRARY_KINDS, REVIEW_LABEL, STATE_LABEL, type DocumentKind } from '@/lib/documentTypes';
 import { formatBytes, levelAtLeast } from '@/lib/studioTypes';
@@ -286,7 +286,7 @@ export default function DocumentDetail({
         actions={
           <>
             {doc.pagesExtracted > 0 && (
-              <Link href={`/library/${doc.id}/read?page=1`} className={TEXT_ACTION}>
+              <Link href={`/library/${doc.id}/read?page=1`} className={TEXT_LINK}>
                 Read the pages
               </Link>
             )}
@@ -319,7 +319,7 @@ function ModelLinks({ doc, models, onLink }: { doc: StudioDocument; models: Mode
           {doc.models.map((m) => (
             <li key={m.id} className="flex items-baseline gap-3">
               {m.manufacturer} {m.model}
-              <button onClick={() => onLink(m.id, false)} className={`text-[11px] ${TEXT_DANGER}`}>
+              <button onClick={() => onLink(m.id, false)} className={BUTTON_SMALL_DANGER}>
                 Remove
               </button>
             </li>
@@ -357,12 +357,12 @@ function Delete({ onDelete }: { onDelete: () => void }) {
           <button onClick={onDelete} className={BUTTON_PRIMARY}>
             Delete
           </button>
-          <button onClick={() => setArmed(false)} className={TEXT_ACTION}>
+          <button onClick={() => setArmed(false)} className={BUTTON}>
             Cancel
           </button>
         </span>
       ) : (
-        <button onClick={() => setArmed(true)} className={TEXT_DANGER}>
+        <button onClick={() => setArmed(true)} className={BUTTON_SMALL_DANGER}>
           Delete document
         </button>
       )}
@@ -388,7 +388,7 @@ function MoveHome({ doc, onMove }: { doc: StudioDocument; onMove: (toLibrary: bo
         {doc.library ? 'In the library.' : `Private to ${doc.level === 'owner' ? 'you' : doc.ownerName}.`}
       </p>
       {!asking ? (
-        <button onClick={() => setAsking(true)} className={TEXT_ACTION}>
+        <button onClick={() => setAsking(true)} className={BUTTON_SMALL}>
           {toLibrary ? 'Move to the library…' : `Make it private to ${who}…`}
         </button>
       ) : (
@@ -410,7 +410,7 @@ function MoveHome({ doc, onMove }: { doc: StudioDocument; onMove: (toLibrary: bo
             <button onClick={() => onMove(toLibrary, kind)} className={BUTTON}>
               Move
             </button>
-            <button onClick={() => setAsking(false)} className={TEXT_ACTION}>
+            <button onClick={() => setAsking(false)} className={BUTTON}>
               Cancel
             </button>
           </div>
@@ -463,7 +463,7 @@ function PagesAndContents({
       </p>
       {canEdit && (
         <>
-          <button onClick={() => post({ op: 'contents' })} disabled={busy} className={`t-body mt-2 ${TEXT_ACTION}`}>
+          <button onClick={() => post({ op: 'contents' })} disabled={busy} className={`mt-2 ${BUTTON}`}>
             {busy ? 'Reading…' : 'Read page numbers and contents from the PDF'}
           </button>
           <form

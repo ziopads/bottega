@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import type { CapabilityDef, CapabilityValue } from '@/lib/gearTypes';
+import { BUTTON_SMALL, BUTTON_SMALL_DANGER } from '@/app/_ui/styles';
 
 // One capability's value, edited in the form its type needs: a yes/no choice,
 // a number, text, one choice, or several. Used for a unit's overrides and for
@@ -121,7 +122,7 @@ export function CapabilityEditor({
           await onSave(draft ?? null);
           setBusy(false);
         }}
-        className="rounded border border-line px-2 py-0.5 text-[11px] hover:border-ink disabled:opacity-40"
+        className={BUTTON_SMALL}
       >
         Save
       </button>
@@ -132,7 +133,7 @@ export function CapabilityEditor({
           if (await onSave(null)) setDraft(undefined);
           setBusy(false);
         }}
-        className="text-[11px] text-muted hover:text-rust"
+        className={BUTTON_SMALL_DANGER}
       >
         {clearLabel}
       </button>

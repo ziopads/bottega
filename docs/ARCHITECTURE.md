@@ -1,7 +1,7 @@
 # Bottega — architecture
 
-**Version:** 0.12
-**Date:** 2026-10-12
+**Version:** 0.13
+**Date:** 2026-10-13
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
 story IDs below (S-3, W-6 and so on) refer to it.
@@ -10,6 +10,9 @@ story IDs below (S-3, W-6 and so on) refer to it.
 
 ## Changelog
 
+- **0.13** (2026-10-13) — Every action drawn as a button: `BUTTON_SMALL`,
+  `BUTTON_SMALL_PRIMARY`, `BUTTON_SMALL_DANGER` and `TEXT_LINK` replace
+  `TEXT_ACTION` and `TEXT_DANGER`, and one-off button classes go (§13).
 - **0.12** (2026-10-12) — `auth_attempts` (021); `document_page_labels` and
   `document_sections` (022), read with PDF.js through unpdf during
   processing; the search page.
@@ -907,9 +910,14 @@ so pages differ in content and never in how they are built.
   even-width digits; no monospace face.
 - **Headers and controls.** Every page opens with `PageHeader` (the way
   back, the title, one line of facts joined by middle dots, the page's
-  actions on the right). Buttons, text actions and fields take their classes
-  from `app/_ui/styles.ts` (`BUTTON`, `BUTTON_PRIMARY`, `TEXT_ACTION`,
-  `TEXT_DANGER`, `FIELD`), so a control looks the same on every page. No
+  actions on the right). Buttons, links and fields take their classes from
+  `app/_ui/styles.ts`, so a control looks the same on every page: `BUTTON`
+  and `BUTTON_PRIMARY` for a form or section, `BUTTON_SMALL`,
+  `BUTTON_SMALL_PRIMARY` and `BUTTON_SMALL_DANGER` for actions beside content
+  (Edit, Accept, Remove), `TEXT_LINK` for navigation set in text, and
+  `FIELD`. Every action has an outline or a fill; plain text is for
+  navigation, tabs and an underlined action inside a sentence. Player,
+  scrubber and page-turn controls draw their own glyphs. No
   Tailwind type sizes (`text-sm`, `text-2xl`) and no serif outside the type
   scale; 11px (`text-[11px]`) is the size for secondary lines.
 - **Sections.** A `t-label` heading over a hairline rule (`Section`), no

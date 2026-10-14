@@ -3,6 +3,7 @@
 import { useActionState } from 'react';
 
 import { changePassword, type ChangePasswordState } from './actions';
+import { BUTTON_PRIMARY } from '@/app/_ui/styles';
 
 export default function ChangePasswordForm() {
   const [state, formAction, pending] = useActionState<ChangePasswordState, FormData>(changePassword, null);
@@ -33,7 +34,7 @@ export default function ChangePasswordForm() {
       <button
         type="submit"
         disabled={pending}
-        className="border border-rust px-4 py-1.5 t-body text-rust hover:bg-rust hover:text-parchment disabled:opacity-50"
+        className={BUTTON_PRIMARY}
       >
         {pending ? 'Changing…' : 'Change password'}
       </button>

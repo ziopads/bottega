@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 
 import { signOut } from '@/app/auth/sign-in/actions';
 import { getAccount } from '@/lib/access';
+import { BUTTON } from '@/app/_ui/styles';
 
 // Where a signed-in person lands until the platform administrator approves
 // their account, and where a disabled account is held (REQUIREMENTS AC-1,
@@ -35,7 +36,7 @@ export default async function PendingPage() {
         </>
       )}
       <form action={signOut}>
-        <button type="submit" className="t-body text-rust underline-offset-2 hover:underline">
+        <button type="submit" className={BUTTON}>
           Sign out
         </button>
       </form>

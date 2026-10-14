@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { measureAndStore } from '@/lib/peaks';
+import { BUTTON } from '@/app/_ui/styles';
 
 // Measures the waveform of every mix and reference uploaded before
 // waveforms existed (REQUIREMENTS S-10). Each file is downloaded once through
@@ -38,7 +39,7 @@ export default function WaveformBackfill({ items }: { items: Item[] }) {
 
   return (
     <div className="t-body space-y-3">
-      <button onClick={run} disabled={running} className="rounded border border-line px-3 py-1 hover:border-ink disabled:opacity-50">
+      <button onClick={run} disabled={running} className={BUTTON}>
         {running ? `Measuring… ${Object.keys(done).length} of ${items.length}` : 'Measure waveforms'}
       </button>
       {Object.keys(done).length > 0 && (

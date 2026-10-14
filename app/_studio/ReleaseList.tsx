@@ -5,6 +5,7 @@ import { useState } from 'react';
 import type { ReleaseKind, StudioArtist, StudioRelease } from '@/lib/studioTypes';
 import { RELEASE_KIND_LABEL, RELEASE_KINDS } from '@/lib/studioTypes';
 import { api } from './controls';
+import { BUTTON_PRIMARY } from '@/app/_ui/styles';
 
 // The viewer's collections, with a form to start a new one, then the
 // collections others have shared with them (REQUIREMENTS AC-8). Sessions are
@@ -80,7 +81,7 @@ export default function ReleaseList({
           <span className="text-muted">Year</span>
           <input value={year} onChange={(e) => setYear(e.target.value)} inputMode="numeric" className={`${field} w-20`} />
         </label>
-        <button disabled={busy || !title.trim()} className="rounded bg-rust px-4 py-1.5 text-white disabled:opacity-50">
+        <button disabled={busy || !title.trim()} className={BUTTON_PRIMARY}>
           {busy ? 'Creating…' : 'New collection'}
         </button>
       </form>

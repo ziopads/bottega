@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useActionState } from 'react';
 
 import { signUpWithEmail, type SignUpState } from './actions';
+import { BUTTON_PRIMARY } from '@/app/_ui/styles';
 
 // Creating an account (REQUIREMENTS AC-1). Anyone can; a new account waits
 // for the platform administrator's approval and reaches nothing until then.
@@ -56,7 +57,7 @@ export default function SignUpPage() {
       <button
         type="submit"
         disabled={pending}
-        className="border border-rust px-4 py-1.5 t-body text-rust hover:bg-rust hover:text-parchment disabled:opacity-50"
+        className={BUTTON_PRIMARY}
       >
         {pending ? 'Creating…' : 'Create the account'}
       </button>

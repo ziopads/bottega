@@ -12,6 +12,7 @@ import { CapabilityEditor } from './CapabilityEditor';
 import DropZone from './DropZone';
 import PhotoEditor from './PhotoEditor';
 import RotatedImage from './RotatedImage';
+import { BUTTON_PRIMARY, BUTTON_SMALL, BUTTON_SMALL_DANGER, BUTTON_SMALL_PRIMARY } from '@/app/_ui/styles';
 
 // One unit: what it is, its capabilities (the model's, with this unit's
 // overrides), its photos, and for its owner the insurance record, the private
@@ -149,7 +150,7 @@ export default function GearDetail({
         <div className="mb-3 flex items-baseline gap-4 border-b border-line pb-1">
           <h2 className="t-label">Capabilities</h2>
           {canEdit && (
-            <button onClick={() => setEditingCaps((x) => !x)} className="text-[11px] text-muted underline hover:text-ink">
+            <button onClick={() => setEditingCaps((x) => !x)} className={BUTTON_SMALL}>
               {editingCaps ? 'done' : 'where this unit differs from its model…'}
             </button>
           )}
@@ -272,15 +273,15 @@ export default function GearDetail({
           <div className="text-[11px]">
             {armed ? (
               <span className="flex gap-3">
-                <button onClick={remove} className="text-rust underline">
+                <button onClick={remove} className={BUTTON_SMALL_PRIMARY}>
                   Confirm: delete this unit and its files
                 </button>
-                <button onClick={() => setArmed(false)} className="text-muted hover:text-ink">
+                <button onClick={() => setArmed(false)} className={BUTTON_SMALL}>
                   cancel
                 </button>
               </span>
             ) : (
-              <button onClick={() => setArmed(true)} className="text-muted hover:text-rust">
+              <button onClick={() => setArmed(true)} className={BUTTON_SMALL_DANGER}>
                 Delete this unit
               </button>
             )}
@@ -295,7 +296,7 @@ function FileDelete({ file, onDeleted }: { file: GearFile; onDeleted: () => void
   const [armed, setArmed] = useState(false);
   if (!armed) {
     return (
-      <button onClick={() => setArmed(true)} className="text-[11px] text-muted hover:text-rust">
+      <button onClick={() => setArmed(true)} className={BUTTON_SMALL_DANGER}>
         delete
       </button>
     );
@@ -307,11 +308,11 @@ function FileDelete({ file, onDeleted }: { file: GearFile; onDeleted: () => void
           const r = await api(`/api/gear-files/${file.id}`, { method: 'DELETE' });
           if (r.ok) onDeleted();
         }}
-        className="text-rust underline"
+        className={BUTTON_SMALL_PRIMARY}
       >
         confirm
       </button>
-      <button onClick={() => setArmed(false)} className="text-muted">
+      <button onClick={() => setArmed(false)} className={BUTTON_SMALL}>
         cancel
       </button>
     </span>
@@ -420,7 +421,7 @@ function InsuranceRecord({ gearId, initial, isSoftware }: { gearId: number; init
         )}
       </div>
       <div className="mt-3 flex items-center gap-3 t-body">
-        <button disabled={!dirty || busy} onClick={save} className="rounded bg-rust px-4 py-1.5 text-white disabled:opacity-40">
+        <button disabled={!dirty || busy} onClick={save} className={BUTTON_PRIMARY}>
           {busy ? 'Saving…' : 'Save record'}
         </button>
         {message && <span className="text-muted">{message}</span>}

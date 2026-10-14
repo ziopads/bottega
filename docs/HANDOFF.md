@@ -1,15 +1,14 @@
 # Bottega — handoff
 
-**Date:** 2026-10-12
-**Read first, then `REQUIREMENTS.md` (0.17) and `ARCHITECTURE.md` (0.7).**
+**Date:** 2026-10-13
+**Read first, then `REQUIREMENTS.md` (0.22) and `ARCHITECTURE.md` (0.13).**
 
 Bottega is James's studio platform for Sirsinate Sound Labs: a service with
 separate accounts holding sessions, gear, manuals and the work in progress,
 reachable from Claude through a connector so Claude can act as a production
-collaborator and teacher. This file replaces the 11 October handoff and was
-brought up to date at the end of 12 October, after the Learning section's
-first slice. It records what is built, how the work is done, and what comes
-next.
+collaborator and teacher. This file replaces the 12 October handoff and was
+brought up to date on 13 October, after the button pass. It records what is
+built, how the work is done, and what comes next.
 
 ---
 
@@ -20,10 +19,14 @@ deployed on Vercel to studio.sirsinate.com. Neon Postgres (project
 `bottega-sirsinate`) with row-level security under the role `bottega_app`;
 Cloudflare R2 for audio and files; Voyage for embeddings.
 
-Latest commits, newest first:
+Latest commits, newest first (`main` and `origin/main` both at `c819354` on
+13 October, read from `.git` without running git):
 
 | Commit | What it did |
 |---|---|
+| `c819354` | Document page: choosing a gear model links it at once, no Link button |
+| `a03a944` | Reading lists (019), videos and links (020), sign-in attempt limit (021), printed page numbers and contents (022), search page |
+| `ef50708`, `300b683` | Study group reading list, Claude's search limited to it; videos and links played in the app |
 | `bbcc6ff` | Library: many documents by drop or folder; the administrator moves a document's home (018) |
 | `f1a04af` | Auth proxy passes only `get-session` to Neon Auth |
 | `a4193c4` | Study sessions and notes (017), group page tabs, connector tools |
@@ -31,46 +34,31 @@ Latest commits, newest first:
 | `599870e` | Page reader: the PDF pane in the reader's layout, so it survives page turns |
 | `003a43c` | Page reader: PDF loaded once, pages by `#page`; reader links signed for a fixed window |
 | `86c9696` | Learning, first slice: study groups, syllabus, cited lessons, progress, group documents (016) |
-| `56ab88c` | Upload form asks private or library first; Scriptorium's page navigation in the reader; the 12 October handoff |
-| `2790d3e` | Corpus search: `search`, `read_pages`, `list_documents` on the connector; the page reader with the PDF beside the text |
-| `237c3fb` | `pipeline/document_home.py`: move a library document into its contributor's private documents |
-| `31d988d` | Documents get their own upload limit, 150 MB (gear files stay at 50 MB) |
-| `fe7e1bd` | Variant chips: Main always shown, and a visible "+ Add variant" |
-| `225094a` | Session variants (015): chips in the header, saves sorted into variants, any save inspectable on the State tab |
-| `fe32104` | Notes: a typed moment field on both note boxes |
-| `f97f745` | The 11 October handoff |
-| `dd04d36` | One type scale; `PageHeader` and shared control styles |
-| `b25d313` | State tab: Live sets read from a dropped project folder (014) |
-| `b1b7cba` | Mix variants numbered within each variant (013) |
 
-The Learning slice and migration 016 were committed and pushed on 12
-October, then the PDF reader fixes, the sign-up page, study sessions and
-notes (017, `a4193c4`) and the narrowed auth proxy (`f1a04af`). **Not yet
-committed** (check `git status`): the study group's reading list (019),
-videos and links (020), the sign-in attempt limit (021), printed page
-numbers and contents (022), and the search page; batch upload and the move
-between library and private (018) went in as `bbcc6ff`. All checked with
-type check, lint (no new findings; StudioProjects.tsx and controls.tsx carry
-earlier ones) and the access check, 019–022 with their database tests; none
-seen in a browser. Checked with type check,
-lint, the access check and the database tests; not seen in a browser. The
-commands are in §7.
+**Not yet committed** (13 October):
 
-Migrations `db/001`–`016`, with test suites in `db/test/` for 002–016.
-001–017 are applied on Neon (check with `pipeline/migrate.py --status`);
-018 presumably with `bbcc6ff`; **019 to 022 are not yet**, unless applied
-since.
+- The button pass (§4, "Controls"): `app/_ui/styles.ts`, 37 files under
+  `app/`, and `docs/ARCHITECTURE.md` 0.13. Type check and access check pass;
+  lint finds only the earlier errors in `StudioProjects.tsx`. Not yet seen in
+  a browser.
+- `package.json` and `package-lock.json`: `pdfjs-dist` 6.4.299, installed for
+  the PDF.js reader and held to go in with it.
+- This handoff.
+
+Migrations `db/001`–`022`, with test suites in `db/test/` for 002–022; all
+applied on Neon with `a03a944` (check with `pipeline/migrate.py --status`).
 
 Confirmed working on production: sign-in and accounts, gear, document upload
 and processing, the session page and its tabs, the workflow, the connector
-from Claude Desktop (sessions, proposals, and now corpus search: James asked
-about the MPC and got cited answers), the State tab's folder drop (all 20
-Khione saves read), variant chips and adding a variant, the MPC Bible
-(document 15) processed and moved to James's private documents.
+from Claude Desktop (sessions, proposals, corpus search with cited answers),
+the State tab's folder drop, variant chips, the MPC Bible (document 15)
+processed and in James's private documents, and (13 October) reading printed
+page numbers and contents from a manual's PDF. The R2 files bucket's CORS
+rule for range requests is in place (13 October).
 
-Not yet seen in a browser: the page reader and its scrubber, the PDF pane,
-the new upload form, saving a note at a typed moment, moving a save between
-variants by hand, and everything in Learning.
+Not yet seen in a browser: whether the PDF pane still reloads on a page turn
+after `599870e`, the button pass, videos, the reading list, the search page,
+sign-in under the attempt limit, and most of Learning.
 
 ## 2. How James works, and how to work with him
 
@@ -139,8 +127,8 @@ straight to Neon Auth, and so does the middleware's session check. Neon
 Auth's own address (`NEON_AUTH_BASE_URL`) still answers anyone who finds it,
 so approval stays the control; and Neon Auth sees Vercel's address, not the
 person's, on every server-side call, so its per-address limit on sign-in
-attempts does not single out one guesser (an attempt limit of our own is a
-pending decision); items shared one at a time at view,
+attempts does not single out one guesser (Bottega keeps its own count,
+migration 021); items shared one at a time at view,
 contribute or edit; only owners delete; every access change in an
 append-only log. Enforced in the database (`project_rank`, `gear_rank`,
 `document_rank`, policies on every table) and in the app (`lib/access.ts`;
@@ -155,7 +143,7 @@ gear map by studio group.
 Upload limit 150 MB (`DOCUMENT_MAX_BYTES`). The upload form asks first
 whether a document is private or a library manual, with no default; the
 library takes manufacturers' manuals only, books are private. A document's
-home cannot change in the app (004's `documents_guard`);
+home changes only through the administrator's move (018, below) or
 `pipeline/document_home.py ID --private --kind book [--apply]` moves one with
 the owner role, removing picks and model links, and logs it. Only library
 documents can be linked to catalogue models.
@@ -279,7 +267,8 @@ decisions, Claude's proposals in a review band.
 **Connector** (§11, 012). `https://studio.sirsinate.com/api/mcp`. Tools:
 `list_projects`, `get_session`, `draft_criteria`, `draft_card`,
 `list_documents`, `search`, `read_pages`, and from 016 `get_study_group`,
-`draft_topic`, `draft_lesson`, `draft_exercise` (server 0.4.0). Results carry links
+`draft_topic`, `draft_lesson`, `draft_exercise` (016), the study session and
+resource tools (017, 020); server 0.7.0. Results carry links
 back into the app (`appOrigin` in `mcp/context.ts`, from the request's
 origin). The instructions tell Claude to read pages before quoting, cite
 "PDF p." with the link, and keep the corpus apart from its own knowledge.
@@ -328,6 +317,20 @@ at the end, and to tell the person it waits as a draft.
 `MetaList`, `TabBar`; control classes in `app/_ui/styles.ts`; four type
 sizes.
 
+**Controls** (13 October, uncommitted). Every action is drawn as a button
+with an outline or a fill: `BUTTON` (outline at 40% ink, darker on hover)
+and `BUTTON_PRIMARY` for a form or section; `BUTTON_SMALL`,
+`BUTTON_SMALL_PRIMARY` (Accept, Confirm delete) and `BUTTON_SMALL_DANGER`
+(Delete, Remove, Revoke) at 11px beside content; `TEXT_LINK` (underlined)
+for navigation set in text. `TEXT_ACTION` and `TEXT_DANGER` are gone, and so
+are the one-off button classes (local `button` in `PhotoEditor.tsx`, local
+`BUTTON` in `WorkflowTab.tsx`, the auth pages' outlined buttons). Left as
+they were: tabs and filters, sort headers, player, volume and scrubber
+controls, page-turn arrows, list rows and dropdown options, thumbnails,
+chips that already had an outline, and an underlined action inside a
+sentence ("choose a file", "Start it"). On a document's page, choosing a
+gear model links it at once (`c819354`).
+
 ## 5. Lessons from the build
 
 - A server component importing a non-component value from a `'use client'`
@@ -351,17 +354,14 @@ sizes.
   the header went unnoticed until it became a bordered chip.
 - A 100 MB PDF compressed in Acrobat only reached 84 MB: its size was not in
   images.
+- Grey text with no outline does not read as a button ("Read page numbers
+  and contents from the PDF" on 13 October), and a second confirming click
+  with no reason for it gets missed (the old Link button beside the model
+  picker).
 
 ## 6. Decisions waiting on James
 
-1. **The PDF reader, properly** (option 2 of 12 October, agreed; waiting for
-   James): render pages with PDF.js (`pdfjs-dist`) from byte ranges, so
-   opening page 824 of a 94 MB book fetches only what that page needs; our
-   own zoom and no clipped toolbar. Needs `npm install pdfjs-dist` and the R2
-   files bucket's CORS rule to allow GET and HEAD with the Range header and
-   expose Content-Range, Accept-Ranges and Content-Length (beside the PUT it
-   already allows for uploads).
-2. **Learning, later** (first slice 12 October; sessions, notes, reading
+1. **Learning, later** (first slice 12 October; sessions, notes, reading
    list, videos and a first Progress tab since). Candidates: asking to join
    and the directory of groups (L-8, L-11); handing over custodianship;
    questions and answers (L-4); each member's MPC model and firmware (L-6);
@@ -371,14 +371,25 @@ sizes.
 
 ## 7. Next, in order
 
-0. Commit what is uncommitted (James): apply 019 and 020 (and 018 if not yet) with
-   `pipeline/migrate.py` first, then commit and push. Put the MPC Bible
-   and the MPC manual on the MPC group's reading list (Resources tab), and
-   reconnect the connector so `search` shows its `group` option. Then: log a session in the app; test whether
-   the mobile app's voice mode calls the connector; drop the HARDWARE folder on the Library's "Add documents" as library
-   manuals and work through "Your submissions"; try "Where it lives" on a
-   document.
-1. The decisions in §6, then build what is chosen.
+0. **Commit the button pass** (James), after looking at it: run `npm run dev`
+   or push, then send screenshots of a document's page, a study group's
+   Sessions tab, a session's Workflow tab and the gear list. Adjust from
+   those, then commit:
+
+   ```
+   git add app/_ui/styles.ts app/_gear/CapabilityEditor.tsx app/_gear/CatalogueAdmin.tsx app/_gear/GearDetail.tsx app/_gear/GearList.tsx app/_gear/PhotoEditor.tsx app/_learning/Exercise.tsx app/_learning/GroupView.tsx app/_learning/Journal.tsx app/_learning/LearningHome.tsx app/_learning/LessonView.tsx app/_learning/Resources.tsx app/_library/DocumentDetail.tsx app/_library/Upload.tsx app/_studio/NewProject.tsx app/_studio/Notes.tsx app/_studio/ReleaseDetail.tsx app/_studio/ReleaseList.tsx app/_studio/Sharing.tsx app/_studio/StudioProjects.tsx app/_studio/session/MixesTab.tsx app/_studio/session/NotesTab.tsx app/_studio/session/OverviewTab.tsx app/_studio/session/VariantBar.tsx app/_studio/session/WorkflowTab.tsx app/account/ChangePasswordForm.tsx app/account/ConnectedApps.tsx app/account/ConvertImages.tsx app/account/ProfileTab.tsx app/account/SharingTab.tsx app/account/UsageTab.tsx app/admin/accounts/page.tsx app/admin/lengths/LengthBackfill.tsx app/admin/lengths/WaveformBackfill.tsx app/auth/pending/page.tsx app/auth/sign-in/page.tsx app/auth/sign-up/page.tsx app/oauth/authorize/page.tsx docs/ARCHITECTURE.md docs/HANDOFF.md
+   git commit -m "Every action drawn as a button: small, small primary and small danger buttons and a text link replace grey text actions; the 13 October handoff"
+   git push
+   ```
+1. **The PDF reader, properly** (agreed 12 October; both prerequisites done
+   13 October: `pdfjs-dist` 6.4.299 installed, the R2 CORS rule in place).
+   Render pages with PDF.js from byte ranges, so opening page 824 of a 94 MB
+   book fetches only what that page needs; our own zoom, page controls tied
+   to the reader's `?page=`, no clipped toolbar. Keep the pane in
+   `app/library/[id]/read/layout.tsx` and the signed reader link from
+   `signReaderGet()`; check that R2 answers a `Range` request from the site
+   with 206. Commit `package.json` and `package-lock.json` with it. First
+   ask James whether the current pane still reloads on a page turn.
 2. **State tab, your read** (S-15): a four-step scale per zone and part
    (empty, sketched, working, baked), each change dated.
 3. **Connector analysis tool**: the latest snapshot, changes since the
@@ -393,14 +404,21 @@ sizes.
    labels, raw JSON in the access log (show "approved" and the document's
    title).
 7. Smaller:
+   - Try in the app: put the MPC Bible and the MPC manual on the MPC group's
+     reading list and reconnect the connector so `search` shows `group`; log
+     a session; whether the mobile app's voice mode calls the connector; drop
+     the HARDWARE folder on "Add documents" and work through "Your
+     submissions"; "Where it lives" on a document.
    - State tab: "length" counts clips on switched-off tracks (Khione shows
      59:11); 2-MIDI appears in the map with no clips; every request reads
      every save's data (fine at 20 saves).
    - Khione's v1 and v2 are reversed; renumbering mix versions. Delete the
      test mix v3 (monhegan-windrose-vox-smpl.mp3) on Khione.
    - Linking a remix to its original; a "made for" field (DJ tool or
-     listening); the bulk manual import from the HARDWARE folder; accounts for
-     Gordon and Chris (needed before a study group is shared).
+     listening); accounts for Gordon and Chris (needed before a study group
+     is shared).
+   - `StudioProjects.tsx` lint errors (components made during render, unused
+     expressions), there since before 12 October.
    - Unconfirmed: the R2 audio bucket's CORS rule allowing GET from the site.
    - Uploads over Vercel's 4.5 MB request limit: a parsed save that large
      would fail with "Could not store it (413)"; none of Khione's did.

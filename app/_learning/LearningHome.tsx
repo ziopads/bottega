@@ -6,7 +6,7 @@ import { useState } from 'react';
 
 import { api } from '@/app/_studio/controls';
 import { Section } from '@/app/_ui/layout';
-import { BUTTON, BUTTON_PRIMARY, FIELD, TEXT_ACTION } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_PRIMARY, FIELD } from '@/app/_ui/styles';
 import type { StudyGroupSummary, StudyInvitation } from '@/lib/studyTypes';
 
 // The Learning page (REQUIREMENTS §10): invitations waiting for the person,
@@ -56,7 +56,7 @@ export default function LearningHome({ groups, invitations }: { groups: StudyGro
                 <button onClick={() => answerInvitation(inv, true)} disabled={busy} className={BUTTON_PRIMARY}>
                   Join
                 </button>
-                <button onClick={() => answerInvitation(inv, false)} disabled={busy} className={TEXT_ACTION}>
+                <button onClick={() => answerInvitation(inv, false)} disabled={busy} className={BUTTON}>
                   Decline
                 </button>
               </li>

@@ -10,6 +10,7 @@ import { SHARE_LEVELS, type ShareLevel } from '@/lib/studioTypes';
 
 import { FIELD } from './parts';
 import When from './When';
+import { BUTTON_SMALL_DANGER } from '@/app/_ui/styles';
 
 // Sharing (REQUIREMENTS AC-5, AC-12): every share this account has granted,
 // across sessions, gear and documents, grouped by item, to change or revoke in
@@ -96,7 +97,7 @@ export default function SharingTab({ initialOutgoing, incoming }: { initialOutgo
                                   </option>
                                 ))}
                               </select>
-                              <button onClick={() => revoke(s)} className="text-muted hover:text-rust">
+                              <button onClick={() => revoke(s)} className={BUTTON_SMALL_DANGER}>
                                 Revoke
                               </button>
                             </>

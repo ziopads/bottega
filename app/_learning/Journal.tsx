@@ -7,7 +7,7 @@ import type { Call } from '@/app/_learning/Exercise';
 import LessonBody from '@/app/_learning/LessonBody';
 import { formatWhen } from '@/app/_studio/Notes';
 import { Section } from '@/app/_ui/layout';
-import { BUTTON, BUTTON_PRIMARY, FIELD, TEXT_ACTION, TEXT_DANGER } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_PRIMARY, BUTTON_SMALL, BUTTON_SMALL_DANGER, FIELD } from '@/app/_ui/styles';
 import { formatTime } from '@/lib/youtube';
 import {
   formatMinutes,
@@ -116,7 +116,7 @@ export function NoteForm({
           {initial ? 'Save' : 'Add the note'}
         </button>
         {onDone && (
-          <button type="button" onClick={onDone} className={TEXT_ACTION}>
+          <button type="button" onClick={onDone} className={BUTTON}>
             Cancel
           </button>
         )}
@@ -176,11 +176,11 @@ export function NoteItem({
         <Badges origin={n.origin} published={n.published} isPrivate={n.private} />
         {mine && !editing && (
           <span className="ml-auto flex gap-3">
-            <button onClick={() => setEditing(true)} className={TEXT_ACTION}>
+            <button onClick={() => setEditing(true)} className={BUTTON_SMALL}>
               Edit
             </button>
             {!n.published && (
-              <button onClick={() => call(`/api/study/notes/${n.id}`, 'DELETE')} disabled={busy} className={TEXT_DANGER}>
+              <button onClick={() => call(`/api/study/notes/${n.id}`, 'DELETE')} disabled={busy} className={BUTTON_SMALL_DANGER}>
                 Discard
               </button>
             )}
@@ -306,7 +306,7 @@ function SessionForm({
         <button disabled={busy} className={BUTTON}>
           {initial ? 'Save' : 'Log the session'}
         </button>
-        <button type="button" onClick={onDone} className={TEXT_ACTION}>
+        <button type="button" onClick={onDone} className={BUTTON}>
           Cancel
         </button>
       </div>
@@ -337,14 +337,14 @@ function SessionItem({ s, g, viewerId, titles, call, busy }: { s: StudySession; 
                 Publish
               </button>
             )}
-            <button onClick={() => setEditing(true)} className={TEXT_ACTION}>
+            <button onClick={() => setEditing(true)} className={BUTTON_SMALL}>
               Edit
             </button>
             {!s.published && (
               <button
                 onClick={() => confirm('Discard this draft and its notes?') && call(`/api/study/sessions/${s.id}`, 'DELETE')}
                 disabled={busy}
-                className={TEXT_DANGER}
+                className={BUTTON_SMALL_DANGER}
               >
                 Discard
               </button>
@@ -385,7 +385,7 @@ function SessionItem({ s, g, viewerId, titles, call, busy }: { s: StudySession; 
             <NoteForm g={g} call={call} busy={busy} fixed={{ sessionId: s.id }} onDone={() => setNoting(false)} />
           </div>
         ) : (
-          <button onClick={() => setNoting(true)} className={`t-body mt-1 ${TEXT_ACTION}`}>
+          <button onClick={() => setNoting(true)} className={`mt-1 ${BUTTON_SMALL}`}>
             + Note
           </button>
         ))}
@@ -413,7 +413,7 @@ export function SessionsTab({ g, viewerId, titles, call, busy }: { g: StudyGroup
       )}
       <Section
         label="Sessions"
-        action={open && !logging ? <button onClick={() => setLogging(true)} className={TEXT_ACTION}>+ Log a session</button> : undefined}
+        action={open && !logging ? <button onClick={() => setLogging(true)} className={BUTTON_SMALL}>+ Log a session</button> : undefined}
       >
         {logging && (
           <div className="mb-4">
@@ -450,7 +450,7 @@ export function NotesTab({ g, viewerId, titles, call, busy }: { g: StudyGroup; v
   return (
     <Section
       label="Notes"
-      action={g.status === 'open' && !adding ? <button onClick={() => setAdding(true)} className={TEXT_ACTION}>+ Note</button> : undefined}
+      action={g.status === 'open' && !adding ? <button onClick={() => setAdding(true)} className={BUTTON_SMALL}>+ Note</button> : undefined}
     >
       {adding && (
         <div className="mb-4">
@@ -505,7 +505,7 @@ export function ProgressTab({ g }: { g: StudyGroup }) {
       <div className="t-body mb-4 flex flex-wrap items-center gap-2">
         <span className="text-muted">The last</span>
         {PERIODS.map((w) => (
-          <button key={w} onClick={() => setWeeks(w)} className={w === weeks ? 'text-ink underline underline-offset-4' : TEXT_ACTION}>
+          <button key={w} onClick={() => setWeeks(w)} className={w === weeks ? 'text-ink underline underline-offset-4' : 'text-muted hover:text-ink'}>
             {w} weeks
           </button>
         ))}

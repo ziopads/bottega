@@ -9,6 +9,7 @@ import { api, InlineEdit } from './controls';
 import PlayerBar from './PlayerBar';
 import Sharing from './Sharing';
 import { usePlayer } from './usePlayer';
+import { BUTTON_PRIMARY, BUTTON_SMALL, BUTTON_SMALL_DANGER, BUTTON_SMALL_PRIMARY } from '@/app/_ui/styles';
 
 // One release: its details, its running order (each entry plays that
 // session's newest mix, and the player runs straight through in order), and
@@ -172,7 +173,7 @@ export default function ReleaseDetail({
           {total > 0 && ` · ${formatDuration(total)}`}
         </span>
         {tracks.some((t) => t.latest) && (
-          <button onClick={() => player.toggle(tracks.find((t) => t.latest))} className="rounded bg-rust px-3 py-1 text-white">
+          <button onClick={() => player.toggle(tracks.find((t) => t.latest))} className={BUTTON_PRIMARY}>
             ▶ Play all
           </button>
         )}
@@ -210,13 +211,13 @@ export default function ReleaseDetail({
               </span>
               {canEdit && (
               <span className="flex shrink-0 gap-1 text-muted">
-                <button onClick={() => move(i, -1)} disabled={i === 0} className="px-1 hover:text-ink disabled:opacity-30" aria-label="Move up">
+                <button onClick={() => move(i, -1)} disabled={i === 0} className={BUTTON_SMALL} aria-label="Move up">
                   ↑
                 </button>
                 <button
                   onClick={() => move(i, 1)}
                   disabled={i === tracks.length - 1}
-                  className="px-1 hover:text-ink disabled:opacity-30"
+                  className={BUTTON_SMALL}
                   aria-label="Move down"
                 >
                   ↓
@@ -224,7 +225,7 @@ export default function ReleaseDetail({
                 {isOwner && (
                   <button
                     onClick={() => order('DELETE', { projectId: p.id })}
-                    className="px-1 hover:text-rust"
+                    className={BUTTON_SMALL_DANGER}
                     aria-label="Remove from collection"
                   >
                     ×
@@ -275,16 +276,16 @@ export default function ReleaseDetail({
       <div className="mt-10 text-[11px]">
         {armed ? (
           <span className="flex gap-3">
-            <button onClick={remove} className="text-rust underline">
+            <button onClick={remove} className={BUTTON_SMALL_PRIMARY}>
               Confirm: delete this collection
             </button>
-            <button onClick={() => setArmed(false)} className="text-muted hover:text-ink">
+            <button onClick={() => setArmed(false)} className={BUTTON_SMALL}>
               cancel
             </button>
             <span className="text-muted">The sessions and their audio stay.</span>
           </span>
         ) : (
-          <button onClick={() => setArmed(true)} className="text-muted hover:text-rust">
+          <button onClick={() => setArmed(true)} className={BUTTON_SMALL_DANGER}>
             Delete collection
           </button>
         )}

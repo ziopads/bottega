@@ -9,7 +9,7 @@ import { titlesOf } from '@/app/_learning/LessonBody';
 import VideoPlayer, { type VideoHandle } from '@/app/_learning/VideoPlayer';
 import { api } from '@/app/_studio/controls';
 import { DetailGrid, PageHeader, Section } from '@/app/_ui/layout';
-import { BUTTON, BUTTON_PRIMARY, FIELD, TEXT_ACTION, TEXT_DANGER } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_PRIMARY, BUTTON_SMALL, BUTTON_SMALL_DANGER, FIELD, TEXT_LINK } from '@/app/_ui/styles';
 import { resourceHref, tabHref, type StudyGroup, type StudyResource } from '@/lib/studyTypes';
 import { formatTime, parseTime } from '@/lib/youtube';
 
@@ -55,7 +55,7 @@ function ResourceRow({ r, g, viewerId, call, busy }: { r: StudyResource; g: Stud
             <button onClick={() => call(`/api/study/resources/${r.id}`, 'POST', { op: 'publish' })} disabled={busy} className={BUTTON_PRIMARY}>
               Publish
             </button>
-            <button onClick={() => call(`/api/study/resources/${r.id}`, 'DELETE')} disabled={busy} className={TEXT_DANGER}>
+            <button onClick={() => call(`/api/study/resources/${r.id}`, 'DELETE')} disabled={busy} className={BUTTON_SMALL_DANGER}>
               Discard
             </button>
           </span>
@@ -113,7 +113,7 @@ function AddResource({ g, call, busy, onDone }: { g: StudyGroup; call: Call; bus
         <button disabled={busy || !url.trim()} className={BUTTON}>
           {busy ? 'Adding…' : 'Add'}
         </button>
-        <button type="button" onClick={onDone} className={TEXT_ACTION}>
+        <button type="button" onClick={onDone} className={BUTTON}>
           Cancel
         </button>
       </span>
@@ -146,7 +146,7 @@ export function VideosSection({ g, viewerId, call, busy }: { g: StudyGroup; view
       )}
       <Section
         label="Videos and links"
-        action={g.status === 'open' && !adding ? <button onClick={() => setAdding(true)} className={TEXT_ACTION}>+ Add</button> : undefined}
+        action={g.status === 'open' && !adding ? <button onClick={() => setAdding(true)} className={BUTTON_SMALL}>+ Add</button> : undefined}
       >
         {adding && <AddResource g={g} call={call} busy={busy} onDone={() => setAdding(false)} />}
         {groups.length === 0 ? (
@@ -276,7 +276,7 @@ export default function ResourceView({
         meta={[r.channel || null, `added by ${r.addedByName}`, topicNames.length ? topicNames.join(', ') : 'not filed']}
         actions={
           <>
-            <a href={r.url} target="_blank" rel="noreferrer" className={TEXT_ACTION}>
+            <a href={r.url} target="_blank" rel="noreferrer" className={TEXT_LINK}>
               {r.kind === 'video' ? 'Open on YouTube' : 'Open'}
             </a>
             {mayRemove && (
@@ -286,7 +286,7 @@ export default function ResourceView({
                   if (await call(`/api/study/resources/${r.id}`, 'DELETE')) window.location.assign(tabHref(g.id, 'resources'));
                 }}
                 disabled={busy}
-                className={TEXT_DANGER}
+                className={BUTTON_SMALL_DANGER}
               >
                 Remove
               </button>
@@ -353,7 +353,7 @@ function MomentNote({
         {video && (
           <>
             <input value={at} onChange={(e) => setAt(e.target.value)} placeholder="m:ss" aria-label="Moment" className={`${FIELD} t-num w-20`} />
-            <button type="button" onClick={now} className={TEXT_ACTION}>
+            <button type="button" onClick={now} className={BUTTON_SMALL}>
               now
             </button>
           </>
@@ -377,7 +377,7 @@ function EditResource({ r, g, call, busy }: { r: StudyResource; g: StudyGroup; c
   const topics = g.topics.filter((t) => t.review === 'accepted');
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className={`t-body mt-3 ${TEXT_ACTION}`}>
+      <button onClick={() => setOpen(true)} className={`mt-3 ${BUTTON_SMALL}`}>
         Edit why and topics
       </button>
     );
@@ -407,7 +407,7 @@ function EditResource({ r, g, call, busy }: { r: StudyResource; g: StudyGroup; c
         <button disabled={busy} className={BUTTON}>
           Save
         </button>
-        <button type="button" onClick={() => setOpen(false)} className={TEXT_ACTION}>
+        <button type="button" onClick={() => setOpen(false)} className={BUTTON}>
           Cancel
         </button>
       </span>

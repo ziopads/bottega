@@ -8,6 +8,7 @@ import { api, GenreSelect, InlineEdit, Stars } from './controls';
 import NewProject from './NewProject';
 import PlayerBar from './PlayerBar';
 import { usePlayer } from './usePlayer';
+import { BUTTON, BUTTON_SMALL } from '@/app/_ui/styles';
 
 // The sessions list: a sortable table with inline editing, multi-select with
 // bulk changes, filters, and one shared player that steps through the rows as
@@ -350,7 +351,7 @@ export default function StudioProjects({
                 setReleaseFilter('');
                 setAudioOnly(false);
               }}
-              className="underline hover:text-ink"
+              className={BUTTON_SMALL}
             >
               clear
             </button>
@@ -544,7 +545,7 @@ function BulkBar({
           placeholder="—"
           className={`${sel} w-16`}
         />
-        <button disabled={busy} className="rounded border border-line px-2 py-1 hover:border-ink disabled:opacity-50">
+        <button disabled={busy} className={BUTTON}>
           Set
         </button>
       </form>
@@ -625,7 +626,7 @@ function BulkBar({
       </label>
 
       {done && <span className="text-[11px] text-muted">{done}</span>}
-      <button onClick={onClear} className="ml-auto text-[11px] text-muted underline hover:text-ink">
+      <button onClick={onClear} className={`ml-auto ${BUTTON_SMALL}`}>
         Clear selection
       </button>
     </div>

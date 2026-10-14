@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { StudioArtist, StudioProject } from '@/lib/studioTypes';
 import { todayCanonicalId } from '@/lib/studioTypes';
 import { api } from './controls';
+import { BUTTON, BUTTON_PRIMARY } from '@/app/_ui/styles';
 
 // The "New session" form on the sessions list.
 
@@ -55,7 +56,7 @@ export default function NewProject({
 
   if (!open) {
     return (
-      <button onClick={start} className="rounded bg-rust px-4 py-2 t-body text-white">
+      <button onClick={start} className={BUTTON_PRIMARY}>
         New session
       </button>
     );
@@ -127,10 +128,10 @@ export default function NewProject({
       )}
 
       <div className="mt-4 flex gap-2">
-        <button disabled={busy} className="rounded bg-rust px-4 py-2 t-body text-white disabled:opacity-50">
+        <button disabled={busy} className={BUTTON_PRIMARY}>
           {busy ? 'Creating…' : 'Create session'}
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="px-3 py-2 t-body text-muted hover:text-ink">
+        <button type="button" onClick={() => setOpen(false)} className={BUTTON}>
           Cancel
         </button>
       </div>

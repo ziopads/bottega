@@ -12,6 +12,7 @@ import { formatDuration } from '@/lib/studioTypes';
 import type { Workflow } from '@/lib/workflowTypes';
 
 import { audioUrl, formatDate } from './audioUpload';
+import { TEXT_LINK } from '@/app/_ui/styles';
 
 // The Overview tab (REQUIREMENTS S-1, S-2): the current mix to play, where
 // the session stands, the latest notes; to their left, its details and who it
@@ -69,7 +70,7 @@ export default function OverviewTab({
         label={current ? `Current mix · ${current.label}` : 'Current mix'}
         action={
           versions > 0 && (
-            <button onClick={() => onTab('mixes')} className="text-muted hover:text-ink">
+            <button onClick={() => onTab('mixes')} className={TEXT_LINK}>
               All {versions} {versions === 1 ? 'version' : 'versions'} →
             </button>
           )
@@ -104,7 +105,7 @@ export default function OverviewTab({
       <Section
         label={stageLabel ? `Where it stands · ${stageLabel}` : 'Where it stands'}
         action={
-          <button onClick={() => onTab('workflow')} className="text-muted hover:text-ink">
+          <button onClick={() => onTab('workflow')} className={TEXT_LINK}>
             Workflow →
           </button>
         }
@@ -138,7 +139,7 @@ export default function OverviewTab({
         label="Latest notes"
         action={
           notes.length > 0 && (
-            <button onClick={() => onTab('notes')} className="text-muted hover:text-ink">
+            <button onClick={() => onTab('notes')} className={TEXT_LINK}>
               All {notes.length} →
             </button>
           )

@@ -16,6 +16,7 @@ import {
   type WorkflowCard,
   type WorkflowElement,
 } from '@/lib/workflowTypes';
+import { BUTTON, BUTTON_SMALL, BUTTON_SMALL_DANGER, BUTTON_SMALL_PRIMARY } from '@/app/_ui/styles';
 
 // The Workflow tab (REQUIREMENTS W-1 to W-10, db/011), layout C:
 //
@@ -29,7 +30,6 @@ import {
 // enforce the same rules. Every change answers with the whole workflow.
 
 const FIELD = 'rounded border border-line bg-card px-1.5 py-0.5 outline-none focus:border-rust';
-const BUTTON = 'rounded border border-line px-2.5 py-0.5 hover:border-ink disabled:opacity-50';
 
 type Props = {
   projectId: number;
@@ -219,10 +219,10 @@ function StartedWorkflow({
               <span className="min-w-0 flex-1">{c.body}</span>
               {canEdit && (
                 <span className="flex gap-3 text-[11px]">
-                  <button onClick={() => call(`/api/criteria/${c.id}`, 'PATCH', { accept: true })} disabled={busy} className="hover:text-ink">
+                  <button onClick={() => call(`/api/criteria/${c.id}`, 'PATCH', { accept: true })} disabled={busy} className={BUTTON_SMALL_PRIMARY}>
                     Accept
                   </button>
-                  <button onClick={() => call(`/api/criteria/${c.id}`, 'PATCH', { reject: true })} disabled={busy} className="text-muted hover:text-rust">
+                  <button onClick={() => call(`/api/criteria/${c.id}`, 'PATCH', { reject: true })} disabled={busy} className={BUTTON_SMALL_DANGER}>
                     Reject
                   </button>
                 </span>
@@ -239,10 +239,10 @@ function StartedWorkflow({
                 <span className="min-w-0 flex-1">{c.what}</span>
                 {canChange(c) && (
                   <span className="flex gap-3 text-[11px]">
-                    <button onClick={() => call(`/api/cards/${c.id}`, 'PATCH', { status: 'accepted' })} disabled={busy} className="hover:text-ink">
+                    <button onClick={() => call(`/api/cards/${c.id}`, 'PATCH', { status: 'accepted' })} disabled={busy} className={BUTTON_SMALL_PRIMARY}>
                       Accept
                     </button>
-                    <button onClick={() => call(`/api/cards/${c.id}`, 'PATCH', { status: 'rejected' })} disabled={busy} className="text-muted hover:text-rust">
+                    <button onClick={() => call(`/api/cards/${c.id}`, 'PATCH', { status: 'rejected' })} disabled={busy} className={BUTTON_SMALL_DANGER}>
                       Reject
                     </button>
                   </span>
@@ -368,7 +368,7 @@ function StartedWorkflow({
           className="scroll-mt-4"
           label={<span id="parked-cards">Parked for later stages · {parked.length}</span>}
           action={
-            <button onClick={() => (parkedOpen ? setParkedOpen(false) : openParked(null))} className="text-muted hover:text-ink">
+            <button onClick={() => (parkedOpen ? setParkedOpen(false) : openParked(null))} className={BUTTON_SMALL}>
               {parkedOpen ? 'Hide' : 'Show'}
             </button>
           }
@@ -380,7 +380,7 @@ function StartedWorkflow({
           ) : (
           <div className="space-y-4">
             {parkedFocus && (
-              <button onClick={() => setParkedFocus(null)} className="t-body text-muted hover:text-ink">
+              <button onClick={() => setParkedFocus(null)} className={BUTTON_SMALL}>
                 Show every later stage
               </button>
             )}
@@ -455,7 +455,7 @@ function CriterionRow({ c, canEdit, isOwner, busy, call }: { c: ExitCriterion; c
         {c.body}
       </span>
       {isOwner && (
-        <button onClick={() => call(`/api/criteria/${c.id}`, 'DELETE')} disabled={busy} className="text-[11px] text-muted hover:text-rust" aria-label="Delete criterion">
+        <button onClick={() => call(`/api/criteria/${c.id}`, 'DELETE')} disabled={busy} className={BUTTON_SMALL_DANGER} aria-label="Delete criterion">
           ×
         </button>
       )}
@@ -489,7 +489,7 @@ function MoveBack({ w, busy, onMove }: { w: Workflow; busy: boolean; onMove: (to
   const [reason, setReason] = useState('');
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="mt-3 block text-[11px] text-muted hover:text-ink">
+      <button onClick={() => setOpen(true)} className={`mt-3 ${BUTTON_SMALL}`}>
         Move back to an earlier stage…
       </button>
     );
@@ -517,7 +517,7 @@ function MoveBack({ w, busy, onMove }: { w: Workflow; busy: boolean; onMove: (to
         <button type="submit" disabled={busy || !reason.trim()} className={BUTTON}>
           Move back
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="text-muted hover:text-ink">
+        <button type="button" onClick={() => setOpen(false)} className={BUTTON}>
           Cancel
         </button>
       </div>
@@ -577,7 +577,7 @@ function CardForm({
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="t-body text-muted hover:text-ink">
+      <button onClick={() => setOpen(true)} className={BUTTON_SMALL}>
         + Add a card
       </button>
     );
@@ -617,7 +617,7 @@ function CardForm({
           ))}
         </select>
         <span className="ml-auto flex gap-3">
-          <button type="button" onClick={() => (onCancel ? onCancel() : setOpen(false))} className="text-muted hover:text-ink">
+          <button type="button" onClick={() => (onCancel ? onCancel() : setOpen(false))} className={BUTTON}>
             Cancel
           </button>
           <button type="submit" disabled={busy || !what.trim() || !doneWhen.trim()} className={BUTTON}>
@@ -716,17 +716,17 @@ function CardRow({
         {c.reopenCount > 0 && <span>· reopened {c.reopenCount}×</span>}
         <span className="ml-auto flex gap-3">
           {changeable && (
-            <button onClick={() => setEditing(true)} className="hover:text-ink">
+            <button onClick={() => setEditing(true)} className={BUTTON_SMALL}>
               Edit
             </button>
           )}
           {canEdit && (
-            <button onClick={() => setSettling((s) => !s)} className="hover:text-ink">
+            <button onClick={() => setSettling((s) => !s)} className={BUTTON_SMALL}>
               Settle
             </button>
           )}
           {isOwner && (
-            <button onClick={() => call(`/api/cards/${c.id}`, 'DELETE')} disabled={busy} className="hover:text-rust">
+            <button onClick={() => call(`/api/cards/${c.id}`, 'DELETE')} disabled={busy} className={BUTTON_SMALL_DANGER}>
               Delete
             </button>
           )}
@@ -775,7 +775,7 @@ function SettledRow({
         {c.sourceNoteId !== null && <span>· from a note</span>}
         {c.reopenCount > 0 && <span>· reopened {c.reopenCount}× before</span>}
         {canEdit && (
-          <button onClick={() => setReopening((r) => !r)} className="ml-auto hover:text-ink">
+          <button onClick={() => setReopening((r) => !r)} className={`ml-auto ${BUTTON_SMALL}`}>
             Reopen
           </button>
         )}
@@ -829,7 +829,7 @@ function ElementTree({
           ))}
         </ul>
         {canEdit && (
-          <button onClick={() => setEditing(true)} className="mt-2 text-muted hover:text-ink">
+          <button onClick={() => setEditing(true)} className={`mt-2 ${BUTTON_SMALL}`}>
             Edit elements
           </button>
         )}
@@ -857,7 +857,7 @@ function ElementTree({
         ))}
       </ul>
       <AddLine placeholder="A new top-level element" busy={busy} onAdd={(name) => call(`/api/projects/${projectId}/elements`, 'POST', { name })} />
-      <button onClick={() => setEditing(false)} className="mt-2 text-muted hover:text-ink">
+      <button onClick={() => setEditing(false)} className={`mt-2 ${BUTTON_SMALL}`}>
         Done editing
       </button>
       {isOwner && <p className="mt-1 text-[11px] text-muted">Deleting an element deletes the parts under it; their cards stay, without an element.</p>}
@@ -885,7 +885,7 @@ function ElementLine({ e, isOwner, busy, call, strong = false }: { e: WorkflowEl
         aria-label="Element name"
       />
       {isOwner && (
-        <button type="button" onClick={() => call(`/api/elements/${e.id}`, 'DELETE')} disabled={busy} className="text-[11px] text-muted hover:text-rust">
+        <button type="button" onClick={() => call(`/api/elements/${e.id}`, 'DELETE')} disabled={busy} className={BUTTON_SMALL_DANGER}>
           Delete
         </button>
       )}

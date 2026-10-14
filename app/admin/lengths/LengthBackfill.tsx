@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { BUTTON } from '@/app/_ui/styles';
 
 type Item = { id: number; label: string };
 type Outcome = 'filled' | 'failed';
@@ -61,7 +62,7 @@ export default function LengthBackfill({ items }: { items: Item[] }) {
       <button
         onClick={run}
         disabled={running}
-        className="rounded border border-line px-3 py-1 hover:border-ink disabled:opacity-50"
+        className={BUTTON}
       >
         {running ? `Measuring… ${Object.keys(done).length} of ${items.length}` : 'Measure and save'}
       </button>

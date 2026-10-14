@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { convertImage } from '@/app/_gear/uploads';
+import { BUTTON_PRIMARY } from '@/app/_ui/styles';
 
 // Older photos, stored as their full-size originals, turned into web
 // versions in this browser one at a time (REQUIREMENTS G-10). The original is
@@ -39,7 +40,7 @@ export default function ConvertImages({ images }: { images: { id: number; filena
         versions here in your browser, removes location data, and deletes the original.
       </p>
       <div className="mt-2 flex items-center gap-3">
-        <button onClick={run} disabled={running} className="rounded bg-rust px-3 py-1 text-white disabled:opacity-40">
+        <button onClick={run} disabled={running} className={BUTTON_PRIMARY}>
           {running ? `Converting… ${done} of ${images.length}` : 'Convert them'}
         </button>
         <span className="text-[11px] text-muted">Keep this page open while it runs.</span>

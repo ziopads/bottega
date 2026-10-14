@@ -11,6 +11,7 @@ import type { StudioNote, StudioReference, StudioTrack } from '@/lib/studioTypes
 import { formatBytes, formatDuration } from '@/lib/studioTypes';
 
 import { audioUrl, formatDate, uploadMix, uploadReference } from './audioUpload';
+import { BUTTON, BUTTON_SMALL, BUTTON_SMALL_DANGER, BUTTON_SMALL_PRIMARY } from '@/app/_ui/styles';
 
 // The Mixes tab (REQUIREMENTS S-3, S-10, S-11): every version as a slim row
 // with its waveform, newest first, the current one marked; the upload that
@@ -303,7 +304,7 @@ function MixRow({
         </span>
         <span className="ml-auto flex gap-3 text-[11px] text-muted" onClick={(e) => e.stopPropagation()}>
           {noteCount > 0 && (
-            <button onClick={onSelect} className="hover:text-ink">
+            <button onClick={onSelect} className={BUTTON_SMALL}>
               {noteCount} {noteCount === 1 ? 'note' : 'notes'}
             </button>
           )}
@@ -311,27 +312,27 @@ function MixRow({
             Download
           </a>
           {canEdit && !current && (
-            <button onClick={onMakeCurrent} className="hover:text-ink">
+            <button onClick={onMakeCurrent} className={BUTTON_SMALL}>
               Make current
             </button>
           )}
           {canEdit && chosenByHand && (
-            <button onClick={onUseNewest} className="hover:text-ink">
+            <button onClick={onUseNewest} className={BUTTON_SMALL}>
               Use the newest
             </button>
           )}
           {canDelete &&
             (armed ? (
               <>
-                <button onClick={onDelete} className="text-rust underline">
+                <button onClick={onDelete} className={BUTTON_SMALL_PRIMARY}>
                   Delete {t.label}
                 </button>
-                <button onClick={() => setArmed(false)} className="hover:text-ink">
+                <button onClick={() => setArmed(false)} className={BUTTON_SMALL}>
                   cancel
                 </button>
               </>
             ) : (
-              <button onClick={() => setArmed(true)} className="hover:text-rust">
+              <button onClick={() => setArmed(true)} className={BUTTON_SMALL_DANGER}>
                 Delete
               </button>
             ))}
@@ -464,7 +465,7 @@ function References({
           <button
             onClick={() => fileInput.current?.click()}
             disabled={busy !== null}
-            className="rounded border border-line px-2.5 py-0.5 hover:border-ink disabled:opacity-50"
+            className={BUTTON}
           >
             {busy !== null ? `Uploading ${Math.round(busy * 100)}%…` : 'Add a reference MP3'}
           </button>
@@ -490,15 +491,15 @@ function ConfirmButton({ label, onConfirm }: { label: string; onConfirm: () => v
   const [armed, setArmed] = useState(false);
   return armed ? (
     <>
-      <button onClick={onConfirm} className="text-rust underline">
+      <button onClick={onConfirm} className={BUTTON_SMALL_PRIMARY}>
         Confirm
       </button>
-      <button onClick={() => setArmed(false)} className="hover:text-ink">
+      <button onClick={() => setArmed(false)} className={BUTTON_SMALL}>
         cancel
       </button>
     </>
   ) : (
-    <button onClick={() => setArmed(true)} className="hover:text-rust">
+    <button onClick={() => setArmed(true)} className={BUTTON_SMALL_DANGER}>
       {label}
     </button>
   );
