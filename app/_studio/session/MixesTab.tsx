@@ -11,7 +11,7 @@ import type { StudioNote, StudioReference, StudioTrack } from '@/lib/studioTypes
 import { formatBytes, formatDuration } from '@/lib/studioTypes';
 
 import { audioUrl, formatDate, uploadMix, uploadReference } from './audioUpload';
-import { BUTTON, BUTTON_SMALL, BUTTON_SMALL_DANGER, BUTTON_SMALL_PRIMARY } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
 
 // The Mixes tab (REQUIREMENTS S-3, S-10, S-11): every version as a slim row
 // with its waveform, newest first, the current one marked; the upload that
@@ -304,7 +304,7 @@ function MixRow({
         </span>
         <span className="ml-auto flex gap-3 text-[11px] text-muted" onClick={(e) => e.stopPropagation()}>
           {noteCount > 0 && (
-            <button onClick={onSelect} className={BUTTON_SMALL}>
+            <button onClick={onSelect} className={BUTTON}>
               {noteCount} {noteCount === 1 ? 'note' : 'notes'}
             </button>
           )}
@@ -312,27 +312,27 @@ function MixRow({
             Download
           </a>
           {canEdit && !current && (
-            <button onClick={onMakeCurrent} className={BUTTON_SMALL}>
+            <button onClick={onMakeCurrent} className={BUTTON}>
               Make current
             </button>
           )}
           {canEdit && chosenByHand && (
-            <button onClick={onUseNewest} className={BUTTON_SMALL}>
+            <button onClick={onUseNewest} className={BUTTON}>
               Use the newest
             </button>
           )}
           {canDelete &&
             (armed ? (
               <>
-                <button onClick={onDelete} className={BUTTON_SMALL_PRIMARY}>
+                <button onClick={onDelete} className={BUTTON_PRIMARY}>
                   Delete {t.label}
                 </button>
-                <button onClick={() => setArmed(false)} className={BUTTON_SMALL}>
+                <button onClick={() => setArmed(false)} className={BUTTON}>
                   cancel
                 </button>
               </>
             ) : (
-              <button onClick={() => setArmed(true)} className={BUTTON_SMALL_DANGER}>
+              <button onClick={() => setArmed(true)} className={BUTTON_DANGER}>
                 Delete
               </button>
             ))}
@@ -491,15 +491,15 @@ function ConfirmButton({ label, onConfirm }: { label: string; onConfirm: () => v
   const [armed, setArmed] = useState(false);
   return armed ? (
     <>
-      <button onClick={onConfirm} className={BUTTON_SMALL_PRIMARY}>
+      <button onClick={onConfirm} className={BUTTON_PRIMARY}>
         Confirm
       </button>
-      <button onClick={() => setArmed(false)} className={BUTTON_SMALL}>
+      <button onClick={() => setArmed(false)} className={BUTTON}>
         cancel
       </button>
     </>
   ) : (
-    <button onClick={() => setArmed(true)} className={BUTTON_SMALL_DANGER}>
+    <button onClick={() => setArmed(true)} className={BUTTON_DANGER}>
       {label}
     </button>
   );

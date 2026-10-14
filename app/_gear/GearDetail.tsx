@@ -12,7 +12,7 @@ import { CapabilityEditor } from './CapabilityEditor';
 import DropZone from './DropZone';
 import PhotoEditor from './PhotoEditor';
 import RotatedImage from './RotatedImage';
-import { BUTTON_PRIMARY, BUTTON_SMALL, BUTTON_SMALL_DANGER, BUTTON_SMALL_PRIMARY } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
 
 // One unit: what it is, its capabilities (the model's, with this unit's
 // overrides), its photos, and for its owner the insurance record, the private
@@ -150,7 +150,7 @@ export default function GearDetail({
         <div className="mb-3 flex items-baseline gap-4 border-b border-line pb-1">
           <h2 className="t-label">Capabilities</h2>
           {canEdit && (
-            <button onClick={() => setEditingCaps((x) => !x)} className={BUTTON_SMALL}>
+            <button onClick={() => setEditingCaps((x) => !x)} className={BUTTON}>
               {editingCaps ? 'done' : 'where this unit differs from its model…'}
             </button>
           )}
@@ -273,15 +273,15 @@ export default function GearDetail({
           <div className="text-[11px]">
             {armed ? (
               <span className="flex gap-3">
-                <button onClick={remove} className={BUTTON_SMALL_PRIMARY}>
+                <button onClick={remove} className={BUTTON_PRIMARY}>
                   Confirm: delete this unit and its files
                 </button>
-                <button onClick={() => setArmed(false)} className={BUTTON_SMALL}>
+                <button onClick={() => setArmed(false)} className={BUTTON}>
                   cancel
                 </button>
               </span>
             ) : (
-              <button onClick={() => setArmed(true)} className={BUTTON_SMALL_DANGER}>
+              <button onClick={() => setArmed(true)} className={BUTTON_DANGER}>
                 Delete this unit
               </button>
             )}
@@ -296,7 +296,7 @@ function FileDelete({ file, onDeleted }: { file: GearFile; onDeleted: () => void
   const [armed, setArmed] = useState(false);
   if (!armed) {
     return (
-      <button onClick={() => setArmed(true)} className={BUTTON_SMALL_DANGER}>
+      <button onClick={() => setArmed(true)} className={BUTTON_DANGER}>
         delete
       </button>
     );
@@ -308,11 +308,11 @@ function FileDelete({ file, onDeleted }: { file: GearFile; onDeleted: () => void
           const r = await api(`/api/gear-files/${file.id}`, { method: 'DELETE' });
           if (r.ok) onDeleted();
         }}
-        className={BUTTON_SMALL_PRIMARY}
+        className={BUTTON_PRIMARY}
       >
         confirm
       </button>
-      <button onClick={() => setArmed(false)} className={BUTTON_SMALL}>
+      <button onClick={() => setArmed(false)} className={BUTTON}>
         cancel
       </button>
     </span>

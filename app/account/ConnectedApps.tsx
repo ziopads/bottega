@@ -6,7 +6,7 @@ import { api } from '@/app/_studio/controls';
 import type { Connection } from '@/lib/connections';
 
 import When from './When';
-import { BUTTON_SMALL_DANGER } from '@/app/_ui/styles';
+import { BUTTON_DANGER } from '@/app/_ui/styles';
 
 // Claude and other connector clients this account has authorized, each with
 // a way to end its access (REQUIREMENTS M-1, AC-11).
@@ -43,7 +43,7 @@ export default function ConnectedApps({ initial }: { initial: Connection[] }) {
               <span className="text-[11px] text-muted">
                 since <When iso={c.connectedAt} day />
               </span>
-              <button onClick={() => revoke(c.clientId)} className={BUTTON_SMALL_DANGER}>
+              <button onClick={() => revoke(c.clientId)} className={BUTTON_DANGER}>
                 Revoke
               </button>
             </li>

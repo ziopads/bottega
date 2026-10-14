@@ -17,7 +17,7 @@ import {
 import { GEAR_GROUPS, groupLabel, groupOf, type GearGroup } from '@/lib/gearGroups';
 import { CapabilityInput } from './CapabilityEditor';
 import RotatedImage from './RotatedImage';
-import { BUTTON_PRIMARY, BUTTON_SMALL } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_PRIMARY } from '@/app/_ui/styles';
 
 // The viewer's gear: their own units by status, with a filter by capability
 // ("which of my sound sources can hold a non-equal-tempered scale?" is: sound
@@ -287,7 +287,7 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
             {model.manufacturer} {model.model}
           </span>{' '}
           <span className="text-muted">· {model.category}</span>{' '}
-          <button type="button" onClick={() => setModel(null)} className={BUTTON_SMALL}>
+          <button type="button" onClick={() => setModel(null)} className={BUTTON}>
             change
           </button>
         </p>
@@ -328,7 +328,7 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
               </select>
             </>
           )}
-          <button type="button" onClick={() => setManual(false)} className={BUTTON_SMALL}>
+          <button type="button" onClick={() => setManual(false)} className={BUTTON}>
             search the catalogue instead
           </button>
         </div>

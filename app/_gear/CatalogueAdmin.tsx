@@ -6,7 +6,7 @@ import { api, InlineEdit } from '@/app/_studio/controls';
 import type { CapabilityDef, CapabilityValue, GearModel } from '@/lib/gearTypes';
 import { GEAR_CATEGORIES, GEAR_KINDS, formatCapability, type GearCategory, type GearKind } from '@/lib/gearTypes';
 import { CapabilityEditor } from './CapabilityEditor';
-import { BUTTON_SMALL, BUTTON_SMALL_DANGER } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_DANGER } from '@/app/_ui/styles';
 
 // Suggestions first, each approved or rejected with one click; then every
 // model, opened to edit its facts and capabilities.
@@ -64,12 +64,12 @@ export default function CatalogueAdmin({ initialModels, defs }: { initialModels:
           </span>
         </button>
         {m.status !== 'approved' && (
-          <button onClick={() => patch(m.id, { status: 'approved' })} className={BUTTON_SMALL}>
+          <button onClick={() => patch(m.id, { status: 'approved' })} className={BUTTON}>
             Approve
           </button>
         )}
         {m.status !== 'rejected' && (
-          <button onClick={() => patch(m.id, { status: 'rejected' })} className={BUTTON_SMALL_DANGER}>
+          <button onClick={() => patch(m.id, { status: 'rejected' })} className={BUTTON_DANGER}>
             Reject
           </button>
         )}

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 
 import { api } from '@/app/_studio/controls';
-import { BUTTON, BUTTON_PRIMARY, BUTTON_SMALL_DANGER } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
 import type { DocumentKind, FingerprintMatch, StudioDocument } from '@/lib/documentTypes';
 import { DOCUMENT_CONTENT_TYPE, DOCUMENT_KIND_LABEL, DOCUMENT_KINDS, LIBRARY_KINDS } from '@/lib/documentTypes';
 import { formatBytes } from '@/lib/studioTypes';
@@ -343,7 +343,7 @@ export default function Upload() {
                         {x.link.label === 'Open' ? 'Open' : 'Open it'}
                       </Link>
                     ) : x.status !== 'working' && !running ? (
-                      <button onClick={() => setItems((list) => list.filter((y) => y.key !== x.key))} className={BUTTON_SMALL_DANGER}>
+                      <button onClick={() => setItems((list) => list.filter((y) => y.key !== x.key))} className={BUTTON_DANGER}>
                         Remove
                       </button>
                     ) : (

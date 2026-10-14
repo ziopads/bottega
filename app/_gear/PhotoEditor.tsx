@@ -7,7 +7,7 @@ import type { GearFile, GearFileRole, Rotation } from '@/lib/gearTypes';
 import { FILE_ROLE_LABEL, FILE_ROLES } from '@/lib/gearTypes';
 
 import RotatedImage from './RotatedImage';
-import { BUTTON, BUTTON_PRIMARY, BUTTON_SMALL, BUTTON_SMALL_DANGER, BUTTON_SMALL_PRIMARY } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
 
 // The edit screen for one image on a unit (REQUIREMENTS G-9): turn it, say
 // whether people the unit is shared with see it, caption it, say what it is,
@@ -151,15 +151,15 @@ export default function PhotoEditor({
               <span className="ml-auto">
                 {armed ? (
                   <span className="flex gap-3">
-                    <button onClick={remove} disabled={busy} className={BUTTON_SMALL_PRIMARY}>
+                    <button onClick={remove} disabled={busy} className={BUTTON_PRIMARY}>
                       Confirm delete
                     </button>
-                    <button onClick={() => setArmed(false)} className={BUTTON_SMALL}>
+                    <button onClick={() => setArmed(false)} className={BUTTON}>
                       cancel
                     </button>
                   </span>
                 ) : (
-                  <button onClick={() => setArmed(true)} className={BUTTON_SMALL_DANGER}>
+                  <button onClick={() => setArmed(true)} className={BUTTON_DANGER}>
                     Delete
                   </button>
                 )}

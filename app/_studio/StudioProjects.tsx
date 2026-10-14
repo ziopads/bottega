@@ -8,7 +8,7 @@ import { api, GenreSelect, InlineEdit, Stars } from './controls';
 import NewProject from './NewProject';
 import PlayerBar from './PlayerBar';
 import { usePlayer } from './usePlayer';
-import { BUTTON, BUTTON_SMALL } from '@/app/_ui/styles';
+import { BUTTON } from '@/app/_ui/styles';
 
 // The sessions list: a sortable table with inline editing, multi-select with
 // bulk changes, filters, and one shared player that steps through the rows as
@@ -351,7 +351,7 @@ export default function StudioProjects({
                 setReleaseFilter('');
                 setAudioOnly(false);
               }}
-              className={BUTTON_SMALL}
+              className={BUTTON}
             >
               clear
             </button>
@@ -626,7 +626,7 @@ function BulkBar({
       </label>
 
       {done && <span className="text-[11px] text-muted">{done}</span>}
-      <button onClick={onClear} className={`ml-auto ${BUTTON_SMALL}`}>
+      <button onClick={onClear} className={`ml-auto ${BUTTON}`}>
         Clear selection
       </button>
     </div>

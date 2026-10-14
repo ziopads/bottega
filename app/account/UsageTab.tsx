@@ -7,7 +7,7 @@ import { DetailGrid, Section } from '@/app/_ui/layout';
 import type { Allowance } from '@/lib/documentTypes';
 import { formatBytes } from '@/lib/studioTypes';
 import { USAGE_LABEL, type UsageFile, type UsageKind, type UsageRow } from '@/lib/usage';
-import { BUTTON_SMALL } from '@/app/_ui/styles';
+import { BUTTON } from '@/app/_ui/styles';
 
 // Usage (REQUIREMENTS O-7, K-10): storage against the allowance, by kind.
 // Each kind opens to its largest files, ten at a time, each linked to where
@@ -114,7 +114,7 @@ export default function UsageTab({
                     )}
                     {l?.loading && <p className="py-1 text-muted">Loading…</p>}
                     {l && !l.loading && l.more && (
-                      <button onClick={() => load(u.kind, l.files.length)} className={BUTTON_SMALL}>
+                      <button onClick={() => load(u.kind, l.files.length)} className={BUTTON}>
                         Show more
                       </button>
                     )}

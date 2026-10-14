@@ -7,7 +7,7 @@ import { NoteComposer, NoteItem } from '@/app/_studio/Notes';
 import { DetailGrid, Section } from '@/app/_ui/layout';
 import type { StudioNote, StudioTrack, StudioVariant } from '@/lib/studioTypes';
 import type { Workflow } from '@/lib/workflowTypes';
-import { BUTTON_SMALL } from '@/app/_ui/styles';
+import { BUTTON } from '@/app/_ui/styles';
 
 // The Notes tab (REQUIREMENTS S-5, S-11): every note on the session, newest
 // first: on a mix, at a moment, or on the whole session. Filters to the left.
@@ -128,7 +128,7 @@ export default function NotesTab({
               setFrom('');
               setTo('');
             }}
-            className={BUTTON_SMALL}
+            className={BUTTON}
           >
             Clear
           </button>

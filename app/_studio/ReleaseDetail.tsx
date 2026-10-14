@@ -9,7 +9,7 @@ import { api, InlineEdit } from './controls';
 import PlayerBar from './PlayerBar';
 import Sharing from './Sharing';
 import { usePlayer } from './usePlayer';
-import { BUTTON_PRIMARY, BUTTON_SMALL, BUTTON_SMALL_DANGER, BUTTON_SMALL_PRIMARY } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
 
 // One release: its details, its running order (each entry plays that
 // session's newest mix, and the player runs straight through in order), and
@@ -211,13 +211,13 @@ export default function ReleaseDetail({
               </span>
               {canEdit && (
               <span className="flex shrink-0 gap-1 text-muted">
-                <button onClick={() => move(i, -1)} disabled={i === 0} className={BUTTON_SMALL} aria-label="Move up">
+                <button onClick={() => move(i, -1)} disabled={i === 0} className={BUTTON} aria-label="Move up">
                   ↑
                 </button>
                 <button
                   onClick={() => move(i, 1)}
                   disabled={i === tracks.length - 1}
-                  className={BUTTON_SMALL}
+                  className={BUTTON}
                   aria-label="Move down"
                 >
                   ↓
@@ -225,7 +225,7 @@ export default function ReleaseDetail({
                 {isOwner && (
                   <button
                     onClick={() => order('DELETE', { projectId: p.id })}
-                    className={BUTTON_SMALL_DANGER}
+                    className={BUTTON_DANGER}
                     aria-label="Remove from collection"
                   >
                     ×
@@ -276,16 +276,16 @@ export default function ReleaseDetail({
       <div className="mt-10 text-[11px]">
         {armed ? (
           <span className="flex gap-3">
-            <button onClick={remove} className={BUTTON_SMALL_PRIMARY}>
+            <button onClick={remove} className={BUTTON_PRIMARY}>
               Confirm: delete this collection
             </button>
-            <button onClick={() => setArmed(false)} className={BUTTON_SMALL}>
+            <button onClick={() => setArmed(false)} className={BUTTON}>
               cancel
             </button>
             <span className="text-muted">The sessions and their audio stay.</span>
           </span>
         ) : (
-          <button onClick={() => setArmed(true)} className={BUTTON_SMALL_DANGER}>
+          <button onClick={() => setArmed(true)} className={BUTTON_DANGER}>
             Delete collection
           </button>
         )}

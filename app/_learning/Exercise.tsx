@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 import { InlineEdit } from '@/app/_studio/controls';
-import { BUTTON_SMALL, FIELD } from '@/app/_ui/styles';
+import { BUTTON, FIELD } from '@/app/_ui/styles';
 import { PROGRESS_LABEL, STUDY_PROGRESS, type StudyExercise, type StudyProgressStatus } from '@/lib/studyTypes';
 
 // One exercise: the task, how it will be known to be done, the viewer's own
@@ -108,10 +108,10 @@ export default function Exercise({
         </div>
         {custodian && (
           <span className="flex shrink-0 gap-2 text-[11px]">
-            <button onClick={() => call(url, 'PATCH', { move: 'up' })} disabled={busy} className={BUTTON_SMALL} aria-label="Move up">
+            <button onClick={() => call(url, 'PATCH', { move: 'up' })} disabled={busy} className={BUTTON} aria-label="Move up">
               ↑
             </button>
-            <button onClick={() => call(url, 'PATCH', { move: 'down' })} disabled={busy} className={BUTTON_SMALL} aria-label="Move down">
+            <button onClick={() => call(url, 'PATCH', { move: 'down' })} disabled={busy} className={BUTTON} aria-label="Move down">
               ↓
             </button>
           </span>

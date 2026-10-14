@@ -7,7 +7,7 @@ import type { Call } from '@/app/_learning/Exercise';
 import LessonBody from '@/app/_learning/LessonBody';
 import { formatWhen } from '@/app/_studio/Notes';
 import { Section } from '@/app/_ui/layout';
-import { BUTTON, BUTTON_PRIMARY, BUTTON_SMALL, BUTTON_SMALL_DANGER, FIELD } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY, FIELD } from '@/app/_ui/styles';
 import { formatTime } from '@/lib/youtube';
 import {
   formatMinutes,
@@ -176,11 +176,11 @@ export function NoteItem({
         <Badges origin={n.origin} published={n.published} isPrivate={n.private} />
         {mine && !editing && (
           <span className="ml-auto flex gap-3">
-            <button onClick={() => setEditing(true)} className={BUTTON_SMALL}>
+            <button onClick={() => setEditing(true)} className={BUTTON}>
               Edit
             </button>
             {!n.published && (
-              <button onClick={() => call(`/api/study/notes/${n.id}`, 'DELETE')} disabled={busy} className={BUTTON_SMALL_DANGER}>
+              <button onClick={() => call(`/api/study/notes/${n.id}`, 'DELETE')} disabled={busy} className={BUTTON_DANGER}>
                 Discard
               </button>
             )}
@@ -337,14 +337,14 @@ function SessionItem({ s, g, viewerId, titles, call, busy }: { s: StudySession; 
                 Publish
               </button>
             )}
-            <button onClick={() => setEditing(true)} className={BUTTON_SMALL}>
+            <button onClick={() => setEditing(true)} className={BUTTON}>
               Edit
             </button>
             {!s.published && (
               <button
                 onClick={() => confirm('Discard this draft and its notes?') && call(`/api/study/sessions/${s.id}`, 'DELETE')}
                 disabled={busy}
-                className={BUTTON_SMALL_DANGER}
+                className={BUTTON_DANGER}
               >
                 Discard
               </button>
@@ -385,7 +385,7 @@ function SessionItem({ s, g, viewerId, titles, call, busy }: { s: StudySession; 
             <NoteForm g={g} call={call} busy={busy} fixed={{ sessionId: s.id }} onDone={() => setNoting(false)} />
           </div>
         ) : (
-          <button onClick={() => setNoting(true)} className={`mt-1 ${BUTTON_SMALL}`}>
+          <button onClick={() => setNoting(true)} className={`mt-1 ${BUTTON}`}>
             + Note
           </button>
         ))}
@@ -413,7 +413,7 @@ export function SessionsTab({ g, viewerId, titles, call, busy }: { g: StudyGroup
       )}
       <Section
         label="Sessions"
-        action={open && !logging ? <button onClick={() => setLogging(true)} className={BUTTON_SMALL}>+ Log a session</button> : undefined}
+        action={open && !logging ? <button onClick={() => setLogging(true)} className={BUTTON}>+ Log a session</button> : undefined}
       >
         {logging && (
           <div className="mb-4">
@@ -450,7 +450,7 @@ export function NotesTab({ g, viewerId, titles, call, busy }: { g: StudyGroup; v
   return (
     <Section
       label="Notes"
-      action={g.status === 'open' && !adding ? <button onClick={() => setAdding(true)} className={BUTTON_SMALL}>+ Note</button> : undefined}
+      action={g.status === 'open' && !adding ? <button onClick={() => setAdding(true)} className={BUTTON}>+ Note</button> : undefined}
     >
       {adding && (
         <div className="mb-4">

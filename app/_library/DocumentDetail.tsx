@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { api, InlineEdit } from '@/app/_studio/controls';
 import { DetailGrid, MetaList, PageHeader, Section } from '@/app/_ui/layout';
-import { BUTTON, BUTTON_PRIMARY, BUTTON_SMALL, BUTTON_SMALL_DANGER, FIELD, TEXT_LINK } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY, FIELD, TEXT_LINK } from '@/app/_ui/styles';
 import type { StudioDocument } from '@/lib/documentTypes';
 import { DOCUMENT_KIND_LABEL, DOCUMENT_KINDS, LIBRARY_KINDS, REVIEW_LABEL, STATE_LABEL, type DocumentKind } from '@/lib/documentTypes';
 import { formatBytes, levelAtLeast } from '@/lib/studioTypes';
@@ -319,7 +319,7 @@ function ModelLinks({ doc, models, onLink }: { doc: StudioDocument; models: Mode
           {doc.models.map((m) => (
             <li key={m.id} className="flex items-baseline gap-3">
               {m.manufacturer} {m.model}
-              <button onClick={() => onLink(m.id, false)} className={BUTTON_SMALL_DANGER}>
+              <button onClick={() => onLink(m.id, false)} className={BUTTON_DANGER}>
                 Remove
               </button>
             </li>
@@ -362,7 +362,7 @@ function Delete({ onDelete }: { onDelete: () => void }) {
           </button>
         </span>
       ) : (
-        <button onClick={() => setArmed(true)} className={BUTTON_SMALL_DANGER}>
+        <button onClick={() => setArmed(true)} className={BUTTON_DANGER}>
           Delete document
         </button>
       )}
@@ -388,7 +388,7 @@ function MoveHome({ doc, onMove }: { doc: StudioDocument; onMove: (toLibrary: bo
         {doc.library ? 'In the library.' : `Private to ${doc.level === 'owner' ? 'you' : doc.ownerName}.`}
       </p>
       {!asking ? (
-        <button onClick={() => setAsking(true)} className={BUTTON_SMALL}>
+        <button onClick={() => setAsking(true)} className={BUTTON}>
           {toLibrary ? 'Move to the library…' : `Make it private to ${who}…`}
         </button>
       ) : (
@@ -407,10 +407,10 @@ function MoveHome({ doc, onMove }: { doc: StudioDocument; onMove: (toLibrary: bo
                 </option>
               ))}
             </select>
-            <button onClick={() => onMove(toLibrary, kind)} className={BUTTON}>
+            <button onClick={() => onMove(toLibrary, kind)} className={`self-stretch ${BUTTON}`}>
               Move
             </button>
-            <button onClick={() => setAsking(false)} className={BUTTON}>
+            <button onClick={() => setAsking(false)} className={`self-stretch ${BUTTON}`}>
               Cancel
             </button>
           </div>
@@ -492,7 +492,7 @@ function PagesAndContents({
                   <input value={first} onChange={(e) => setFirst(e.target.value)} inputMode="numeric" aria-label="First printed number" className={`${FIELD} t-num w-16`} />
                 </>
               )}
-              <button disabled={busy || !from || !to} className={BUTTON}>
+              <button disabled={busy || !from || !to} className={`self-stretch ${BUTTON}`}>
                 Set
               </button>
             </div>

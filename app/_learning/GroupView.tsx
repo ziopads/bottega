@@ -11,7 +11,7 @@ import { VideosSection } from '@/app/_learning/Resources';
 import { api, InlineEdit } from '@/app/_studio/controls';
 import { formatWhen } from '@/app/_studio/Notes';
 import { DetailGrid, PageHeader, Section, TabBar } from '@/app/_ui/layout';
-import { BUTTON, BUTTON_SMALL, BUTTON_SMALL_DANGER, BUTTON_SMALL_PRIMARY, FIELD } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY, FIELD } from '@/app/_ui/styles';
 import {
   GROUP_TAB_LABEL,
   GROUP_TABS,
@@ -251,12 +251,12 @@ export default function GroupView({
                 call(`/api/study/groups/${g.id}`, 'PATCH', { status: open ? 'closed' : 'open' })
               }
               disabled={busy}
-              className={BUTTON_SMALL}
+              className={BUTTON}
             >
               {open ? 'Close the group' : 'Reopen the group'}
             </button>
           ) : (
-            <button onClick={leave} className={BUTTON_SMALL_DANGER}>
+            <button onClick={leave} className={BUTTON_DANGER}>
               Leave the group
             </button>
           )
@@ -356,10 +356,10 @@ function ReviewRow({
         <span className="text-[11px] text-muted">{label}</span>
         {canReview && (
           <span className="ml-auto flex gap-3 text-[11px]">
-            <button onClick={() => call(url, 'PATCH', { accept: true })} disabled={busy || !!blocked} title={blocked} className={BUTTON_SMALL_PRIMARY}>
+            <button onClick={() => call(url, 'PATCH', { accept: true })} disabled={busy || !!blocked} title={blocked} className={BUTTON_PRIMARY}>
               Accept
             </button>
-            <button onClick={() => call(url, 'PATCH', { reject: true })} disabled={busy} className={BUTTON_SMALL_DANGER}>
+            <button onClick={() => call(url, 'PATCH', { reject: true })} disabled={busy} className={BUTTON_DANGER}>
               Reject
             </button>
           </span>
@@ -425,10 +425,10 @@ function Topic({
         )}
         {custodian && (
           <span className="flex gap-2 text-[11px]">
-            <button onClick={() => call(url, 'PATCH', { move: 'up' })} disabled={busy} className={BUTTON_SMALL} aria-label="Move topic up">
+            <button onClick={() => call(url, 'PATCH', { move: 'up' })} disabled={busy} className={BUTTON} aria-label="Move topic up">
               ↑
             </button>
-            <button onClick={() => call(url, 'PATCH', { move: 'down' })} disabled={busy} className={BUTTON_SMALL} aria-label="Move topic down">
+            <button onClick={() => call(url, 'PATCH', { move: 'down' })} disabled={busy} className={BUTTON} aria-label="Move topic down">
               ↓
             </button>
           </span>
@@ -455,10 +455,10 @@ function Topic({
               </Link>
               {custodian && (
                 <span className="flex gap-2 text-[11px]">
-                  <button onClick={() => call(`/api/study/lessons/${l.id}`, 'PATCH', { move: 'up' })} disabled={busy} className={BUTTON_SMALL} aria-label="Move lesson up">
+                  <button onClick={() => call(`/api/study/lessons/${l.id}`, 'PATCH', { move: 'up' })} disabled={busy} className={BUTTON} aria-label="Move lesson up">
                     ↑
                   </button>
-                  <button onClick={() => call(`/api/study/lessons/${l.id}`, 'PATCH', { move: 'down' })} disabled={busy} className={BUTTON_SMALL} aria-label="Move lesson down">
+                  <button onClick={() => call(`/api/study/lessons/${l.id}`, 'PATCH', { move: 'down' })} disabled={busy} className={BUTTON} aria-label="Move lesson down">
                     ↓
                   </button>
                 </span>
@@ -492,10 +492,10 @@ function Topic({
         <div className="t-body mt-3">
           {adding === null && (
             <span className="flex gap-4">
-              <button onClick={() => setAdding('lesson')} className={BUTTON_SMALL}>
+              <button onClick={() => setAdding('lesson')} className={BUTTON}>
                 + Lesson
               </button>
-              <button onClick={() => setAdding('exercise')} className={BUTTON_SMALL}>
+              <button onClick={() => setAdding('exercise')} className={BUTTON}>
                 + Exercise
               </button>
             </span>
@@ -650,7 +650,7 @@ function Members({ g, viewerId, custodian, busy, call }: { g: StudyGroup; viewer
               <button
                 onClick={() => confirm(`Remove ${m.name} from the group? Their progress is kept; they stop seeing the group and its documents.`) && call(url, 'POST', { op: 'remove', accountId: m.accountId })}
                 disabled={busy}
-                className={BUTTON_SMALL_DANGER}
+                className={BUTTON_DANGER}
               >
                 Remove
               </button>
@@ -666,7 +666,7 @@ function Members({ g, viewerId, custodian, busy, call }: { g: StudyGroup; viewer
               <li key={inv.id} className="flex items-baseline gap-2">
                 <span className="min-w-0 flex-1 text-muted">{inv.name}</span>
                 {custodian && (
-                  <button onClick={() => call(url, 'POST', { op: 'withdraw', invitationId: inv.id })} disabled={busy} className={BUTTON_SMALL}>
+                  <button onClick={() => call(url, 'POST', { op: 'withdraw', invitationId: inv.id })} disabled={busy} className={BUTTON}>
                     Withdraw
                   </button>
                 )}
@@ -767,7 +767,7 @@ function ReadingList({
                     .join(' · ')}
                 </span>
                 {mayRemove(d) && (
-                  <button onClick={() => change(d.id, false)} disabled={busy} className={BUTTON_SMALL_DANGER}>
+                  <button onClick={() => change(d.id, false)} disabled={busy} className={BUTTON_DANGER}>
                     Remove
                   </button>
                 )}
@@ -827,7 +827,7 @@ function ReadingList({
                 )}
                 <span className="text-[11px] text-muted"> · cited in {d.citedBy} {d.citedBy === 1 ? 'lesson' : 'lessons'}</span>
                 {((d.library && custodian) || (!d.library && d.mine)) && (
-                  <button onClick={() => change(d.id, true)} disabled={busy} className={`ml-2 ${BUTTON_SMALL}`}>
+                  <button onClick={() => change(d.id, true)} disabled={busy} className={`ml-2 ${BUTTON}`}>
                     Add to the list
                   </button>
                 )}

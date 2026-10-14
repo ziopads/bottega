@@ -9,7 +9,7 @@ import { titlesOf } from '@/app/_learning/LessonBody';
 import VideoPlayer, { type VideoHandle } from '@/app/_learning/VideoPlayer';
 import { api } from '@/app/_studio/controls';
 import { DetailGrid, PageHeader, Section } from '@/app/_ui/layout';
-import { BUTTON, BUTTON_PRIMARY, BUTTON_SMALL, BUTTON_SMALL_DANGER, FIELD, TEXT_LINK } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY, FIELD, TEXT_LINK } from '@/app/_ui/styles';
 import { resourceHref, tabHref, type StudyGroup, type StudyResource } from '@/lib/studyTypes';
 import { formatTime, parseTime } from '@/lib/youtube';
 
@@ -55,7 +55,7 @@ function ResourceRow({ r, g, viewerId, call, busy }: { r: StudyResource; g: Stud
             <button onClick={() => call(`/api/study/resources/${r.id}`, 'POST', { op: 'publish' })} disabled={busy} className={BUTTON_PRIMARY}>
               Publish
             </button>
-            <button onClick={() => call(`/api/study/resources/${r.id}`, 'DELETE')} disabled={busy} className={BUTTON_SMALL_DANGER}>
+            <button onClick={() => call(`/api/study/resources/${r.id}`, 'DELETE')} disabled={busy} className={BUTTON_DANGER}>
               Discard
             </button>
           </span>
@@ -146,7 +146,7 @@ export function VideosSection({ g, viewerId, call, busy }: { g: StudyGroup; view
       )}
       <Section
         label="Videos and links"
-        action={g.status === 'open' && !adding ? <button onClick={() => setAdding(true)} className={BUTTON_SMALL}>+ Add</button> : undefined}
+        action={g.status === 'open' && !adding ? <button onClick={() => setAdding(true)} className={BUTTON}>+ Add</button> : undefined}
       >
         {adding && <AddResource g={g} call={call} busy={busy} onDone={() => setAdding(false)} />}
         {groups.length === 0 ? (
@@ -286,7 +286,7 @@ export default function ResourceView({
                   if (await call(`/api/study/resources/${r.id}`, 'DELETE')) window.location.assign(tabHref(g.id, 'resources'));
                 }}
                 disabled={busy}
-                className={BUTTON_SMALL_DANGER}
+                className={BUTTON_DANGER}
               >
                 Remove
               </button>
@@ -353,7 +353,7 @@ function MomentNote({
         {video && (
           <>
             <input value={at} onChange={(e) => setAt(e.target.value)} placeholder="m:ss" aria-label="Moment" className={`${FIELD} t-num w-20`} />
-            <button type="button" onClick={now} className={BUTTON_SMALL}>
+            <button type="button" onClick={now} className={`self-stretch ${BUTTON}`}>
               now
             </button>
           </>
@@ -362,7 +362,7 @@ function MomentNote({
           <input type="checkbox" checked={isPrivate} onChange={(e) => setPrivate(e.target.checked)} />
           Private
         </label>
-        <button disabled={busy || !body.trim() || (video && !!at.trim() && parseTime(at) === null)} className={BUTTON}>
+        <button disabled={busy || !body.trim() || (video && !!at.trim() && parseTime(at) === null)} className={`self-stretch ${BUTTON}`}>
           Add the note
         </button>
       </div>
@@ -377,7 +377,7 @@ function EditResource({ r, g, call, busy }: { r: StudyResource; g: StudyGroup; c
   const topics = g.topics.filter((t) => t.review === 'accepted');
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className={`mt-3 ${BUTTON_SMALL}`}>
+      <button onClick={() => setOpen(true)} className={`mt-3 ${BUTTON}`}>
         Edit why and topics
       </button>
     );

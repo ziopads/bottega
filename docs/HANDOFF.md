@@ -318,17 +318,19 @@ at the end, and to tell the person it waits as a draft.
 sizes.
 
 **Controls** (13 October, uncommitted). Every action is drawn as a button
-with an outline or a fill: `BUTTON` (outline at 40% ink, darker on hover)
-and `BUTTON_PRIMARY` for a form or section; `BUTTON_SMALL`,
-`BUTTON_SMALL_PRIMARY` (Accept, Confirm delete) and `BUTTON_SMALL_DANGER`
-(Delete, Remove, Revoke) at 11px beside content; `TEXT_LINK` (underlined)
-for navigation set in text. `TEXT_ACTION` and `TEXT_DANGER` are gone, and so
-are the one-off button classes (local `button` in `PhotoEditor.tsx`, local
-`BUTTON` in `WorkflowTab.tsx`, the auth pages' outlined buttons). Left as
-they were: tabs and filters, sort headers, player, volume and scrubber
-controls, page-turn arrows, list rows and dropdown options, thumbnails,
-chips that already had an outline, and an underlined action inside a
-sentence ("choose a file", "Start it"). On a document's page, choosing a
+with an outline or a fill, all at one size (11px text, tight padding; James
+chose the look of the small Remove button for all of them): `BUTTON`
+(outline at 30% ink, darker on hover), `BUTTON_PRIMARY` (filled: the action a
+form is for, Accept, Confirm delete) and `BUTTON_DANGER` (Delete, Remove,
+Revoke); `TEXT_LINK` (underlined) for navigation set in text. In a row with
+fields a button stretches to the fields' height (`self-stretch` where the row
+centres its items). `TEXT_ACTION` and `TEXT_DANGER` are gone, and so are the
+one-off button classes (local `button` in `PhotoEditor.tsx`, local `BUTTON`
+in `WorkflowTab.tsx`, the auth pages' outlined buttons). Left as they were:
+tabs and filters, sort headers, player, volume and scrubber controls,
+page-turn arrows, list rows and dropdown options, thumbnails, chips that
+already had an outline, and an underlined action inside a sentence ("choose
+a file", "Start it"). On a document's page, choosing a
 gear model links it at once (`c819354`).
 
 ## 5. Lessons from the build
@@ -372,13 +374,14 @@ gear model links it at once (`c819354`).
 ## 7. Next, in order
 
 0. **Commit the button pass** (James), after looking at it: run `npm run dev`
-   or push, then send screenshots of a document's page, a study group's
-   Sessions tab, a session's Workflow tab and the gear list. Adjust from
+   or push, then send screenshots of a study group's Sessions tab, a
+   session's Workflow tab, the gear list and the sign-in page (the document
+   page was checked on 13 October, before the move to one size). Adjust from
    those, then commit:
 
    ```
    git add app/_ui/styles.ts app/_gear/CapabilityEditor.tsx app/_gear/CatalogueAdmin.tsx app/_gear/GearDetail.tsx app/_gear/GearList.tsx app/_gear/PhotoEditor.tsx app/_learning/Exercise.tsx app/_learning/GroupView.tsx app/_learning/Journal.tsx app/_learning/LearningHome.tsx app/_learning/LessonView.tsx app/_learning/Resources.tsx app/_library/DocumentDetail.tsx app/_library/Upload.tsx app/_studio/NewProject.tsx app/_studio/Notes.tsx app/_studio/ReleaseDetail.tsx app/_studio/ReleaseList.tsx app/_studio/Sharing.tsx app/_studio/StudioProjects.tsx app/_studio/session/MixesTab.tsx app/_studio/session/NotesTab.tsx app/_studio/session/OverviewTab.tsx app/_studio/session/VariantBar.tsx app/_studio/session/WorkflowTab.tsx app/account/ChangePasswordForm.tsx app/account/ConnectedApps.tsx app/account/ConvertImages.tsx app/account/ProfileTab.tsx app/account/SharingTab.tsx app/account/UsageTab.tsx app/admin/accounts/page.tsx app/admin/lengths/LengthBackfill.tsx app/admin/lengths/WaveformBackfill.tsx app/auth/pending/page.tsx app/auth/sign-in/page.tsx app/auth/sign-up/page.tsx app/oauth/authorize/page.tsx docs/ARCHITECTURE.md docs/HANDOFF.md
-   git commit -m "Every action drawn as a button: small, small primary and small danger buttons and a text link replace grey text actions; the 13 October handoff"
+   git commit -m "Every action drawn as a button, all at one size: outlined, filled and danger buttons and a text link replace grey text actions; the 13 October handoff"
    git push
    ```
 1. **The PDF reader, properly** (agreed 12 October; both prerequisites done

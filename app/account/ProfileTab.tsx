@@ -8,7 +8,7 @@ import type { MyArtist } from '@/lib/account';
 
 import { FIELD } from './parts';
 import When from './When';
-import { BUTTON, BUTTON_SMALL, BUTTON_SMALL_DANGER } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_DANGER } from '@/app/_ui/styles';
 
 // Profile (REQUIREMENTS AC-13): the name others see on shares, notes and
 // uploads; the sign-in email; the artists sessions are credited to.
@@ -62,7 +62,7 @@ export default function ProfileTab({
           <button
             type="submit"
             disabled={nameState === 'saving' || !draft.trim() || draft.trim() === name}
-            className={BUTTON}
+            className={`self-stretch ${BUTTON}`}
           >
             {nameState === 'saving' ? 'Saving…' : 'Save'}
           </button>
@@ -165,10 +165,10 @@ function ArtistList({
         autoFocus
       />
       <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" aria-label="Name" className={`${FIELD} w-56`} />
-      <button type="submit" disabled={busy || !code.trim() || !name.trim()} className={BUTTON}>
+      <button type="submit" disabled={busy || !code.trim() || !name.trim()} className={`self-stretch ${BUTTON}`}>
         {busy ? 'Saving…' : 'Save'}
       </button>
-      <button type="button" onClick={() => setEditing(null)} className={BUTTON}>
+      <button type="button" onClick={() => setEditing(null)} className={`self-stretch ${BUTTON}`}>
         Cancel
       </button>
     </form>
@@ -188,11 +188,11 @@ function ArtistList({
               <span className="text-[11px] text-muted">
                 {a.uses} {a.uses === 1 ? 'credit' : 'credits'}
               </span>
-              <button onClick={() => start(a)} className={BUTTON_SMALL}>
+              <button onClick={() => start(a)} className={BUTTON}>
                 Rename
               </button>
               {a.uses === 0 && (
-                <button onClick={() => remove(a)} className={BUTTON_SMALL_DANGER}>
+                <button onClick={() => remove(a)} className={BUTTON_DANGER}>
                   Delete
                 </button>
               )}
@@ -202,7 +202,7 @@ function ArtistList({
         {editing === 'new' && <li>{form}</li>}
       </ul>
       {editing === null && (
-        <button onClick={() => start(null)} className={`mt-2 ${BUTTON_SMALL}`}>
+        <button onClick={() => start(null)} className={`mt-2 ${BUTTON}`}>
           + Add an artist
         </button>
       )}
