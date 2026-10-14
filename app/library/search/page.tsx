@@ -1,3 +1,4 @@
+import Form from 'next/form';
 import Link from 'next/link';
 
 import { PageHeader } from '@/app/_ui/layout';
@@ -41,7 +42,7 @@ export default async function SearchPage({ searchParams }: Props) {
   return (
     <div className="max-w-4xl">
       <PageHeader back={{ href: '/library', label: 'Library' }} title="Search the manuals and books" />
-      <form action="/library/search" method="get" className="t-body mb-6 flex flex-wrap gap-2">
+      <Form action="/library/search" className="t-body mb-6 flex flex-wrap gap-2">
         <input
           name="q"
           defaultValue={q}
@@ -60,7 +61,7 @@ export default async function SearchPage({ searchParams }: Props) {
           ))}
         </select>
         <button className={BUTTON}>Search</button>
-      </form>
+      </Form>
 
       {result && (
         <>

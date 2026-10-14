@@ -1,5 +1,6 @@
 'use client';
 
+import Form from 'next/form';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -124,9 +125,9 @@ export default function Library({
         title="Library"
         actions={
           <>
-            <form action="/library/search" method="get" className="flex">
+            <Form action="/library/search" className="flex">
               <input name="q" placeholder="Search the manuals and books" aria-label="Search" className={`${FIELD} w-64`} />
-            </form>
+            </Form>
             <button type="button" onClick={() => setAdding(!adding)} className={adding ? BUTTON : BUTTON_PRIMARY} aria-expanded={adding}>
               {adding ? 'Close' : 'Add documents'}
             </button>
