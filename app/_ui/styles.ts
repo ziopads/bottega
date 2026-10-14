@@ -8,7 +8,7 @@
 // page-turn controls draw their own glyphs.
 
 const OFF = 'disabled:pointer-events-none disabled:opacity-50';
-const SHAPE = 'inline-flex items-center justify-center rounded border px-2 py-0.5 text-[11px] leading-tight';
+const SHAPE = 'inline-flex items-center justify-center rounded border px-2 py-0.5 text-[11px] leading-[14px]';
 
 // One size for every button. In a row with fields, a button stretches to the
 // fields' height (a flex row's default, or self-stretch where the row centres).
@@ -26,7 +26,7 @@ export const BUTTON_DANGER = `${SHAPE} border-ink/30 text-ink hover:border-rust 
  *  container joins the segments; SEGMENT(on) styles each, the chosen one filled. */
 export const SEGMENTS = 'inline-flex divide-x divide-ink/30 overflow-hidden rounded border border-ink/30';
 export const SEGMENT = (on: boolean) =>
-  `px-2 py-0.5 text-[11px] leading-tight ${on ? 'bg-ink text-parchment' : 'text-ink hover:bg-ink/5'}`;
+  `px-2 py-0.5 text-[11px] leading-[14px] ${on ? 'bg-ink text-parchment' : 'text-ink hover:bg-ink/5'}`;
 
 /** A link to another page or tab, set in text (Read the pages, All notes →). */
 export const TEXT_LINK = 'underline decoration-ink/30 underline-offset-2 hover:decoration-ink';
