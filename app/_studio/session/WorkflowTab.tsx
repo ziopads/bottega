@@ -77,7 +77,7 @@ export default function WorkflowTab({ projectId, workflow: w, setWorkflow, viewe
           <Section label="Workflow">
             <div className="t-body max-w-prose space-y-3">
               <p>
-                The workflow keeps track of where this session stands: one stage at a time ({w.stages.map((s) => s.label).join(', ')}),
+                The workflow keeps track of where this project stands: one stage at a time ({w.stages.map((s) => s.label).join(', ')}),
                 each finished when its exit criteria are met, with the open work on each part of the track as cards.
               </p>
               {canEdit ? (

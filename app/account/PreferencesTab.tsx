@@ -44,7 +44,7 @@ export default function PreferencesTab({
 
   const main = (
     <>
-      <Section label="New sessions">
+      <Section label="New projects">
         {error && <p className="t-body mb-2 text-rust">{error}</p>}
         {artists.length === 0 ? (
           <p className="t-body text-muted">Add an artist under Profile first.</p>
@@ -62,13 +62,13 @@ export default function PreferencesTab({
             {state === 'saved' && <span className="text-muted">Saved.</span>}
           </label>
         )}
-        <p className="mt-2 text-[11px] text-muted">The artist a new session starts with. It can be changed on each session.</p>
+        <p className="mt-2 text-[11px] text-muted">The artist a new project starts with. It can be changed on each project.</p>
       </Section>
       <Section label="Display">
         <ComingSoon>Date format, and the time zone used for dates.</ComingSoon>
       </Section>
       <Section label="Notifications">
-        <ComingSoon>Email when someone shares with you, adds a note or uploads a mix to your sessions.</ComingSoon>
+        <ComingSoon>Email when someone shares with you, adds a note or uploads a mix to your projects.</ComingSoon>
       </Section>
     </>
   );

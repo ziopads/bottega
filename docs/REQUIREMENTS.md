@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.24
+**Version:** 0.25
 **Date:** 2026-10-14
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -9,6 +9,10 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.25** (2026-10-14) — Terms: a music project is an Ableton project folder,
+  and its `.als` files are sets (§1, Terms); the app says Projects where it
+  said Sessions. A project's BPM follows its newest set (S-2).
 
 - **0.24** (2026-10-14) — One player for the whole site, in a bar at the foot
   of the window, that keeps playing between pages and leads back to the mix
@@ -150,11 +154,11 @@ Its first account is James's, for Sirsinate Sound Labs, a music studio. An
 account holds:
 
 - the studio's gear, with manuals and private documentation;
-- every Ableton Live session, with its mixes, references and notes;
-- where each session stands in the production process, and what remains to do
+- every Ableton Live project, with its mixes, references and notes;
+- where each project stands in the production process, and what remains to do
   in each part of the track;
 - the text of manuals and reference books, searchable by meaning;
-- measurements of sessions and audio, taken on the studio machine;
+- measurements of projects and audio, taken on the studio machine;
 - a study group's shared notes on learning the MPC.
 
 All of it is reachable from Claude through a Model Context Protocol (MCP)
@@ -167,6 +171,14 @@ easy to lose track of where a track stands, to reopen decisions already made,
 and to reach ahead into a later stage to avoid the work of the current one.
 After a month away, the application should return the producer to the exact
 place they left.
+
+**Terms** (14 October 2026). A music **project** is one Ableton project
+folder: its saved **sets** (the `.als` files Live writes, one per working
+sitting, grouped into variants such as a radio edit) and the samples and other
+material they share. Until that date this document and the app called a
+project a session; the connector's tool names and fields still do
+(`get_session`, `session_id`). A **study session** is a sitting in a study
+group (L-18), a separate thing.
 
 ## 2. Users and accounts
 
@@ -208,7 +220,7 @@ place they left.
 - **AC-7** Only an owner deletes, and only their own items. A collaborator
   deletes nothing, including notes they wrote on someone else's project.
   Collaborators may edit their own notes.
-- **AC-8** On signing in, a person lands in their own account: their sessions,
+- **AC-8** On signing in, a person lands in their own account: their projects,
   gear and documents first. Items shared with them appear in a second section,
   "Shared with me", each naming its owner and the level granted.
 - **AC-9** The platform administrator may open any account's content
@@ -238,7 +250,7 @@ place they left.
   rename, delete one nothing is credited to), every share they have granted
   in one list to change or revoke, what is shared with them, their recent
   activity from the access log (AC-12), and preferences, starting with the
-  artist new sessions are credited to.
+  artist new projects are credited to.
 
 ## 3. Layers
 
@@ -247,7 +259,7 @@ place they left.
 | Accounts | People, accounts, shares, the access log | Phase 1, first |
 | Gear | Hardware, software and books; images, serials, receipts, manuals | Phase 1 |
 | Projects | Projects of every kind; collections (EP, LP and so on) | Phase 0 |
-| Music | Ableton sessions, mixes, references, notes, ratings | Phase 0 |
+| Music | Ableton projects, mixes, references, notes, ratings | Phase 0 |
 | Workflow | Stages, exit criteria, elements, cards, settled decisions | Phase 2 |
 | Corpus | Manual and book text, chunked and embedded | Phase 1 |
 | Analysis | Measurements of `.als` files and audio | Phase 3 |
@@ -323,7 +335,7 @@ place they left.
 A project is any piece of work that moves through stages. Each project has a
 kind, and the kind decides its particular fields and its stages.
 
-- **P-1** Kinds: **music** (an Ableton Live session, §6), **installation**,
+- **P-1** Kinds: **music** (an Ableton Live project, §6), **installation**,
   **multimedia**, and **collection**.
 - **P-2** A collection is a meta project made of other projects in order: EP,
   LP, single, compilation, or multi-part composition (a piece in movements or
@@ -341,7 +353,7 @@ kind, and the kind decides its particular fields and its stages.
   files. Fields particular to a kind live with that kind: canonical ID, genre
   and BPM for music; site, dimensions and equipment for an installation; dates
   and venues for a performance.
-- **P-7** Music projects and collections exist from Phase 0, because sessions
+- **P-7** Music projects and collections exist from Phase 0, because projects
   and releases are already in use. Installation and multimedia projects arrive
   with the workflow in Phase 2.
 
@@ -350,29 +362,32 @@ kind, and the kind decides its particular fields and its stages.
 Carried over from Vivarium's studio, which is in daily use; nothing that works
 there may be lost in the move.
 
-- **S-1** Each session belongs to an account and is credited to one of that
+- **S-1** Each project belongs to an account and is credited to one of that
   account's artists. It has a permanent canonical ID (the date prefix
   of its Ableton folder, `YYYY MMDD`, unique per artist and never editable,
   because renaming breaks Ableton's file associations) and a working name that
   can change, with its history kept.
-- **S-2** Rating 0–5 (0 unrated), genre from an extendable list, BPM.
+- **S-2** Rating 0–5 (0 unrated), genre from an extendable list, BPM. The BPM
+  follows the tempo of the project's newest set whenever a set is read (a
+  dropped folder, later the Mac watcher, A-9); one typed by hand lasts until
+  the next set. Built 14 October 2026 (migration 023).
 - **S-3** Mixes: MP3s uploaded to private storage, numbered versions, streamed
   in the page and downloadable through signed links.
-- **S-4** Notes per session, newest first, optionally attached to one mix
+- **S-4** Notes per project, newest first, optionally attached to one mix
   and to a moment in it, typed as "1:35" (beside a mix, filled in from the
   player), filterable by person, mix, variant and date.
-- **S-5** The session list: sortable columns, search, filters by artist, genre,
+- **S-5** The project list: sortable columns, search, filters by artist, genre,
   rating and audio, multi-select bulk edit, and a shared player that auditions
-  each session's current mix with keyboard shortcuts.
+  each project's current mix with keyboard shortcuts.
 - **S-6** Vivarium's releases and their running orders migrate as collections
   (P-2).
 - **S-7 (new)** References: one or more tracks by other artists attached to a
-  session, stored and played like mixes but kept apart from them. The app
+  project, stored and played like mixes but kept apart from them. The app
   currently calls the producer's own bounces "reference tracks"; in Bottega
   those are **mixes** and **references** means other people's music.
-- **S-8 (new)** Current mix: each session points at one mix, defaulting to the
+- **S-8 (new)** Current mix: each project points at one mix, defaulting to the
   newest and changeable by hand. The list plays and describes the current mix.
-- **S-9 (new)** The session list shows the length of the current mix.
+- **S-9 (new)** The project list shows the length of the current mix.
   `studio_tracks.duration_s` already exists in Vivarium; how many rows have it
   filled is to be checked before the migration.
 - **S-10** Every mix and reference plays in one slim player that draws its
@@ -387,13 +402,13 @@ there may be lost in the move.
 - **S-17** One player for the whole site. Starting a mix or reference anywhere
   plays it in a bar at the foot of the window, which stays as the person moves
   from page to page; the players on a page control it and show its progress.
-  The bar names the session and mix and links back to the mix on its session
+  The bar names the project and mix and links back to the mix on its project
   page; "Note at 1:35" opens that page with the note box ready at that
   moment, while the sound carries on. Next and previous follow the list the
   mix was started from. Built 14 October 2026.
-- **S-13** The session page has five tabs, under a one-line header (working
+- **S-13** The project page has five tabs, under a one-line header (working
   name, canonical ID, artist, rating). Overview: its details and sharing in
-  the narrow column on the left; the current mix, where the session stands
+  the narrow column on the left; the current mix, where the project stands
   and the latest notes beside them. Mixes: every version and reference with
   its waveform, and on the right the notes on the selected version, ordered
   by moment. Workflow: stages and cards (§7). Notes: every note, filterable
@@ -401,11 +416,11 @@ there may be lost in the move.
   references uploaded and names changed, newest first.
 - **S-14** Mix variants: a mix belongs to the main mix or to a named variant
   (radio edit, extended, instrumental…), and versions are numbered within it
-  ("Radio edit v1"). A mix goes to the variant chosen in the session's
-  header (S-16); the Mixes tab shows that variant's mixes. The session's
+  ("Radio edit v1"). A mix goes to the variant chosen in the project's
+  header (S-16); the Mixes tab shows that variant's mixes. The project's
   current mix can be any version of any variant. A remix is its
-  own session; a link between a remix and its original comes later.
-- **S-16** Variants are a list on the session: chips in its header (Main,
+  own project; a link between a remix and its original comes later.
+- **S-16** Variants are a list on the project: chips in its header (Main,
   then each variant) choose what the Mixes and State tabs show. Edit access
   adds and renames a variant; the owner removes one that has no mixes. Each
   variant has a name rule, text in a saved set's file name ("radio edit"),
@@ -415,7 +430,7 @@ there may be lost in the move.
   first, each with what changed since the save before; choosing one shows
   the set as it was then. A variant's first save is compared with the main
   save just before it. The workflow, references and notes about the whole
-  session are common to all variants; a note on a mix follows its mix.
+  project are common to all variants; a note on a mix follows its mix.
 - **S-15 (planned)** A State tab, between Mixes and Workflow: each element's
   state as the person reads it (empty, sketched, working, baked; each change
   dated) beside what the latest analysis shows (how much of the arrangement
@@ -551,7 +566,7 @@ there may be lost in the move.
 
 ## 9. Analysis (A)
 
-Runs on the studio machine, where the sessions and audio live. Only the results
+Runs on the studio machine, where the projects and audio live. Only the results
 travel to the database.
 
 - **A-1** Read an `.als` file (gzipped XML): tracks, device chains per track,
@@ -562,8 +577,8 @@ travel to the database.
   differences.
 - **A-4** Measurements are stamped with the file, its modification date and the
   analyser's version, so a stale reading can be told from a current one.
-- **A-5** Analysis never changes a session file.
-- **A-6** Dropping a session's Ableton project folder on its page
+- **A-5** Analysis never changes a saved set or anything else in the project folder.
+- **A-6** Dropping a project's Ableton folder on its page
   reads every `.als` file in it in the browser, lists the folder's files by
   name and size without uploading the audio, and stores one snapshot per
   saved set (dated by the file, identified by its contents, so dropping the
@@ -577,10 +592,10 @@ travel to the database.
   disabled devices, empty and muted tracks; and files in the folder that only
   older saves use, which the latest set has moved on from. Several instances
   of one effect are pointed out as candidates for a shared return.
-- **A-8** Session history: the differences between consecutive
+- **A-8** Project history: the differences between consecutive
   snapshots (tracks, devices, clips, coverage per element, length) as a log
   of work sessions. Plugin use and sample references are also kept in tables
-  of their own, for questions across sessions.
+  of their own, for questions across projects.
 - **A-9 (planned)** Automatic updates: a small program on the Mac watches the
   sessions folder and sends each newly saved set, using the same parser and
   a token of the person's own, so Bottega follows the work in Live without an
@@ -680,7 +695,7 @@ travel to the database.
   logged (AC-11).
 - **M-2** Every tool sees what the connected person sees (AC-10), no more.
   Read tools across the layers: search the corpus, read pages, query
-  gear capabilities, read a session's state (stage, cards, notes, analysis),
+  gear capabilities, read a project's state (stage, cards, notes, analysis),
   list study notes and progress.
 - **M-3** Write tools only propose. `draft_card` and `draft_note` create items
   marked as written by the assistant and unreviewed; a person accepts or rejects
@@ -688,8 +703,8 @@ travel to the database.
 - **M-4** Quotations from the corpus in a proposal are checked against the page
   text, as in Scriptorium.
 - **M-5** First tools, to test the mentor scenarios early: `list_projects`
-  (the sessions a person can see, with each one's stage and current mix) and
-  `get_session` (one session's details, stage, exit criteria, open, parked
+  (the projects a person can see, with each one's stage and current mix) and
+  `get_session` (one project's details, stage, exit criteria, open, parked
   and settled cards, pending proposals, recent moves, elements, mixes,
   references and latest notes with their moments). The scenarios they serve:
   returning after a month ("where was I?"), getting unstuck on a passage,

@@ -37,7 +37,7 @@ export default async function AccountViewPage({ params }: { params: Promise<{ id
       </div>
 
       <section>
-        <h2 className="t-label mb-3 border-b border-line pb-1">Sessions ({theirs.length})</h2>
+        <h2 className="t-label mb-3 border-b border-line pb-1">Projects ({theirs.length})</h2>
         <ul className="divide-y divide-line border-y border-line t-body">
           {theirs.map((p) => (
             <li key={p.id} className="flex gap-4 py-2">

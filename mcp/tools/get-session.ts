@@ -15,7 +15,7 @@ const moment = (s: number | null) => (s === null ? null : formatDuration(s) || '
 
 export async function getSessionTool(db: Scoped, args: { id: number; notes?: number }) {
   const project = await getProject(db, args.id);
-  if (!project) throw new ToolError(`No session ${args.id} that you can see. list_projects gives the ids.`);
+  if (!project) throw new ToolError(`No project ${args.id} that you can see. list_projects gives the ids.`);
   const [w, tracks, references, notes] = await Promise.all([
     getWorkflow(db, args.id),
     listTracks(db, args.id),
@@ -113,7 +113,7 @@ export async function getSessionTool(db: Scoped, args: { id: number; notes?: num
       id: n.id,
       by: n.authorName,
       on: n.createdAt.slice(0, 10),
-      about: n.trackLabel ?? 'the whole session',
+      about: n.trackLabel ?? 'the whole project',
       at: n.trackLabel !== null ? moment(n.positionS) : null,
       text: n.body,
     })),

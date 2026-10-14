@@ -404,7 +404,7 @@ export default function StudioProjects({
 
       {shown.length === 0 ? (
         <p className="rounded-lg border border-line bg-card px-4 py-6 t-body text-muted">
-          {projects.length === 0 ? 'No sessions yet.' : 'No sessions match these filters.'}
+          {projects.length === 0 ? 'No projects yet.' : 'No projects match these filters.'}
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-line bg-card">
@@ -429,7 +429,7 @@ export default function StudioProjects({
                 <SortHead k="versions">Ver.</SortHead>
                 <SortHead k="length" className="text-right">Length</SortHead>
                 <th className={th}>Collections</th>
-                <SortHead k="date">Session</SortHead>
+                <SortHead k="date">Project</SortHead>
                 <SortHead k="upload">Uploaded</SortHead>
               </tr>
             </thead>
@@ -461,7 +461,7 @@ export default function StudioProjects({
 
       <p className="mt-3 text-[11px] text-muted">
         Click a column heading to sort, again to reverse. Shift-click checkboxes to select a range.
-        {shown.some((p) => p.latest) && ' Keys: Space play/pause · N next · P previous · 1–5 rate the playing session · 0 clears.'}
+        {shown.some((p) => p.latest) && ' Keys: Space play/pause · N next · P previous · 1–5 rate the playing project · 0 clears.'}
       </p>
     </div>
   );
@@ -713,7 +713,7 @@ function ProjectRow({
         <Link
           href={`/projects/${p.id}`}
           className="font-mono underline decoration-muted/50 underline-offset-4 hover:decoration-ink"
-          title="Open the session"
+          title="Open the project"
         >
           {p.canonicalId}
         </Link>

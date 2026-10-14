@@ -60,7 +60,7 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
   const s = await setup(req, params.id, 'owner');
   if ('error' in s) return s.error;
   const projectId = Number(s.body.projectId);
-  if (!Number.isInteger(projectId)) return NextResponse.json({ error: 'Invalid session' }, { status: 400 });
+  if (!Number.isInteger(projectId)) return NextResponse.json({ error: 'Invalid project' }, { status: 400 });
   await removeFromRelease(s.db, s.id, projectId);
   return NextResponse.json({ projects: await releaseProjects(s.db, s.id) });
 }

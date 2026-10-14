@@ -19,11 +19,14 @@ deployed on Vercel to studio.sirsinate.com. Neon Postgres (project
 `bottega-sirsinate`) with row-level security under the role `bottega_app`;
 Cloudflare R2 for audio and files; Voyage for embeddings.
 
-Latest commits, newest first (`main` and `origin/main` both at `ce160ec` on
-13 October, read from `.git` without running git):
+Latest commits, newest first (`main` and `origin/main` both at `af34fdb` on
+14 October, read from `.git` without running git):
 
 | Commit | What it did |
 |---|---|
+| `af34fdb` | One player for the whole site (S-17) |
+| `6b6b52f`, `3d369a4` | Page reader: the PDF drawn with PDF.js from byte ranges, with a page field and zoom |
+| `1d34dea`, `8944483` | Library in tabs: manuals by type, manufacturer and model (K-16) |
 | `ce160ec` | Buttons: a whole-pixel line height so every button is the same height |
 | `fdfeb95`, `3cc530d` | Every action drawn as a button, all at one size; variants as a segmented control; the stage strip as a progress line |
 | `c819354` | Document page: choosing a gear model links it at once, no Link button |
@@ -37,27 +40,18 @@ Latest commits, newest first (`main` and `origin/main` both at `ce160ec` on
 | `003a43c` | Page reader: PDF loaded once, pages by `#page`; reader links signed for a fixed window |
 | `86c9696` | Learning, first slice: study groups, syllabus, cited lessons, progress, group documents (016) |
 
-**Not yet committed** (13 October):
+**Not yet committed** (14 October):
 
-- The Library in tabs (§4, "The Library page"; REQUIREMENTS 0.23 K-16,
-  ARCHITECTURE 0.14): `app/_library/Library.tsx`, `app/library/page.tsx`,
-  `lib/gearGroups.ts`, `lib/documentTypes.ts`, `lib/documents.ts`. Type
-  check, lint on those files and access check pass. Not yet seen in a
-  browser; the query change (two more fields in the linked models) is not
-  tested against a database.
-- The PDF.js reader (§4, the reader): `app/_library/PdfPane.tsx`, with
-  `package.json` and `package-lock.json` (`pdfjs-dist` 6.4.299). Seen working
-  on localhost 14 October; page field added after.
-- The site's one player (§4, "The site's player"; REQUIREMENTS 0.24 S-17,
-  ARCHITECTURE 0.15): `app/_ui/audio/deck.ts`, `SitePlayer.tsx`,
-  `Player.tsx`, `app/layout.tsx`, `app/_studio/StudioProjects.tsx`,
-  `ReleaseDetail.tsx`, `Notes.tsx`, `ProjectDetail.tsx`,
-  `session/MixesTab.tsx`, `session/OverviewTab.tsx`,
-  `app/projects/[id]/page.tsx`, `lib/studio.ts`, `lib/studioTypes.ts`; the
-  Library and search forms moved to `next/form`; `PlayerBar.tsx` and
-  `usePlayer.ts` to be removed with `git rm`. Type check, lint (only the old
-  `StudioProjects.tsx` errors) and access check pass. Not yet seen in a
-  browser.
+- Projects and sets, and BPM from sets (REQUIREMENTS 0.25, ARCHITECTURE
+  0.16): migration `db/023-bpm-from-saves.sql` with
+  `db/test/023-bpm-from-saves.test.sql` (passes on a fresh local database
+  with 001–023; the 014 and 015 suites still pass); the screens say Projects
+  and sets where they said Sessions and saves; connector 0.8.0 instructions
+  and descriptions say project, tool names unchanged; `ProjectDetail.tsx`
+  reads the BPM again after a folder drop. Type check, lint and access check
+  pass. 023 not yet applied on Neon. Not yet seen in a browser.
+- `scripts/r2-link-test.mjs`: the R2 signing test of 14 October, kept out of
+  commits.
 - This handoff.
 
 Migrations `db/001`–`022`, with test suites in `db/test/` for 002–022; all
@@ -239,7 +233,7 @@ where it exists. Without an embedding the search runs on words alone and
 says so. The reader, `/library/[id]/read?page=N&q=…`: a page's extracted
 text with the query's words marked, Scriptorium's navigation (‹ ›, arrow
 keys, a page field, a scrubber that moves on release), and beside it the PDF
-at that page (14 October, uncommitted): `app/_library/PdfPane.tsx` draws one
+at that page (14 October, `3d369a4`, `6b6b52f`): `app/_library/PdfPane.tsx` draws one
 page at a time with PDF.js (`pdfjs-dist` 6.4.299, its worker loaded with
 `new Worker(new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url))`)
 from byte ranges of the reader link (`signReaderGet()`, signed for a fixed
@@ -334,7 +328,7 @@ at the end, and to tell the person it waits as a draft.
 `MetaList`, `TabBar`; control classes in `app/_ui/styles.ts`; four type
 sizes.
 
-**The Library page** (K-16, 13 October, uncommitted). Tabs: Library, Your
+**The Library page** (K-16, 13 October, `8944483`, `1d34dea`). Tabs: Library, Your
 documents, Shared and Submissions (the last two only when they hold
 something; Submissions also holds the administrator's review queue). The
 search field and an "Add documents" button (opening `Upload.tsx`) sit in the
@@ -346,7 +340,7 @@ it is linked to (`groupOfModel()`), so linking a manual on its page files it;
 one linked to two models stands under both. `?tab=`, `?type=` and `?maker=`
 are kept with `history.replaceState`.
 
-**The site's player** (S-17, 14 October, uncommitted). One audio element for
+**The site's player** (S-17, 14 October, `af34fdb`). One audio element for
 the tab in `app/_ui/audio/deck.ts`; the bar `SitePlayer.tsx` in the root
 layout shows ‹ ▶ ›, the session and mix (a link to
 `/projects/:id?tab=mixes&track=:id`), a scrubber, "Note at 1:35" (the same
@@ -418,22 +412,17 @@ gear model links it at once (`c819354`).
 
 ## 7. Next, in order
 
-0. **Commit** (James), after looking at each on localhost: the Library tabs
-   (screenshots: Library on All and on one type, Not filed, Your
-   documents); the reader; the site's player (play a mix, move to the
-   Library, use "Note at", step through the sessions list).
+0. **Commit Projects and sets, and BPM from sets** (James), after looking
+   on localhost (the projects list and a project's State tab; drop a folder
+   and watch the BPM), then the migration before the push:
 
    ```
-   git add app/_library/Library.tsx app/library/page.tsx app/library/search/page.tsx lib/gearGroups.ts lib/documentTypes.ts lib/documents.ts
-   git commit -m "Library in tabs: manuals by type, manufacturer and model; your documents, shared and submissions on their own tabs"
-   git add app/_library/PdfPane.tsx package.json package-lock.json
-   git commit -m "Page reader: the PDF drawn with PDF.js from byte ranges, one page at a time, with its own page field and zoom"
-   git rm app/_studio/PlayerBar.tsx app/_studio/usePlayer.ts
-   git add app/_ui/audio/deck.ts app/_ui/audio/SitePlayer.tsx app/_ui/audio/Player.tsx app/layout.tsx app/_studio/StudioProjects.tsx app/_studio/ReleaseDetail.tsx app/_studio/Notes.tsx app/_studio/ProjectDetail.tsx app/_studio/session/MixesTab.tsx app/_studio/session/OverviewTab.tsx 'app/projects/[id]/page.tsx' lib/studio.ts lib/studioTypes.ts docs/REQUIREMENTS.md docs/ARCHITECTURE.md docs/HANDOFF.md
-   git commit -m "One player for the whole site: a bar that keeps playing between pages and opens a note at the moment on the mix's page"
+   git add app/_studio/NewProject.tsx app/_studio/Notes.tsx app/_studio/ProjectDetail.tsx app/_studio/ReleaseDetail.tsx app/_studio/StudioProjects.tsx app/_studio/session/NotesTab.tsx app/_studio/session/StateTab.tsx app/_studio/session/VariantBar.tsx app/_studio/session/WorkflowTab.tsx app/_ui/audio/SitePlayer.tsx app/account/PreferencesTab.tsx app/account/ProfileTab.tsx app/account/SharingTab.tsx app/account/UsageTab.tsx app/account/page.tsx 'app/admin/accounts/[id]/page.tsx' 'app/api/artists/[id]/route.ts' 'app/api/collections/[id]/tracks/route.ts' 'app/api/projects/[id]/als/[snapshotId]/route.ts' 'app/api/projects/[id]/route.ts' 'app/api/projects/[id]/tracks/route.ts' app/api/projects/bulk/route.ts app/collections/page.tsx app/layout.tsx app/page.tsx 'app/projects/[id]/page.tsx' mcp/server.ts mcp/tools/drafts.ts mcp/tools/get-session.ts db/023-bpm-from-saves.sql db/test/023-bpm-from-saves.test.sql docs/REQUIREMENTS.md docs/ARCHITECTURE.md docs/HANDOFF.md
+   git commit -m "Projects and sets in place of Sessions and saves; a project's BPM follows its newest set (023)"
+   python3 pipeline/migrate.py
    git push
    ```
-1. **The PDF reader, properly** (agreed 12 October; both prerequisites done
+1. **The PDF reader, properly**: done 14 October (`3d369a4`, `6b6b52f`; seen working on localhost). (Agreed 12 October; both prerequisites done
    13 October: `pdfjs-dist` 6.4.299 installed, the R2 CORS rule in place).
    Render pages with PDF.js from byte ranges, so opening page 824 of a 94 MB
    book fetches only what that page needs; our own zoom, page controls tied

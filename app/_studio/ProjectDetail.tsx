@@ -148,6 +148,12 @@ export default function ProjectDetail({
     if (r.ok) setVariants(r.data.variants);
   }
 
+  /** New saves set the BPM from the newest one (db/023): show it without a reload. */
+  async function refreshBpm() {
+    const r = await api<{ project: StudioProject }>(`/api/projects/${project.id}`, { method: 'GET' });
+    if (r.ok) setProject((p) => ({ ...p, bpm: r.data.project.bpm }));
+  }
+
   function selectTab(key: string) {
     const next = key as SessionTab;
     setTab(next);
@@ -335,7 +341,10 @@ export default function ProjectDetail({
           variant={variant}
           variants={variants}
           canEdit={canEdit}
-          onSavesMoved={() => void refreshVariants()}
+          onSavesMoved={() => {
+            void refreshVariants();
+            void refreshBpm();
+          }}
         />
       )}
       {tab === 'workflow' && (

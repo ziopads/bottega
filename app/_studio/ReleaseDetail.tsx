@@ -248,7 +248,7 @@ export default function ReleaseDetail({
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Add a session: search by ID, name, artist or genre…"
+          placeholder="Add a project: search by ID, name, artist or genre…"
           className="w-full rounded border border-line bg-card px-3 py-2 t-body outline-none focus:border-rust sm:w-96"
         />
         {matches.length > 0 && (
@@ -286,7 +286,7 @@ export default function ReleaseDetail({
             <button onClick={() => setArmed(false)} className={BUTTON}>
               cancel
             </button>
-            <span className="text-muted">The sessions and their audio stay.</span>
+            <span className="text-muted">The projects and their audio stay.</span>
           </span>
         ) : (
           <button onClick={() => setArmed(true)} className={BUTTON_DANGER}>

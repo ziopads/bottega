@@ -79,7 +79,7 @@ export default function SitePlayer() {
 
           <div className="min-w-0 flex-1">
             <div className="t-body flex items-baseline gap-2">
-              <Link href={mixHref(item)} className="min-w-0 truncate hover:text-rust" title="Open this mix on its session page">
+              <Link href={mixHref(item)} className="min-w-0 truncate hover:text-rust" title="Open this mix on its project page">
                 <span className="font-mono">{item.code}</span>
                 {item.title && <span className="ml-2">{item.title}</span>}
                 <span className="ml-2 text-[11px] text-muted">{item.kind === 'reference' ? `reference · ${item.label}` : item.label}</span>
@@ -113,7 +113,7 @@ export default function SitePlayer() {
               </button>
             )}
             {rater && (
-              <span title="Rate the playing session (1–5, 0 clears)">
+              <span title="Rate the playing project (1–5, 0 clears)">
                 <Stars rating={rater.ratingOf(item.projectId)} onRate={(n) => rater.rate(item.projectId, n)} />
               </span>
             )}

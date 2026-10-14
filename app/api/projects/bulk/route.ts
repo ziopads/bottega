@@ -25,11 +25,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
   const ids = Array.isArray(body.ids) ? body.ids.map(Number).filter((n) => Number.isInteger(n) && n > 0) : [];
-  if (!ids.length) return NextResponse.json({ error: 'Select at least one session.' }, { status: 400 });
+  if (!ids.length) return NextResponse.json({ error: 'Select at least one project.' }, { status: 400 });
   if (ids.length > MAX_IDS) return NextResponse.json({ error: `At most ${MAX_IDS} at a time.` }, { status: 400 });
 
   const levels = await Promise.all(ids.map((id) => projectLevel(db, id)));
-  if (levels.some((l) => l === null)) return NextResponse.json({ error: 'Session not found.' }, { status: 404 });
+  if (levels.some((l) => l === null)) return NextResponse.json({ error: 'Project not found.' }, { status: 404 });
 
   const patch: { genre?: string; bpm?: number | null; rating?: number; artistId?: number } = {};
   if ('genre' in body) {
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
   const needed = patch.artistId !== undefined ? 'owner' : 'edit';
   if (Object.keys(patch).length && levels.some((l) => !atLeast(l, needed))) {
     return NextResponse.json(
-      { error: needed === 'owner' ? 'Only the owner can move a session to another artist.' : 'Some of these sessions are shared with you without edit access.' },
+      { error: needed === 'owner' ? 'Only the owner can move a project to another artist.' : 'Some of these projects are shared with you without edit access.' },
       { status: 403 },
     );
   }
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
   if (!result.ok) {
     const msg =
       result.reason === 'taken'
-        ? 'That artist already has a session with one of these canonical IDs, so nothing was moved.'
+        ? 'That artist already has a project with one of these canonical IDs, so nothing was moved.'
         : result.reason === 'no-genre'
           ? 'That genre is not on the list.'
           : 'Choose one of your own artists.';

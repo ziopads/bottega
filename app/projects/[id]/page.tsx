@@ -69,7 +69,7 @@ export default async function ProjectPage({ params, searchParams }: Params) {
   return (
     <div>
       <Link href="/" className="t-body text-muted hover:text-ink">
-        ← Sessions
+        ← Projects
       </Link>
       <ProjectDetail
         initialTab={tab}

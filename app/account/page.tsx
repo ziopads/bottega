@@ -130,7 +130,7 @@ export default async function AccountPage({ searchParams }: Props) {
         main={
           <Section label="Your data">
             <ComingSoon>
-              An export of everything the account holds (sessions, audio, gear, documents and notes), and closing the
+              An export of everything the account holds (projects, audio, gear, documents and notes), and closing the
               account.
             </ComingSoon>
           </Section>

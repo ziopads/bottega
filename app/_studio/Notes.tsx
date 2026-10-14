@@ -147,7 +147,7 @@ export function NoteItem({
                   {t.label}
                 </option>
               ))}
-              <option value="project">the whole session</option>
+              <option value="project">the whole project</option>
             </select>
             <button onClick={save} disabled={busy || !draft.trim()} className={BUTTON_PRIMARY}>
               {busy ? 'Saving…' : 'Save'}
@@ -291,7 +291,7 @@ export function NoteComposer({
                   {i === 0 ? ' (latest)' : ''}
                 </option>
               ))}
-              <option value="project">the whole session</option>
+              <option value="project">the whole project</option>
             </select>
           </label>
         )}

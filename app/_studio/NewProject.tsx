@@ -57,7 +57,7 @@ export default function NewProject({
   if (!open) {
     return (
       <button onClick={start} className={BUTTON_PRIMARY}>
-        New session
+        New project
       </button>
     );
   }
@@ -129,7 +129,7 @@ export default function NewProject({
 
       <div className="mt-4 flex gap-2">
         <button disabled={busy} className={BUTTON_PRIMARY}>
-          {busy ? 'Creating…' : 'Create session'}
+          {busy ? 'Creating…' : 'Create project'}
         </button>
         <button type="button" onClick={() => setOpen(false)} className={BUTTON}>
           Cancel

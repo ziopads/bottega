@@ -176,7 +176,7 @@ function ArtistList({
 
   return (
     <div className="t-body">
-      {artists.length === 0 && editing !== 'new' && <p className="text-muted">No artists yet. Sessions are credited to one.</p>}
+      {artists.length === 0 && editing !== 'new' && <p className="text-muted">No artists yet. Projects are credited to one.</p>}
       <ul className="divide-y divide-line">
         {artists.map((a) =>
           editing === a.id ? (
@@ -207,7 +207,7 @@ function ArtistList({
         </button>
       )}
       <p className="mt-2 text-[11px] text-muted">
-        The code starts each session&rsquo;s canonical ID. Codes and names are unique across Bottega. Renaming a code does
+        The code starts each project&rsquo;s canonical ID. Codes and names are unique across Bottega. Renaming a code does
         not rename existing canonical IDs.
       </p>
     </div>

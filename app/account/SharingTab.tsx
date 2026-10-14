@@ -17,7 +17,7 @@ import { BUTTON_DANGER } from '@/app/_ui/styles';
 // one place; and what others have shared with it. Each item's own page shares
 // it with someone new.
 
-const KIND_LABEL: Record<ShareKind, string> = { project: 'Sessions', gear: 'Gear', document: 'Documents' };
+const KIND_LABEL: Record<ShareKind, string> = { project: 'Projects', gear: 'Gear', document: 'Documents' };
 const KINDS: ShareKind[] = ['project', 'gear', 'document'];
 
 const LEVEL_WORD: Record<ShareLevel, string> = { view: 'view', contribute: 'contribute', edit: 'edit' };
@@ -64,7 +64,7 @@ export default function SharingTab({ initialOutgoing, incoming }: { initialOutgo
     <Section label={`Shared by you · ${outgoing.length}`}>
       {error && <p className="t-body mb-2 text-rust">{error}</p>}
       {groups.length === 0 ? (
-        <p className="t-body text-muted">You have not shared anything. Share a session or a unit from its own page.</p>
+        <p className="t-body text-muted">You have not shared anything. Share a project or a unit from its own page.</p>
       ) : (
         <div className="t-body space-y-5">
           {groups.map((g) => (

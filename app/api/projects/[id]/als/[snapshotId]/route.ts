@@ -24,6 +24,6 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string; s
   if (variant === undefined) return NextResponse.json({ error: 'Say which variant, or null for the name rules.' }, { status: 400 });
   const r = await moveSave(account.db, id, snapshotId, variant);
   if (r === 'not-found') return NextResponse.json({ error: 'Not found.' }, { status: 404 });
-  if (r === 'unknown-variant') return NextResponse.json({ error: 'This session has no variant by that name.' }, { status: 400 });
+  if (r === 'unknown-variant') return NextResponse.json({ error: 'This project has no variant by that name.' }, { status: 400 });
   return NextResponse.json({ ok: true });
 }

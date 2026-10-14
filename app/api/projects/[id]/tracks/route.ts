@@ -74,7 +74,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   } catch (err) {
     // db/015: a mix's variant must be one of the session's.
     if ((err as { code?: string })?.code === '23503') {
-      return NextResponse.json({ error: `This session has no variant called “${variant.value}”. Add it above the tabs first.` }, { status: 400 });
+      return NextResponse.json({ error: `This project has no variant called “${variant.value}”. Add it above the tabs first.` }, { status: 400 });
     }
     throw err;
   }

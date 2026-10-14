@@ -46,7 +46,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const result = await deleteArtist(account.db, id);
   if (!result.ok) {
     return result.reason === 'in-use'
-      ? NextResponse.json({ error: 'Sessions or releases are credited to this artist; move them first.' }, { status: 409 })
+      ? NextResponse.json({ error: 'Projects or releases are credited to this artist; move them first.' }, { status: 409 })
       : NextResponse.json({ error: 'Artist not found' }, { status: 404 });
   }
   return NextResponse.json({ ok: true });

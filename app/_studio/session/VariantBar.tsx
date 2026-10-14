@@ -107,9 +107,9 @@ export default function VariantBar({
   return (
     <div className="t-body flex flex-wrap items-center gap-1.5">
       <div role="group" aria-label="Variant" className={SEGMENTS}>
-        {chip('Main', '', 'The main mix: its mixes, and the saves no variant’s name rule finds')}
+        {chip('Main', '', 'The main mix: its mixes, and the sets no variant’s name rule finds')}
         {variants.map((v) =>
-          chip(v.name, v.name, `${v.mixes} ${v.mixes === 1 ? 'mix' : 'mixes'} · ${v.saves} ${v.saves === 1 ? 'save' : 'saves'} · saves named “…${v.match}…”`),
+          chip(v.name, v.name, `${v.mixes} ${v.mixes === 1 ? 'mix' : 'mixes'} · ${v.saves} ${v.saves === 1 ? 'set' : 'sets'} · sets named “…${v.match}…”`),
         )}
       </div>
       {canEdit && !form && (
@@ -147,7 +147,7 @@ export default function VariantBar({
               <option key={c} value={c} />
             ))}
           </datalist>
-          <span className="text-muted">saves named</span>
+          <span className="text-muted">sets named</span>
           <input
             value={match}
             onChange={(e) => setMatch(e.target.value)}
@@ -165,7 +165,7 @@ export default function VariantBar({
               type="button"
               onClick={() => void remove(form.v)}
               disabled={busy || form.v.mixes > 0}
-              title={form.v.mixes > 0 ? 'Delete its mixes first' : 'Its saves return to the name rules'}
+              title={form.v.mixes > 0 ? 'Delete its mixes first' : 'Its sets return to the name rules'}
               className={BUTTON_DANGER}
             >
               Remove

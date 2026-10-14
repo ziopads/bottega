@@ -173,7 +173,7 @@ export default function NotesTab({
                 {t.label}
               </option>
             ))}
-            <option value="session">the whole session</option>
+            <option value="session">the whole project</option>
           </select>
         </label>
         <label className="flex items-center gap-2">

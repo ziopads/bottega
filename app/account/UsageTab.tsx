@@ -125,7 +125,7 @@ export default function UsageTab({
           })}
         </ul>
         <p className="mt-2 text-[11px] text-muted">
-          Largest first. Files count against the owner of the session or unit they belong to, whoever uploaded them.
+          Largest first. Files count against the owner of the project or unit they belong to, whoever uploaded them.
         </p>
       </Section>
       {children}

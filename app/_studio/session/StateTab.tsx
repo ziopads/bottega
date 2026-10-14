@@ -60,7 +60,7 @@ function changeParts(c: SetChange): string[] {
 }
 
 function summary(s: SaveEntry): string {
-  if (s.first) return 'The first save read.';
+  if (s.first) return 'The first set read.';
   if (!s.change) return 'Nothing the parser tracks changed.';
   return changeParts(s.change).join(' · ');
 }
@@ -99,9 +99,9 @@ export default function StateTab({
     try {
       const r = await fetch(`/api/projects/${projectId}/als?${q}`).then((x) => x.json());
       if (r.state) setState(r.state);
-      else setError(r.error || 'Could not read the saves.');
+      else setError(r.error || 'Could not read the sets.');
     } catch {
-      setError('Could not read the saves.');
+      setError('Could not read the sets.');
     } finally {
       setLoading(false);
     }
@@ -112,7 +112,7 @@ export default function StateTab({
     setError('');
     const sets = savedSets(files).sort((a, b) => a.file.lastModified - b.file.lastModified);
     if (!sets.length) {
-      setError('No saved sets (.als files) at the top of that folder. Drop the session’s Ableton project folder itself.');
+      setError('No saved sets (.als files) at the top of that folder. Drop the Ableton project folder itself.');
       return;
     }
     setBusy(true);
@@ -162,7 +162,7 @@ export default function StateTab({
     setError('');
     const r = await api(`/api/projects/${projectId}/als/${saveId}`, { method: 'PATCH', body: JSON.stringify({ variant: to }) });
     if (!r.ok) {
-      setError(r.body.error || 'Could not move the save.');
+      setError(r.body.error || 'Could not move the set.');
       return;
     }
     await load(saveId);
@@ -181,14 +181,14 @@ export default function StateTab({
   // ── Left column ─────────────────────────────────────────────────────────────
   const aside = (
     <>
-      <Section label={`Saves · ${variantLabel(variant)} · ${state.saves.length}`}>
+      <Section label={`Sets · ${variantLabel(variant)} · ${state.saves.length}`}>
         {state.saves.length === 0 ? (
           <p className="t-body text-muted">
             {state.total === 0
               ? 'No sets read yet. Drop the project folder below.'
               : variant
-                ? `No saves in ${variant} yet. A save whose file name contains “${rule}” joins it; any save can also be moved here from another variant.`
-                : 'Every save read belongs to a variant.'}
+                ? `No sets in ${variant} yet. A set whose file name contains “${rule}” joins it; any set can also be moved here from another variant.`
+                : 'Every set read belongs to a variant.'}
           </p>
         ) : (
           <ul className={`t-body max-h-96 space-y-px overflow-y-auto ${loading || switching ? 'opacity-60' : ''}`}>
@@ -220,7 +220,7 @@ export default function StateTab({
       </Section>
 
       {sel && latest && (
-        <Section label="This save">
+        <Section label="This set">
           <dl className="t-body space-y-1">
             <div className="break-words font-medium">{bare(sel.fileName)}</div>
             <div className="text-[11px] text-muted">
@@ -273,7 +273,7 @@ export default function StateTab({
         )}
         {state.stale > 0 && (
           <p className="t-body mb-2 text-rust">
-            {state.stale} {state.stale === 1 ? 'save was' : 'saves were'} read by an older parser. Drop the folder again to read them anew.
+            {state.stale} {state.stale === 1 ? 'set was' : 'sets were'} read by an older parser. Drop the folder again to read them anew.
           </p>
         )}
         {canEdit ? (
@@ -296,7 +296,7 @@ export default function StateTab({
               'Reading…'
             ) : (
               <>
-                Drop the session&rsquo;s Ableton project folder here, or{' '}
+                Drop the project&rsquo;s Ableton folder here, or{' '}
                 <button onClick={() => input.current?.click()} className="underline hover:text-ink">
                   choose it
                 </button>
@@ -323,7 +323,7 @@ export default function StateTab({
         )}
         <p className="mt-2 text-[11px] text-muted">
           Every saved set in the folder is read here in your browser and sorted into a variant by its file name. The rest of the folder is listed by
-          name and size; no audio is uploaded. Dropping it again adds only new saves.
+          name and size; no audio is uploaded. Dropping it again adds only new sets.
         </p>
         {error && <p className="t-body mt-2 text-rust">{error}</p>}
         {lines.length > 0 && (
@@ -362,8 +362,8 @@ export default function StateTab({
             <div className="t-body max-w-prose space-y-2 text-muted">
               <p>
                 {state.total === 0
-                  ? 'Drop the session’s Ableton project folder on the left. From its saved sets this tab shows:'
-                  : `Once ${variantLabel(variant)} has a save, this tab shows:`}
+                  ? 'Drop the project’s Ableton folder on the left. From its saved sets this tab shows:'
+                  : `Once ${variantLabel(variant)} has a set, this tab shows:`}
               </p>
               <ul className="list-disc space-y-1 pl-5">
                 <li>how much of the arrangement each zone covers, and a map of where everything plays;</li>
@@ -557,7 +557,7 @@ function MaintenanceSection({ m, folderRead }: { m: NonNullable<SessionState['ma
           title="Samples outside the project folder"
           ok="None: every sample is in the project folder or in Live’s own libraries."
           items={m.external.map((s) => s.path || s.relativePath)}
-          note="Collect All and Save (File menu) copies these into the project folder, so the session opens on another computer or after the files move."
+          note="Collect All and Save (File menu) copies these into the project folder, so the project opens on another computer or after the files move."
         />
         {folderRead ? (
           <>
@@ -619,11 +619,11 @@ function Finding({ title, ok, items, note }: { title: string; ok: string; items:
 
 function ChangesSection({ save }: { save: SaveEntry }) {
   const parts = save.change ? changeParts(save.change) : [];
-  const label = save.comparedWith ? `Since ${bare(save.comparedWith)} (main)` : 'Since the save before';
+  const label = save.comparedWith ? `Since ${bare(save.comparedWith)} (main)` : 'Since the set before';
   return (
     <Section label={label}>
       {save.first ? (
-        <p className="t-body text-muted">The first save read: nothing earlier to compare with.</p>
+        <p className="t-body text-muted">The first set read: nothing earlier to compare with.</p>
       ) : parts.length === 0 ? (
         <p className="t-body text-muted">Nothing the parser tracks changed.</p>
       ) : (

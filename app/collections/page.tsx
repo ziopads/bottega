@@ -15,7 +15,7 @@ export default async function CollectionsPage() {
   return (
     <div>
       <Link href="/" className="t-body text-muted hover:text-rust">
-        ← Sessions
+        ← Projects
       </Link>
       <h1 className="mb-6 mt-2 t-title">Collections</h1>
       <ReleaseList initialReleases={releases} artists={artists} viewerId={userId} />

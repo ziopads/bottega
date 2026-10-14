@@ -10,7 +10,7 @@ import { formatDuration, type AccessLevel } from '@/lib/studioTypes';
 // the full list tools; below them, sessions other accounts have shared with
 // them, each naming its owner and the access granted (REQUIREMENTS AC-8).
 
-export const metadata = { title: 'Sessions · Bottega' };
+export const metadata = { title: 'Projects · Bottega' };
 
 const LEVEL_WORD: Record<AccessLevel, string> = {
   owner: 'owner',
@@ -39,9 +39,9 @@ export default async function SessionsPage() {
   return (
     <div>
       <div className="mb-6 flex items-baseline justify-between gap-3">
-        <h1 className="t-title">Sessions</h1>
+        <h1 className="t-title">Projects</h1>
         <p className="t-body text-muted">
-          {own.length} {own.length === 1 ? 'session' : 'sessions'}
+          {own.length} {own.length === 1 ? 'project' : 'projects'}
         </p>
       </div>
       <StudioProjects
