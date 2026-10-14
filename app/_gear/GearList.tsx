@@ -207,7 +207,7 @@ function UnitTable({
           {onMove && MOVE[u.status] && (
             <button
               onClick={() => onMove(u, MOVE[u.status]!.to)}
-              className="mr-1 shrink-0 rounded border border-line px-1.5 py-0 text-[11px] text-muted opacity-60 hover:border-ink hover:text-ink group-hover:opacity-100"
+              className={`mr-1 shrink-0 opacity-60 group-hover:opacity-100 ${BUTTON}`}
             >
               {MOVE[u.status]!.label}
             </button>

@@ -914,7 +914,8 @@ so pages differ in content and never in how they are built.
   `app/_ui/styles.ts`, so a control looks the same on every page: `BUTTON`
   (outlined), `BUTTON_PRIMARY` (filled: the action a form is for, and
   confirmations) and `BUTTON_DANGER` (deleting and removing), all one size at
-  11px; `TEXT_LINK` for navigation set in text; and `FIELD`. In a row with
+  11px; `SEGMENTS` and `SEGMENT(on)` for one choice from a set (a session's
+  variants); `TEXT_LINK` for navigation set in text; and `FIELD`. In a row with
   fields a button stretches to the fields' height. Every action has an outline
   or a fill; plain text is for
   navigation, tabs and an underlined action inside a sentence. Player,

@@ -22,6 +22,12 @@ export const BUTTON_PRIMARY = `${SHAPE} border-rust bg-rust text-white hover:opa
 /** A destructive action (Delete, Remove, Revoke). Rust is the danger colour. */
 export const BUTTON_DANGER = `${SHAPE} border-ink/30 text-ink hover:border-rust hover:bg-rust/5 hover:text-rust ${OFF}`;
 
+/** A segmented control: one choice from a set (a session's variants). The
+ *  container joins the segments; SEGMENT(on) styles each, the chosen one filled. */
+export const SEGMENTS = 'inline-flex divide-x divide-ink/30 overflow-hidden rounded border border-ink/30';
+export const SEGMENT = (on: boolean) =>
+  `px-2 py-0.5 text-[11px] leading-tight ${on ? 'bg-ink text-parchment' : 'text-ink hover:bg-ink/5'}`;
+
 /** A link to another page or tab, set in text (Read the pages, All notes →). */
 export const TEXT_LINK = 'underline decoration-ink/30 underline-offset-2 hover:decoration-ink';
 

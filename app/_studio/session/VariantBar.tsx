@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import { api } from '@/app/_studio/controls';
 import { COMMON_VARIANTS, type StudioVariant } from '@/lib/studioTypes';
-import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY, SEGMENT, SEGMENTS } from '@/app/_ui/styles';
 
 // The session's variants as chips in its header (REQUIREMENTS S-14, S-16;
 // db/015): Main, then each named variant. The chosen one decides what the
@@ -96,7 +96,7 @@ export default function VariantBar({
         onClick={() => onSelect(value)}
         aria-pressed={on}
         title={title}
-        className={`rounded-full border px-2.5 py-0.5 ${on ? 'border-ink text-ink' : 'border-line text-muted hover:text-ink'}`}
+        className={SEGMENT(on)}
       >
         {label}
       </button>
@@ -106,16 +106,18 @@ export default function VariantBar({
 
   return (
     <div className="t-body flex flex-wrap items-center gap-1.5">
-      {chip('Main', '', 'The main mix: its mixes, and the saves no variant’s name rule finds')}
-      {variants.map((v) =>
-        chip(v.name, v.name, `${v.mixes} ${v.mixes === 1 ? 'mix' : 'mixes'} · ${v.saves} ${v.saves === 1 ? 'save' : 'saves'} · saves named “…${v.match}…”`),
-      )}
+      <div role="group" aria-label="Variant" className={SEGMENTS}>
+        {chip('Main', '', 'The main mix: its mixes, and the saves no variant’s name rule finds')}
+        {variants.map((v) =>
+          chip(v.name, v.name, `${v.mixes} ${v.mixes === 1 ? 'mix' : 'mixes'} · ${v.saves} ${v.saves === 1 ? 'save' : 'saves'} · saves named “…${v.match}…”`),
+        )}
+      </div>
       {canEdit && !form && (
         <>
           <button
             type="button"
             onClick={() => open({ mode: 'add' })}
-            className="rounded-full border border-dashed border-line px-2.5 py-0.5 text-muted hover:border-ink hover:text-ink"
+            className={BUTTON}
             title="A radio edit, an extended mix…: its own mixes and its own saved sets"
           >
             + Add variant

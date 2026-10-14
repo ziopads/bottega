@@ -172,34 +172,31 @@ function StartedWorkflow({
 
   // ── Stage strip ─────────────────────────────────────────────────────────────
   const strip = (
-    <ol className="t-body mb-6 flex flex-wrap items-center gap-x-1 gap-y-2" aria-label="Stages">
+    <ol className="t-body mb-6 flex flex-wrap items-center gap-x-2 gap-y-2" aria-label="Stages">
       {w.stages.map((s, i) => {
         const state = s.position < pos ? 'past' : s.position === pos ? 'current' : 'later';
         return (
           <li key={s.key} className="flex items-center gap-1">
-            {i > 0 && <span className="px-1 text-muted" aria-hidden>→</span>}
-            {state === 'later' && parked.some((c) => c.stage === s.key) ? (
+            {i > 0 && <span className="pr-1 text-muted" aria-hidden>→</span>}
+            <span
+              aria-current={state === 'current' ? 'step' : undefined}
+              className={
+                state === 'current' ? 'border-b-2 border-ink pb-0.5 font-medium text-ink' : 'border-b-2 border-transparent pb-0.5 text-muted'
+              }
+            >
+              {state === 'past' && <span className="mr-1">✓</span>}
+              {s.label}
+            </span>
+            {state === 'later' && parked.some((c) => c.stage === s.key) && (
               <button
                 type="button"
                 onClick={() => (parkedOpen && parkedFocus === s.key ? setParkedOpen(false) : openParked(s.key))}
+                aria-pressed={parkedOpen && parkedFocus === s.key}
                 title={`Cards parked for ${s.label}`}
-                className={`rounded border px-2.5 py-0.5 hover:text-ink ${
-                  parkedOpen && parkedFocus === s.key ? 'border-ink text-ink' : 'border-line text-muted'
-                }`}
+                className={`ml-1 ${parkedOpen && parkedFocus === s.key ? BUTTON_PRIMARY : BUTTON}`}
               >
-                {s.label}
-                <span className="t-num ml-1.5 text-[11px]">{parked.filter((c) => c.stage === s.key).length}</span>
+                <span className="t-num">{parked.filter((c) => c.stage === s.key).length}</span>&nbsp;parked
               </button>
-            ) : (
-              <span
-                aria-current={state === 'current' ? 'step' : undefined}
-                className={`rounded border px-2.5 py-0.5 ${
-                  state === 'current' ? 'border-ink font-medium text-ink' : state === 'past' ? 'border-line text-ink' : 'border-line text-muted'
-                }`}
-              >
-                {state === 'past' && <span className="mr-1 text-muted">✓</span>}
-                {s.label}
-              </span>
             )}
           </li>
         );

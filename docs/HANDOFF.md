@@ -326,10 +326,14 @@ Revoke); `TEXT_LINK` (underlined) for navigation set in text. In a row with
 fields a button stretches to the fields' height (`self-stretch` where the row
 centres its items). `TEXT_ACTION` and `TEXT_DANGER` are gone, and so are the
 one-off button classes (local `button` in `PhotoEditor.tsx`, local `BUTTON`
-in `WorkflowTab.tsx`, the auth pages' outlined buttons). Left as they were:
+in `WorkflowTab.tsx`, the auth pages' outlined buttons). A session's variants are a segmented control (`SEGMENTS` and
+`SEGMENT(on)`: joined, the chosen one filled), with "+ Add variant" and Edit
+as buttons beside it. The Workflow tab's stage strip is a progress line with
+no boxes (done stages muted with a tick, the current one in medium weight
+over a black bar, later ones muted); a later stage with parked cards has a
+"2 parked" button beside it. Left as they were:
 tabs and filters, sort headers, player, volume and scrubber controls,
-page-turn arrows, list rows and dropdown options, thumbnails, chips that
-already had an outline, and an underlined action inside a sentence ("choose
+page-turn arrows, list rows and dropdown options, thumbnails, and an underlined action inside a sentence ("choose
 a file", "Start it"). On a document's page, choosing a
 gear model links it at once (`c819354`).
 
