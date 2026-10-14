@@ -1,3 +1,4 @@
+import type { GearCategory, GearKind } from '@/lib/gearTypes';
 import type { AccessLevel } from '@/lib/studioTypes';
 
 // Shared by the documents data layer, the routes and the pages
@@ -63,8 +64,12 @@ export interface StudioDocument {
   /** The viewer has picked this library document for their own search (K-7). */
   picked: boolean;
   /** Catalogue models this document is linked to. */
-  models: { id: number; manufacturer: string; model: string }[];
+  models: LinkedModel[];
 }
+
+/** A catalogue model a document is linked to; its kind and category give the
+ *  document's place in the Library's types (lib/gearGroups.ts). */
+export type LinkedModel = { id: number; manufacturer: string; model: string; kind: GearKind; category: GearCategory };
 
 /** What the signed-in person may still use (db/004 my_allowance). Nulls mean no limit. */
 export interface Allowance {

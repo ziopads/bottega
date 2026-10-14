@@ -7,7 +7,7 @@ Bottega is James's studio platform for Sirsinate Sound Labs: a service with
 separate accounts holding sessions, gear, manuals and the work in progress,
 reachable from Claude through a connector so Claude can act as a production
 collaborator and teacher. This file replaces the 12 October handoff and was
-brought up to date on 13 October, after the button pass. It records what is
+brought up to date on 13 October, after the button pass and the Library tabs. It records what is
 built, how the work is done, and what comes next.
 
 ---
@@ -19,11 +19,13 @@ deployed on Vercel to studio.sirsinate.com. Neon Postgres (project
 `bottega-sirsinate`) with row-level security under the role `bottega_app`;
 Cloudflare R2 for audio and files; Voyage for embeddings.
 
-Latest commits, newest first (`main` and `origin/main` both at `c819354` on
+Latest commits, newest first (`main` and `origin/main` both at `ce160ec` on
 13 October, read from `.git` without running git):
 
 | Commit | What it did |
 |---|---|
+| `ce160ec` | Buttons: a whole-pixel line height so every button is the same height |
+| `fdfeb95`, `3cc530d` | Every action drawn as a button, all at one size; variants as a segmented control; the stage strip as a progress line |
 | `c819354` | Document page: choosing a gear model links it at once, no Link button |
 | `a03a944` | Reading lists (019), videos and links (020), sign-in attempt limit (021), printed page numbers and contents (022), search page |
 | `ef50708`, `300b683` | Study group reading list, Claude's search limited to it; videos and links played in the app |
@@ -37,10 +39,12 @@ Latest commits, newest first (`main` and `origin/main` both at `c819354` on
 
 **Not yet committed** (13 October):
 
-- The button pass (§4, "Controls"): `app/_ui/styles.ts`, 37 files under
-  `app/`, and `docs/ARCHITECTURE.md` 0.13. Type check and access check pass;
-  lint finds only the earlier errors in `StudioProjects.tsx`. Not yet seen in
-  a browser.
+- The Library in tabs (§4, "The Library page"; REQUIREMENTS 0.23 K-16,
+  ARCHITECTURE 0.14): `app/_library/Library.tsx`, `app/library/page.tsx`,
+  `lib/gearGroups.ts`, `lib/documentTypes.ts`, `lib/documents.ts`. Type
+  check, lint on those files and access check pass. Not yet seen in a
+  browser; the query change (two more fields in the linked models) is not
+  tested against a database.
 - `package.json` and `package-lock.json`: `pdfjs-dist` 6.4.299, installed for
   the PDF.js reader and held to go in with it.
 - This handoff.
@@ -56,8 +60,7 @@ processed and in James's private documents, and (13 October) reading printed
 page numbers and contents from a manual's PDF. The R2 files bucket's CORS
 rule for range requests is in place (13 October).
 
-Not yet seen in a browser: whether the PDF pane still reloads on a page turn
-after `599870e`, the button pass, videos, the reading list, the search page,
+Not yet seen in a browser: the Library tabs, videos, the reading list, the search page,
 sign-in under the attempt limit, and most of Learning.
 
 ## 2. How James works, and how to work with him
@@ -317,7 +320,19 @@ at the end, and to tell the person it waits as a draft.
 `MetaList`, `TabBar`; control classes in `app/_ui/styles.ts`; four type
 sizes.
 
-**Controls** (13 October, uncommitted). Every action is drawn as a button
+**The Library page** (K-16, 13 October, uncommitted). Tabs: Library, Your
+documents, Shared and Submissions (the last two only when they hold
+something; Submissions also holds the administrator's review queue). The
+search field and an "Add documents" button (opening `Upload.tsx`) sit in the
+header; the page is full width now. The Library tab: a row of types (All, the
+gear map's groups that hold manuals, Not filed) with counts; manufacturers A–Z
+on the left (a select below `md`); the chosen manufacturer's models A–Z on the
+right, each with its manuals. A manual's type comes from the catalogue model
+it is linked to (`groupOfModel()`), so linking a manual on its page files it;
+one linked to two models stands under both. `?tab=`, `?type=` and `?maker=`
+are kept with `history.replaceState`.
+
+**Controls** (13 October). Every action is drawn as a button
 with an outline or a fill, all at one size (11px text, tight padding; James
 chose the look of the small Remove button for all of them): `BUTTON`
 (outline at 30% ink, darker on hover), `BUTTON_PRIMARY` (filled: the action a
@@ -377,15 +392,12 @@ gear model links it at once (`c819354`).
 
 ## 7. Next, in order
 
-0. **Commit the button pass** (James), after looking at it: run `npm run dev`
-   or push, then send screenshots of a study group's Sessions tab, a
-   session's Workflow tab, the gear list and the sign-in page (the document
-   page was checked on 13 October, before the move to one size). Adjust from
-   those, then commit:
+0. **Commit the Library tabs** (James), after looking at them: screenshots
+   of the Library tab on All and on one type, Not filed, and Your documents.
 
    ```
-   git add app/_ui/styles.ts app/_gear/CapabilityEditor.tsx app/_gear/CatalogueAdmin.tsx app/_gear/GearDetail.tsx app/_gear/GearList.tsx app/_gear/PhotoEditor.tsx app/_learning/Exercise.tsx app/_learning/GroupView.tsx app/_learning/Journal.tsx app/_learning/LearningHome.tsx app/_learning/LessonView.tsx app/_learning/Resources.tsx app/_library/DocumentDetail.tsx app/_library/Upload.tsx app/_studio/NewProject.tsx app/_studio/Notes.tsx app/_studio/ReleaseDetail.tsx app/_studio/ReleaseList.tsx app/_studio/Sharing.tsx app/_studio/StudioProjects.tsx app/_studio/session/MixesTab.tsx app/_studio/session/NotesTab.tsx app/_studio/session/OverviewTab.tsx app/_studio/session/VariantBar.tsx app/_studio/session/WorkflowTab.tsx app/account/ChangePasswordForm.tsx app/account/ConnectedApps.tsx app/account/ConvertImages.tsx app/account/ProfileTab.tsx app/account/SharingTab.tsx app/account/UsageTab.tsx app/admin/accounts/page.tsx app/admin/lengths/LengthBackfill.tsx app/admin/lengths/WaveformBackfill.tsx app/auth/pending/page.tsx app/auth/sign-in/page.tsx app/auth/sign-up/page.tsx app/oauth/authorize/page.tsx docs/ARCHITECTURE.md docs/HANDOFF.md
-   git commit -m "Every action drawn as a button, all at one size: outlined, filled and danger buttons and a text link replace grey text actions; the 13 October handoff"
+   git add app/_library/Library.tsx app/library/page.tsx lib/gearGroups.ts lib/documentTypes.ts lib/documents.ts docs/REQUIREMENTS.md docs/ARCHITECTURE.md docs/HANDOFF.md
+   git commit -m "Library in tabs: manuals by type, manufacturer and model; your documents, shared and submissions on their own tabs"
    git push
    ```
 1. **The PDF reader, properly** (agreed 12 October; both prerequisites done
@@ -395,8 +407,15 @@ gear model links it at once (`c819354`).
    to the reader's `?page=`, no clipped toolbar. Keep the pane in
    `app/library/[id]/read/layout.tsx` and the signed reader link from
    `signReaderGet()`; check that R2 answers a `Range` request from the site
-   with 206. Commit `package.json` and `package-lock.json` with it. First
-   ask James whether the current pane still reloads on a page turn.
+   with 206. Commit `package.json` and `package-lock.json` with it. Agreed
+   13 October: one page drawn on a canvas in the existing pane, our own row
+   of controls (zoom out, zoom in, fit width), no text layer in this slice;
+   the new tab keeps the browser's viewer for printing and search. James's
+   13 October screenshot shows the current pane in Firefox's viewer, which
+   ignores `toolbar=0` and opens at 100%, wider than the column. Before
+   building: James pastes the R2 files bucket's CORS rule, to confirm it
+   exposes `Accept-Ranges`, `Content-Range` and `Content-Length` (without
+   them PDF.js quietly downloads the whole file).
 2. **State tab, your read** (S-15): a four-step scale per zone and part
    (empty, sketched, working, baked), each change dated.
 3. **Connector analysis tool**: the latest snapshot, changes since the
@@ -407,7 +426,7 @@ gear model links it at once (`c819354`).
    folder.
 6. **Layout follow-through**: Gear and Collection detail pages; and from
    the 11 October screenshots: Collections' stray "← Sessions", uneven title
-   heights between pages, Library's narrower width, Collections' misaligned
+   heights between pages, Collections' misaligned
    labels, raw JSON in the access log (show "approved" and the document's
    title).
 7. Smaller:

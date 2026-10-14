@@ -1,7 +1,7 @@
 # Bottega — requirements
 
-**Version:** 0.22
-**Date:** 2026-10-12
+**Version:** 0.23
+**Date:** 2026-10-13
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
 built is in `ARCHITECTURE.md`.
@@ -9,6 +9,9 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.23** (2026-10-13) — The Library page in tabs, the library's manuals
+  browsed by type, manufacturer and model (K-16).
 
 - **0.22** (2026-10-12) — Printed page numbers and a document's contents
   (K-13, K-14); searching from the app (K-15); a limit on sign-in and
@@ -527,6 +530,13 @@ there may be lost in the move.
 - **K-15** Searching from the app: the same search Claude uses, over the
   person's documents and gear manuals, the whole library, or a study group's
   reading list, each passage linking to the page reader. Built 12 October 2026.
+- **K-16** The Library page in tabs: Library, Your documents, Shared,
+  Submissions (the administrator's review queue with them). The library's
+  manuals are browsed by type (the gear map's groups, G-11, from the catalogue
+  model a manual is linked to; Not filed for a manual with none), then
+  manufacturer A–Z on the left and the chosen manufacturer's models A–Z, each
+  with its manuals, on the right. Tab, type and manufacturer are in the
+  address. Built 13 October 2026.
 
 ## 9. Analysis (A)
 

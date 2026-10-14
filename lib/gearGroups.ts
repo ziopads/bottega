@@ -1,4 +1,4 @@
-import type { GearCategory, GearUnit } from '@/lib/gearTypes';
+import type { GearCategory, GearKind, GearUnit } from '@/lib/gearTypes';
 
 // The studio's groups (REQUIREMENTS G-11): how the gear map lays a room out.
 // Each catalogue category belongs to one group, so a unit's group follows
@@ -50,9 +50,14 @@ const BY_CATEGORY: Record<GearCategory, GearGroup> = {
 };
 
 export function groupOf(u: Pick<GearUnit, 'model'>): GearGroup {
-  if (!u.model) return 'misc';
-  if (u.model.kind === 'software') return 'software';
-  return BY_CATEGORY[u.model.category] ?? 'misc';
+  return u.model ? groupOfModel(u.model) : 'misc';
+}
+
+/** A catalogue model's group: software by its kind, the rest by category. The
+ *  Library sorts manuals by the models they are linked to with this too. */
+export function groupOfModel(m: { kind: GearKind; category: GearCategory }): GearGroup {
+  if (m.kind === 'software') return 'software';
+  return BY_CATEGORY[m.category] ?? 'misc';
 }
 
 export function groupLabel(g: GearGroup): string {

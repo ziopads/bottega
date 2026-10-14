@@ -1,6 +1,6 @@
 # Bottega — architecture
 
-**Version:** 0.13
+**Version:** 0.14
 **Date:** 2026-10-13
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
@@ -10,6 +10,9 @@ story IDs below (S-3, W-6 and so on) refer to it.
 
 ## Changelog
 
+- **0.14** (2026-10-13) — The Library page in tabs; library manuals by
+  type from their catalogue model's group (`groupOfModel()` in
+  `lib/gearGroups.ts`), then manufacturer and model (§11, The library).
 - **0.13** (2026-10-13) — Every action drawn as a button, all at one size:
   `BUTTON`, `BUTTON_PRIMARY`, `BUTTON_DANGER` and `TEXT_LINK` replace
   `TEXT_ACTION` and `TEXT_DANGER`, and one-off button classes go (§13).
@@ -612,6 +615,14 @@ nothing.
   hand). Library to private removes picks and model links; private to library
   approves and removes shares and group shares; both refuse a second copy of
   the same file and write `document_moved` to the access log.
+- The Library page (`app/_library/Library.tsx`, K-16) files an approved
+  manual by the catalogue models it is linked to: each model's kind and
+  category (carried in `StudioDocument.models`) give its group through
+  `groupOfModel()`, the gear map's rule, so a manual is never given a type of
+  its own. A manual linked to two models stands under both; one with no link
+  is under Not filed, by the manufacturer and model typed on the document.
+  Manufacturers are one row whatever their case, spelled as the catalogue
+  spells them.
 
 ### Study groups (Phase 2)
 

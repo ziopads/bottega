@@ -4,6 +4,7 @@ import type {
   DocumentKind,
   DocumentState,
   FingerprintMatch,
+  LinkedModel,
   ReviewStatus,
   StudioDocument,
 } from '@/lib/documentTypes';
@@ -37,7 +38,7 @@ const DOC_SELECT = `
          document_level(d.id) as level,
          (select count(*) from pages p where p.document_id = d.id) as pages_extracted,
          exists (select 1 from library_picks lp where lp.document_id = d.id and lp.user_id = app_user()) as picked,
-         coalesce((select json_agg(json_build_object('id', m.id, 'manufacturer', m.manufacturer, 'model', m.model) order by m.manufacturer, m.model)
+         coalesce((select json_agg(json_build_object('id', m.id, 'manufacturer', m.manufacturer, 'model', m.model, 'kind', m.kind, 'category', m.category) order by m.manufacturer, m.model)
                    from model_documents md join gear_models m on m.id = md.model_id
                    where md.document_id = d.id), '[]'::json) as models
   from documents d`;
@@ -69,7 +70,7 @@ async function toDocuments(db: Scoped, rows: Row[]): Promise<StudioDocument[]> {
     createdAt: iso(r.created_at),
     level: (strOrNull(r.level) as AccessLevel | null) ?? null,
     picked: r.picked === true,
-    models: (r.models as { id: number; manufacturer: string; model: string }[]) ?? [],
+    models: (r.models as LinkedModel[]) ?? [],
   }));
 }
 
