@@ -14,6 +14,9 @@ import { originFrom, RESOURCE_METADATA_PATH, SCOPE, verifyAccess } from '@/lib/o
 import { handler } from '@/mcp/server';
 
 export const dynamic = 'force-dynamic';
+// A backstop on Vercel billing: no tool call needs a minute, and anything
+// held open longer is waste.
+export const maxDuration = 60;
 
 const authed = withMcpAuth(
   handler,
