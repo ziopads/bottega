@@ -11,6 +11,7 @@ import type {
   WorkflowCard,
   WorkflowElement,
   WorkflowStage,
+  WorkflowTemplateStatus,
 } from '@/lib/workflowTypes';
 
 // A project's workflow (REQUIREMENTS W-1 to W-10, db/011): reads for the
@@ -34,7 +35,7 @@ function pgMessage(err: unknown): string {
 
 // The messages db/011 raises on purpose, passed on as they are.
 const READABLE =
-  /needs (edit|a reason)|not met|one at a time|already in|not a stage|not been started|not a settled|has no stages|no stages yet|belongs to the same project|stays with its|cannot sit under/;
+  /needs (edit|contribute|a reason|what was done)|not met|one at a time|already in|not a stage|not been started|not a settled|has no stages|no stages yet|belongs to the same project|stays with its|cannot sit under|template no longer exists/;
 
 async function run<T>(fn: () => Promise<T>): Promise<T> {
   try {
@@ -87,6 +88,8 @@ function toCriterion(r: Row, who: Map<string, string>): ExitCriterion {
     id: num(r.id),
     stage: String(r.stage),
     body: String(r.body),
+    hint: String(r.hint ?? ''),
+    checkKey: r.check_key === null || r.check_key === undefined ? null : String(r.check_key),
     position: num(r.position),
     metAt: isoOrNull(r.met_at),
     metByName: r.met_by === null ? null : nameOf(who, String(r.met_by)),
@@ -97,20 +100,21 @@ function toCriterion(r: Row, who: Map<string, string>): ExitCriterion {
 }
 
 export async function getWorkflow(db: Scoped, projectId: number): Promise<Workflow> {
-  const [stageRows, current, moveRows, criteriaRows, elementRows, cardRows] = await db.tx([
+  const [stageRows, current, templateRows, moveRows, criteriaRows, elementRows, cardRows] = await db.tx([
+    { text: 'select key, label, position, standard from project_stage_list($1) order by position', params: [projectId] },
     {
-      text: `select s.key, s.label, s.position from workflow_stages s join projects p on p.kind = s.kind
-              where p.id = $1 order by s.position`,
+      text: `select stage, entered_at, next_move, blocker, blocker_set_at, finished_at from project_workflow
+              where project_id = $1`,
       params: [projectId],
     },
-    { text: 'select stage, entered_at from project_workflow where project_id = $1', params: [projectId] },
+    { text: 'select template_id, name, version, seen_version from workflow_template_status($1)', params: [projectId] },
     {
       text: `select id, from_stage, to_stage, reason, moved_by, moved_at from stage_moves
               where project_id = $1 order by moved_at desc, id desc`,
       params: [projectId],
     },
     {
-      text: `select id, stage, body, position, met_at, met_by, origin, reviewed, rejected_at from exit_criteria
+      text: `select id, stage, body, hint, check_key, position, met_at, met_by, origin, reviewed, rejected_at from exit_criteria
               where project_id = $1 order by stage, position, id`,
       params: [projectId],
     },
@@ -122,7 +126,16 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
     ...criteriaRows.map((r) => (r.met_by === null ? null : String(r.met_by))),
     ...cardRows.map((r) => String(r.created_by)),
   ]);
-  const stages: WorkflowStage[] = stageRows.map((r) => ({ key: String(r.key), label: String(r.label), position: num(r.position) }));
+  const stages: WorkflowStage[] = stageRows.map((r) => ({
+    key: String(r.key),
+    label: String(r.label),
+    position: num(r.position),
+    standard: String(r.standard ?? ''),
+  }));
+  const t = templateRows[0];
+  const template: WorkflowTemplateStatus | null = t
+    ? { id: num(t.template_id), name: String(t.name), version: num(t.version), seenVersion: num(t.seen_version) }
+    : null;
   const moves: StageMove[] = moveRows.map((r) => ({
     id: num(r.id),
     fromStage: r.from_stage === null ? null : String(r.from_stage),
@@ -141,6 +154,11 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
     stages,
     stage: current[0] ? String(current[0].stage) : null,
     enteredAt: current[0] ? iso(current[0].entered_at) : null,
+    nextMove: current[0] ? String(current[0].next_move ?? '') : '',
+    blocker: current[0] ? String(current[0].blocker ?? '') : '',
+    blockerSetAt: current[0] ? isoOrNull(current[0].blocker_set_at) : null,
+    finishedAt: current[0] ? isoOrNull(current[0].finished_at) : null,
+    template,
     moves,
     criteria: criteriaRows.map((r) => toCriterion(r, who)),
     elements,
@@ -153,7 +171,8 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
 /**
  * Starts the workflow at the first stage and, the first time, copies the
  * element template for the project's kind. One transaction: the elements
- * exist exactly when the workflow does.
+ * exist exactly when the workflow does. workflow_start (db/024) copies the
+ * owner's template: its stages and every stage's criteria.
  */
 export async function startWorkflow(db: Scoped, projectId: number): Promise<void> {
   await run(async () => {

@@ -1,7 +1,7 @@
 # Bottega — requirements
 
-**Version:** 0.25
-**Date:** 2026-10-14
+**Version:** 0.26
+**Date:** 2026-10-23
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
 built is in `ARCHITECTURE.md`.
@@ -9,6 +9,15 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.26** (2026-10-23) — Workflow templates per account, stages and exit
+  criteria both, from a platform default (W-13 to W-18); music stages become
+  Seed, Palette, Structure, Detail, Mixdown, Master, Release (W-1); every
+  stage's criteria are written when the workflow starts (W-3); the re-entry
+  note and ending a session (W-19, W-20); each person's board with a rotation
+  limit, and finishing (W-21 to W-23); the Workflow tab's new layout (W-24).
+  From a friend's prototype, Finish Line. Built so far: the data (migration
+  024).
 
 - **0.25** (2026-10-14) — Terms: a music project is an Ableton project folder,
   and its `.als` files are sets (§1, Terms); the app says Projects where it
@@ -440,13 +449,18 @@ there may be lost in the move.
 
 ## 7. Workflow (W)
 
-- **W-1** Stages are defined per kind. Music: sketch, arrange, mix, master;
-  sound design is a kind of card (W-6), done in whichever stage needs it.
-  Collection: select, sequence, master, artwork, release, to be confirmed.
-  Installation and multimedia: to be defined.
+- **W-1** Stages come from a template per kind (W-13). Music, by default:
+  Seed, Palette, Structure, Detail, Mixdown, Master, Release (23 October;
+  until then sketch, arrange, mix, master, which moved to Seed, Structure,
+  Mixdown and Master). Palette is a stage of its own; sound design stays a
+  kind of card (W-6) as well. Collection: select, sequence, master, artwork,
+  release, to be confirmed. Installation and multimedia: to be defined.
 - **W-2** Each project is in exactly one stage at a time.
-- **W-3** Entering a stage means writing its exit criteria: the conditions under
-  which the stage is finished. Advancing means confirming each one.
+- **W-3** Exit criteria are the conditions under which a stage is finished.
+  Every stage's criteria are copied from the template when the workflow
+  starts, so later stages show how far they have to go; criteria can be
+  added, changed and ticked in any stage. Advancing from the current stage
+  needs each of its accepted criteria met.
 - **W-4** Moving back to an earlier stage requires a reason, which is kept.
 - **W-5** Elements: a tree of the parts of a work, one template per kind,
   copied to each project when its workflow starts and editable there. For
@@ -460,8 +474,7 @@ there may be lost in the move.
   done. Kind, optional: sound design, writing, arrangement, mix, fix. Status:
   proposed (Claude's only), accepted, in progress, done, rejected. A card can
   name the note it came from and the mix and moment it is about.
-- **W-7** The board: columns by status, swimlanes by element, filtered to the
-  current stage.
+- **W-7** Replaced by W-21 (23 October).
 - **W-8** Parked cards. A card for a later stage can be written at any time and
   is held out of view until that stage begins: folded away on the Workflow
   tab, opened from its section or from that stage in the stage strip, where
@@ -484,6 +497,60 @@ there may be lost in the move.
   workflow, moves the stage, writes exit criteria and elements, changes any
   card, accepts or rejects Claude's proposals and settles or reopens
   decisions; only the owner deletes (AC-7).
+- **W-13** Workflow templates. A template holds a kind's stages in order, each
+  with a label and a one-line standard ("Plays start to finish"), and the
+  exit criteria each stage starts with. The platform has one default per
+  kind; an account copies it and edits its copy in Preferences. The account
+  chooses the template its new music projects start from.
+- **W-14** A template criterion has its text (one condition, checkable), an
+  optional hint (how to check it or what to aim for; lines indented by two
+  spaces render as a nested list), and optionally one check from a fixed
+  list (W-18).
+- **W-15** The platform's music default: the seven stages of W-1 with 32
+  criteria, from the Finish Line checklist.
+- **W-16** A project keeps its own copy of its stages and criteria, taken from
+  its owner's template when the workflow starts. Later template edits do not
+  change projects underway.
+- **W-17** When the template has changed since a project took it, the project's
+  Workflow tab says so and offers the changes: criteria changed or added in
+  the template, chosen one by one, and stage labels. A changed criterion
+  keeps whether it is met. Dismissing the offer marks the version seen.
+  Projects started before templates are offered the template's criteria this
+  way.
+- **W-18** Likely done. A criterion with a check is marked "likely done" (or
+  "likely not yet") from the newest saved set, with what was read; Bottega
+  never ticks it. The checks: tempo, key and scale set; a reference track;
+  samples collected; tracks named and grouped; named locators; an intro and
+  outro to mix; plays end to end; automation written; master left clean;
+  master chain set.
+- **W-19** The re-entry note. Each project has a next move (one action to start
+  within five minutes of opening the set) and a blocker. A blocker that has
+  lasted two sessions prompts another way in: bounce to audio, pull a
+  reference, send it to a collaborator.
+- **W-20** Ending a session logs what was done, sets the next move, and turns
+  loose lines into cards in the current stage. A tag in a line (`#bass`)
+  names the card's element; a line without one is unassigned. "Done · pull
+  the next card up" logs the next move as done and makes the top open card
+  the next move.
+- **W-21** The board. Each person has their own board, the page Bottega opens
+  on: columns Backlog, In rotation, Finished, each project with its stage bar,
+  next move and how long since it was touched. A project lands in its owner's
+  backlog when its workflow starts; anyone who can see a project can put it
+  on their own board. Dragging on the board moves only between Backlog and
+  In rotation; stage moves stay on the project page.
+- **W-22** Rotation holds at most the person's limit (Preferences, default 4).
+  When it is full, moving one in means choosing one to swap out. A project
+  untouched for the person's cold-after days (default 21) shows as cold.
+- **W-23** A project is finished when it is in its last stage and every
+  accepted criterion there is met; unticking one or moving back undoes it.
+  Release work beyond the checklist becomes its own module later.
+- **W-24** The Workflow tab, from 23 October: the stage bar across the top
+  (one segment per stage, filled by the share of its criteria met, the
+  current one outlined, labels under it); "Pick up here" with the next move,
+  the blocker and ending a session; Claude's proposals; then three columns:
+  the stages, the chosen stage's criteria with hints and likely-done marks,
+  and the current stage's cards by element, with parked cards, settled
+  decisions and the work log folded below.
 
 ## 8. Corpus (K)
 

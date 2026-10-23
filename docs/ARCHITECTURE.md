@@ -1,7 +1,7 @@
 # Bottega — architecture
 
-**Version:** 0.16
-**Date:** 2026-10-13
+**Version:** 0.17
+**Date:** 2026-10-23
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
 story IDs below (S-3, W-6 and so on) refer to it.
@@ -10,6 +10,10 @@ story IDs below (S-3, W-6 and so on) refer to it.
 
 ## Changelog
 
+- **0.17** (2026-10-23) — Migration 024: workflow templates, each project's
+  own stages, the re-entry note, the work log and the board (§4, Workflow).
+  `lib/workflow.ts` reads a project's stages through `project_stage_list()`;
+  `workflow_stages` is no longer read.
 - **0.16** (2026-10-14) — Terms: project (an Ableton project folder) and set
   (an `.als` file); code, tables and connector tool names keep `session`
   where they had it (§1, Terms). Migration 023: a project's `bpm` follows its
@@ -269,15 +273,41 @@ The names `tracks` and `trackId` for mixes are carried over from Vivarium.
 
 ### Workflow (Phase 2)
 
-- `stages` — kind, name, position. The stage list for each kind.
-- `project_stages` — one row per time a project enters a stage: stage, exit
-  criteria, entered, left, direction (forward or back), reason (required
-  going back). The open row is the current stage.
-- `element_templates`, `elements` — the element tree per kind, and its copy per
-  project.
+Migrations 011 and 024. REQUIREMENTS W-1 to W-24.
+
+- `workflow_templates`, `template_stages`, `template_criteria` (024) — a
+  kind's stages (key, position, label, standard) and the criteria each starts
+  with (body, hint, check, and a `uid` kept across copies). No owner: the
+  platform default. `template_copy()` makes an account's copy; any change to
+  stages or criteria raises the template's `version`. A stage key never
+  changes.
+- `workflow_checks` (024) — the fixed list of checks a criterion can name.
+- `account_preferences` gains `music_template_id`, `rotation_limit`,
+  `cold_days` (024).
+- `project_stages` (024) — a project's own stages, copied at
+  `workflow_start()`. `project_stage_list()` gives them, or the owner's
+  template's before the start. `workflow_stages` (011) is kept, no longer
+  read.
+- `project_workflow` — the current stage, when entered, and (024) the
+  template and version copied, `next_move`, `blocker`, `blocker_set_at`,
+  `finished_at`. Written by functions only: `workflow_start`,
+  `workflow_move`, `workflow_set_next`, `work_log_add`, `template_apply`;
+  `workflow_check_finished()` keeps `finished_at` after every change to
+  criteria or the stage.
+- `stage_moves` — every move, with the reason a move back needs.
+- `exit_criteria` — per project and stage; (024) `hint`, `check_key`,
+  `template_uid`. `workflow_template_status()` and
+  `workflow_template_criteria()` read the project's template for anyone who
+  can see the project.
+- `elements` — the element tree, copied per project from
+  `lib/elementTemplate.ts`.
 - `cards` — project, element, stage, what needs to happen, how it will be known
-  to be done, status, settled, origin, reviewed, rejected.
+  to be done, status, settled, origin.
 - `card_reopenings` — card, reason, who, when.
+- `work_log` (024) — each ended session: what was done, the next move set.
+- `board_places` (024) — each person's board: project, backlog or rotation.
+  `board_place()` keeps rotation within `rotation_limit`, finished projects
+  not counting; `board_swap()` exchanges two.
 
 ### Gear (Phase 1)
 

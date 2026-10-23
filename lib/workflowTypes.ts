@@ -1,7 +1,8 @@
-// Workflow shapes, shared by server and client (REQUIREMENTS W-1 to W-10,
-// db/011). No imports, so client components can use them.
+// Workflow shapes, shared by server and client (REQUIREMENTS W-1 to W-24,
+// db/011, db/024). No imports, so client components can use them.
 
-export type WorkflowStage = { key: string; label: string; position: number };
+/** One of a project's own stages (db/024), with its one-line standard. */
+export type WorkflowStage = { key: string; label: string; position: number; standard: string };
 
 export const CARD_KINDS = ['sound design', 'writing', 'arrangement', 'mix', 'fix'] as const;
 export type CardKind = (typeof CARD_KINDS)[number];
@@ -24,6 +25,10 @@ export type ExitCriterion = {
   id: number;
   stage: string;
   body: string;
+  /** How to check it or what to aim for; lines indented by two spaces nest. */
+  hint: string;
+  /** A check from workflow_checks that can mark it likely done, or null. */
+  checkKey: string | null;
   position: number;
   metAt: string | null;
   metByName: string | null;
@@ -61,12 +66,28 @@ export type WorkflowCard = {
   updatedAt: string;
 };
 
+/** The template a project's workflow was copied from (db/024). */
+export type WorkflowTemplateStatus = {
+  id: number;
+  name: string;
+  version: number;
+  /** The template version the project last took in; lower than version when it has moved on. */
+  seenVersion: number;
+};
+
 export type Workflow = {
-  /** The stages of this kind of project, in order; empty when it has none. */
+  /** The project's stages in order (its own once started); empty when it has none. */
   stages: WorkflowStage[];
   /** null until the workflow is started. */
   stage: string | null;
   enteredAt: string | null;
+  /** The re-entry note: one action to start with next time. */
+  nextMove: string;
+  blocker: string;
+  blockerSetAt: string | null;
+  /** Set while the project is in its last stage with every criterion there met. */
+  finishedAt: string | null;
+  template: WorkflowTemplateStatus | null;
   moves: StageMove[];
   criteria: ExitCriterion[];
   elements: WorkflowElement[];

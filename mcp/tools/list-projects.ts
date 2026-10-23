@@ -8,7 +8,7 @@ import { formatDuration } from '@/lib/studioTypes';
 export async function listProjectsTool(db: Scoped, args: { query?: string }) {
   const [projects, stages] = await Promise.all([
     listProjects(db),
-    db.q(`select w.project_id, s.label from project_workflow w join workflow_stages s on s.kind = w.kind and s.key = w.stage`),
+    db.q(`select w.project_id, s.label from project_workflow w join project_stages s on s.project_id = w.project_id and s.key = w.stage`),
   ]);
   const stageOf = new Map(stages.map((r) => [Number(r.project_id), String(r.label)]));
   const q = (args.query ?? '').trim().toLowerCase();
