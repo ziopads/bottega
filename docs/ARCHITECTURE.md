@@ -13,7 +13,10 @@ story IDs below (S-3, W-6 and so on) refer to it.
 - **0.17** (2026-10-23) — Migration 024: workflow templates, each project's
   own stages, the re-entry note, the work log and the board (§4, Workflow).
   `lib/workflow.ts` reads a project's stages through `project_stage_list()`;
-  `workflow_stages` is no longer read.
+  `workflow_stages` is no longer read. The Workflow tab rebuilt to W-24:
+  `POST /api/projects/:id/workflow` gains `next`, `end-session` and
+  `pull-next` (contribute) and `template` (edit); `parseSessionLine()` in
+  `lib/workflowInput.ts` reads a loose line's #tags and "--".
 - **0.16** (2026-10-14) — Terms: project (an Ableton project folder) and set
   (an `.als` file); code, tables and connector tool names keep `session`
   where they had it (§1, Terms). Migration 023: a project's `bpm` follows its

@@ -10,9 +10,12 @@ import type {
   Workflow,
   WorkflowCard,
   WorkflowElement,
+  TemplateChange,
+  WorkLogEntry,
   WorkflowStage,
   WorkflowTemplateStatus,
 } from '@/lib/workflowTypes';
+import { parseSessionLine } from '@/lib/workflowInput';
 
 // A project's workflow (REQUIREMENTS W-1 to W-10, db/011): reads for the
 // Workflow tab and the connector, and the writes behind the tab's controls.
@@ -90,6 +93,7 @@ function toCriterion(r: Row, who: Map<string, string>): ExitCriterion {
     body: String(r.body),
     hint: String(r.hint ?? ''),
     checkKey: r.check_key === null || r.check_key === undefined ? null : String(r.check_key),
+    templateUid: r.template_uid === null || r.template_uid === undefined ? null : String(r.template_uid),
     position: num(r.position),
     metAt: isoOrNull(r.met_at),
     metByName: r.met_by === null ? null : nameOf(who, String(r.met_by)),
@@ -100,7 +104,7 @@ function toCriterion(r: Row, who: Map<string, string>): ExitCriterion {
 }
 
 export async function getWorkflow(db: Scoped, projectId: number): Promise<Workflow> {
-  const [stageRows, current, templateRows, moveRows, criteriaRows, elementRows, cardRows] = await db.tx([
+  const [stageRows, current, templateRows, moveRows, criteriaRows, elementRows, cardRows, logRows] = await db.tx([
     { text: 'select key, label, position, standard from project_stage_list($1) order by position', params: [projectId] },
     {
       text: `select stage, entered_at, next_move, blocker, blocker_set_at, finished_at from project_workflow
@@ -114,14 +118,20 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
       params: [projectId],
     },
     {
-      text: `select id, stage, body, hint, check_key, position, met_at, met_by, origin, reviewed, rejected_at from exit_criteria
+      text: `select id, stage, body, hint, check_key, template_uid, position, met_at, met_by, origin, reviewed, rejected_at from exit_criteria
               where project_id = $1 order by stage, position, id`,
       params: [projectId],
     },
     { text: 'select id, parent_id, name, position from elements where project_id = $1 order by position, id', params: [projectId] },
     { text: `${CARD_SELECT} where c.project_id = $1 order by c.created_at, c.id`, params: [projectId] },
+    {
+      text: `select id, did, next_move, logged_by, logged_at from work_log
+              where project_id = $1 order by logged_at desc, id desc limit 30`,
+      params: [projectId],
+    },
   ]);
   const who = await accountNames(db, [
+    ...logRows.map((r) => String(r.logged_by)),
     ...moveRows.map((r) => String(r.moved_by)),
     ...criteriaRows.map((r) => (r.met_by === null ? null : String(r.met_by))),
     ...cardRows.map((r) => String(r.created_by)),
@@ -136,6 +146,17 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
   const template: WorkflowTemplateStatus | null = t
     ? { id: num(t.template_id), name: String(t.name), version: num(t.version), seenVersion: num(t.seen_version) }
     : null;
+  const criteria = criteriaRows.map((r) => toCriterion(r, who));
+  const templateChanges = template && template.version > template.seenVersion ? await readTemplateChanges(db, projectId, criteria) : [];
+  const workLog: WorkLogEntry[] = logRows.map((r) => ({
+    id: num(r.id),
+    did: String(r.did),
+    nextMove: String(r.next_move),
+    loggedByName: nameOf(who, String(r.logged_by)),
+    loggedAt: iso(r.logged_at),
+  }));
+  const blockerSetAt = current[0] ? isoOrNull(current[0].blocker_set_at) : null;
+  const sessionsSinceBlocker = blockerSetAt ? workLog.filter((e) => e.loggedAt > blockerSetAt).length : 0;
   const moves: StageMove[] = moveRows.map((r) => ({
     id: num(r.id),
     fromStage: r.from_stage === null ? null : String(r.from_stage),
@@ -156,11 +177,14 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
     enteredAt: current[0] ? iso(current[0].entered_at) : null,
     nextMove: current[0] ? String(current[0].next_move ?? '') : '',
     blocker: current[0] ? String(current[0].blocker ?? '') : '',
-    blockerSetAt: current[0] ? isoOrNull(current[0].blocker_set_at) : null,
+    blockerSetAt,
     finishedAt: current[0] ? isoOrNull(current[0].finished_at) : null,
     template,
+    templateChanges,
+    workLog,
+    sessionsSinceBlocker,
     moves,
-    criteria: criteriaRows.map((r) => toCriterion(r, who)),
+    criteria,
     elements,
     cards: cardRows.map((r) => toCard(r, who)),
   };
@@ -209,6 +233,81 @@ export async function startWorkflow(db: Scoped, projectId: number): Promise<void
 
 export async function moveStage(db: Scoped, projectId: number, to: string, reason: string): Promise<void> {
   await run(() => db.q('select workflow_move($1, $2, $3)', [projectId, to, reason]));
+}
+
+// ── Template changes (W-17, db/024) ──────────────────────────────────────────
+
+/** What the project's template offers: criteria it lacks, and criteria whose text differs from its own. */
+async function readTemplateChanges(db: Scoped, projectId: number, criteria: ExitCriterion[]): Promise<TemplateChange[]> {
+  const rows = await db.q(
+    `select stage, stage_label, uid, body, hint from workflow_template_criteria($1) where uid is not null`,
+    [projectId],
+  );
+  const mine = new Map(criteria.filter((c) => c.templateUid).map((c) => [c.templateUid as string, c]));
+  const changes: TemplateChange[] = [];
+  for (const r of rows) {
+    const uid = String(r.uid);
+    const body = String(r.body);
+    const hint = String(r.hint ?? '');
+    const own = mine.get(uid);
+    const base = { uid, stage: String(r.stage), stageLabel: String(r.stage_label), body, hint };
+    if (!own) changes.push({ ...base, change: 'new', was: null });
+    else if (own.body !== body || own.hint !== hint) changes.push({ ...base, change: 'changed', was: { body: own.body, hint: own.hint } });
+  }
+  return changes;
+}
+
+/** Brings the chosen template changes in and marks the template's version seen; an empty list dismisses. */
+export async function applyTemplateChanges(db: Scoped, projectId: number, uids: string[]): Promise<void> {
+  await run(() => db.q('select template_apply($1, $2::uuid[])', [projectId, uids]));
+}
+
+// ── The next move and ending a session (W-19, W-20, db/024) ──────────────────
+
+/** Sets the next move, the blocker, or both; undefined leaves one alone. */
+export async function setNext(db: Scoped, projectId: number, next: string | undefined, blocker: string | undefined): Promise<void> {
+  await run(() => db.q('select workflow_set_next($1, $2, $3)', [projectId, next ?? null, blocker ?? null]));
+}
+
+/**
+ * Ends a session: logs what was done, sets the next move, and turns each loose
+ * line into a card in the current stage, or the stage a #tag names, on the
+ * element a #tag names. One transaction.
+ */
+export async function endSession(
+  db: Scoped,
+  projectId: number,
+  input: { did: string; next: string; lines: string[] },
+  w: Workflow,
+): Promise<void> {
+  if (!w.stage) throw new WorkflowError('The workflow has not been started.');
+  const current = w.stage;
+  const pos = (key: string | null) => w.stages.find((s) => s.key === key)?.position ?? 0;
+  const statements: Statement[] = [{ text: 'select work_log_add($1, $2, $3)', params: [projectId, input.did, input.next] }];
+  for (const line of input.lines) {
+    const c = parseSessionLine(line, w.elements, w.stages);
+    if (!c) continue;
+    statements.push({
+      text: `insert into cards (project_id, element_id, stage, what, done_when, origin, status)
+             values ($1, $2, $3, $4, $5, 'human', 'accepted')`,
+      // A tag naming an earlier stage is ignored: open work goes in the current one or later.
+      params: [projectId, c.elementId, pos(c.stage) > pos(current) ? c.stage : current, c.what, c.doneWhen],
+    });
+  }
+  await run(() => db.tx(statements));
+}
+
+/**
+ * The next move is done: log it, and make the first open card of the current
+ * stage the next move (in progress before accepted, then oldest first).
+ */
+export async function pullNext(db: Scoped, projectId: number, w: Workflow): Promise<void> {
+  if (!w.nextMove.trim()) throw new WorkflowError('There is no next move to mark done.');
+  const open = w.cards
+    .filter((c) => c.stage === w.stage && !c.settled && (c.status === 'in progress' || c.status === 'accepted'))
+    .sort((a, b) => Number(b.status === 'in progress') - Number(a.status === 'in progress') || a.createdAt.localeCompare(b.createdAt));
+  const next = open.find((c) => c.what.trim() !== w.nextMove.trim())?.what ?? '';
+  await run(() => db.q('select work_log_add($1, $2, $3)', [projectId, `Done: ${w.nextMove}`, next]));
 }
 
 // ── Exit criteria ────────────────────────────────────────────────────────────

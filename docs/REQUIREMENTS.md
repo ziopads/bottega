@@ -17,7 +17,9 @@ built is in `ARCHITECTURE.md`.
   note and ending a session (W-19, W-20); each person's board with a rotation
   limit, and finishing (W-21 to W-23); the Workflow tab's new layout (W-24).
   From a friend's prototype, Finish Line. Built so far: the data (migration
-  024).
+  024) and the Workflow tab (W-17, W-19, W-20, W-24). Loose lines at the end
+  of a session become cards whose done-when reads "Not written yet" unless
+  the line gives one after "--".
 
 - **0.25** (2026-10-14) — Terms: a music project is an Ableton project folder,
   and its `.als` files are sets (§1, Terms); the app says Projects where it

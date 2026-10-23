@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { api } from '@/app/_studio/controls';
 import { formatMoment, formatWhen } from '@/app/_studio/Notes';
 import { DetailGrid, Section } from '@/app/_ui/layout';
+import { DONE_WHEN_UNWRITTEN } from '@/lib/workflowInput';
 import {
   CARD_KINDS,
   PERSON_STATUSES,
@@ -18,14 +19,22 @@ import {
 } from '@/lib/workflowTypes';
 import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
 
-// The Workflow tab (REQUIREMENTS W-1 to W-10, db/011), layout C:
+// The Workflow tab (REQUIREMENTS W-1 to W-24, db/011, db/024), from 23 October:
 //
-//   stage strip     the stages in order, the current one marked
+//   stage bar       one segment per stage, filled by the share of its criteria
+//                   met, the current one outlined, labels and a caption
+//   pick up here    the next move, the blocker, Done · pull the next card up,
+//                   End session (log, next move, loose lines as cards)
+//   template        what the project's template offers since it was taken
 //   review band     Claude's proposals, waiting for a person
-//   left column     the current stage: exit criteria to tick, advance, move back
-//   main column     open cards by element; cards parked for later stages;
-//                   settled decisions; the element tree
+//   left column     the stages, each with its share met and parked cards
+//   middle column   the chosen stage: its standard and criteria with hints;
+//                   advance and move back from the current one
+//   right column    the current stage's cards by element; folded below, done
+//                   cards, cards waiting for later stages, settled decisions,
+//                   the session log and the element tree
 //
+// General to detail, left to right.
 // What the controls offer follows the viewer's level; the routes and db/011
 // enforce the same rules. Every change answers with the whole workflow.
 
@@ -134,6 +143,7 @@ function StartedWorkflow({
   const pos = stagePosition(w, current);
   const stageLabel = (key: string) => w.stages.find((s) => s.key === key)?.label ?? key;
   const next = w.stages.find((s) => s.position === pos + 1) ?? null;
+  const url = `/api/projects/${projectId}/workflow`;
 
   const elementName = useMemo(() => {
     const byId = new Map(w.elements.map((e) => [e.id, e]));
@@ -153,58 +163,24 @@ function StartedWorkflow({
   const settled = w.cards.filter((c) => c.settled);
   const proposedCards = w.cards.filter((c) => c.status === 'proposed');
   const proposedCriteria = w.criteria.filter((c) => !c.reviewed);
-  const criteria = w.criteria.filter((c) => c.stage === current && c.reviewed && !c.rejected);
-  const unmet = criteria.filter((c) => !c.metAt).length;
+  const accepted = w.criteria.filter((c) => c.reviewed && !c.rejected);
+  const tally = (key: string) => {
+    const cs = accepted.filter((c) => c.stage === key);
+    return { met: cs.filter((c) => c.metAt).length, total: cs.length };
+  };
+  const unmet = accepted.filter((c) => c.stage === current && !c.metAt).length;
+
+  // The stage shown in the middle column: the current one unless another is picked.
+  const [picked, setPicked] = useState<string | null>(null);
+  const sel = w.stages.find((s) => s.key === picked) ?? w.stages.find((s) => s.key === current) ?? w.stages[0];
+  const selTally = tally(sel.key);
+  const selCriteria = accepted.filter((c) => c.stage === sel.key);
+  const selParked = parked.filter((c) => c.stage === sel.key);
 
   const canChange = (c: WorkflowCard) => canEdit || (canContribute && c.createdById === viewerId);
   const cardProps = { elementName, stageLabel, canChange, canEdit, isOwner, busy, call };
 
-  // Parked cards stay folded away (W-8); a later stage's chip opens just its own.
-  const [parkedOpen, setParkedOpen] = useState(false);
-  const [parkedFocus, setParkedFocus] = useState<string | null>(null);
-  function openParked(stage: string | null) {
-    setParkedFocus(stage);
-    setParkedOpen(true);
-    if (typeof document !== 'undefined') {
-      requestAnimationFrame(() => document.getElementById('parked-cards')?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
-    }
-  }
-
-  // ── Stage strip ─────────────────────────────────────────────────────────────
-  const strip = (
-    <ol className="t-body mb-6 flex flex-wrap items-center gap-x-2 gap-y-2" aria-label="Stages">
-      {w.stages.map((s, i) => {
-        const state = s.position < pos ? 'past' : s.position === pos ? 'current' : 'later';
-        return (
-          <li key={s.key} className="flex items-center gap-1">
-            {i > 0 && <span className="pr-1 text-muted" aria-hidden>→</span>}
-            <span
-              aria-current={state === 'current' ? 'step' : undefined}
-              className={
-                state === 'current' ? 'border-b-2 border-ink pb-0.5 font-medium text-ink' : 'border-b-2 border-transparent pb-0.5 text-muted'
-              }
-            >
-              {state === 'past' && <span className="mr-1">✓</span>}
-              {s.label}
-            </span>
-            {state === 'later' && parked.some((c) => c.stage === s.key) && (
-              <button
-                type="button"
-                onClick={() => (parkedOpen && parkedFocus === s.key ? setParkedOpen(false) : openParked(s.key))}
-                aria-pressed={parkedOpen && parkedFocus === s.key}
-                title={`Cards parked for ${s.label}`}
-                className={`ml-1 ${parkedOpen && parkedFocus === s.key ? BUTTON_PRIMARY : BUTTON}`}
-              >
-                <span className="t-num">{parked.filter((c) => c.stage === s.key).length}</span>&nbsp;parked
-              </button>
-            )}
-          </li>
-        );
-      })}
-    </ol>
-  );
-
-  // ── Review band ─────────────────────────────────────────────────────────────
+  // ── Claude's proposals ──────────────────────────────────────────────────────
   const review =
     proposedCards.length + proposedCriteria.length > 0 ? (
       <div className="t-body mb-6 rounded border border-line bg-card px-3 py-2">
@@ -252,45 +228,46 @@ function StartedWorkflow({
       </div>
     ) : null;
 
-  // ── Left column: the current stage ───────────────────────────────────────────
-  const aside = (
-    <>
-      <Section label={`Stage · ${stageLabel(current)}`}>
-        <div className="t-body">
-          {w.enteredAt && <p className="mb-2 text-[11px] text-muted">Since {formatWhen(w.enteredAt)}</p>}
-          <p className="t-label mb-1">Exit criteria</p>
-          {criteria.length === 0 ? (
-            <p className="text-muted">
-              None yet. {canEdit ? 'Write what finishes this stage before working in it.' : ''}
-            </p>
-          ) : (
-            <ul className="space-y-1">
-              {criteria.map((c) => (
-                <CriterionRow key={c.id} c={c} canEdit={canEdit} isOwner={isOwner} busy={busy} call={call} />
-              ))}
-            </ul>
-          )}
-          {canEdit && <AddLine placeholder="This stage is finished when…" busy={busy} onAdd={(body) => call(`/api/projects/${projectId}/criteria`, 'POST', { stage: current, body })} />}
-
-          {canEdit && next && (
-            <div className="mt-4">
+  // ── Left column: the stages ─────────────────────────────────────────────────
+  const stagesColumn = (
+    <nav aria-label="Stages">
+      <p className="t-label mb-1">Stages</p>
+      <ul className="space-y-1">
+        {w.stages.map((s) => {
+          const t = tally(s.key);
+          const isCurrent = s.key === current;
+          const past = s.position < pos;
+          const share = t.total ? t.met / t.total : past ? 1 : 0;
+          const parkedHere = parked.filter((c) => c.stage === s.key).length;
+          return (
+            <li key={s.key}>
               <button
-                onClick={() => call(`/api/projects/${projectId}/workflow`, 'POST', { op: 'move', to: next.key })}
-                disabled={busy || unmet > 0}
-                className={BUTTON}
-                title={unmet > 0 ? `${unmet} exit ${unmet === 1 ? 'criterion is' : 'criteria are'} not met` : undefined}
+                type="button"
+                onClick={() => setPicked(isCurrent ? null : s.key)}
+                aria-pressed={s.key === sel.key}
+                aria-current={isCurrent ? 'step' : undefined}
+                className={`t-body block w-full rounded border px-2.5 py-2 text-left ${s.key === sel.key ? 'border-ink' : 'border-transparent hover:border-line'}`}
               >
-                Advance to {next.label} →
+                <span className="flex items-baseline justify-between gap-2">
+                  <span className={isCurrent ? 'font-medium' : past ? 'text-muted' : ''}>
+                    {past ? '✓ ' : isCurrent ? '● ' : ''}
+                    {s.label}
+                  </span>
+                  <span className="t-num text-[10px] text-muted">{t.total ? `${t.met}/${t.total}` : ''}</span>
+                </span>
+                <span className="mt-1 block h-[3px] overflow-hidden rounded bg-line">
+                  <span className="block h-full bg-ink" style={{ width: `${Math.round(share * 100)}%` }} />
+                </span>
+                {parkedHere > 0 && <span className="mt-0.5 block text-[11px] text-muted">{parkedHere} parked</span>}
               </button>
-              {unmet > 0 && <p className="mt-1 text-[11px] text-muted">{unmet} still to meet.</p>}
-            </div>
-          )}
-          {canEdit && pos > 1 && <MoveBack w={w} busy={busy} onMove={(to, reason) => call(`/api/projects/${projectId}/workflow`, 'POST', { op: 'move', to, reason })} />}
-        </div>
-      </Section>
-
-      <Section label="Moves">
-        <ul className="t-body space-y-1.5">
+            </li>
+          );
+        })}
+      </ul>
+      {w.template && <p className="mt-3 text-[11px] text-muted">From the template “{w.template.name}”.</p>}
+      <details className="mt-4">
+        <summary className="t-label cursor-pointer">Moves · {w.moves.length}</summary>
+        <ul className="t-body mt-2 space-y-1.5">
           {w.moves.map((m) => (
             <li key={m.id}>
               <span>{m.fromStage ? `${stageLabel(m.fromStage)} → ${stageLabel(m.toStage)}` : `Started at ${stageLabel(m.toStage)}`}</span>
@@ -301,11 +278,57 @@ function StartedWorkflow({
             </li>
           ))}
         </ul>
-      </Section>
-    </>
+      </details>
+    </nav>
   );
 
-  // ── Main column ───────────────────────────────────────────────────────────────
+  // ── Middle column: the chosen stage's criteria ──────────────────────────────
+  const criteriaColumn = (
+    <section aria-label={`${sel.label} criteria`}>
+      <p className="t-label">
+        Stage {sel.position} · {sel.label} · {selTally.met} of {selTally.total}
+      </p>
+      {sel.standard && <p className="mt-0.5 text-[15px] font-medium">{sel.standard}</p>}
+      {sel.key === current && w.enteredAt && <p className="mt-0.5 text-[11px] text-muted">Since {formatWhen(w.enteredAt)}</p>}
+      {sel.position > pos && (
+        <p className="mt-0.5 text-[11px] text-muted">A later stage. Its criteria can be ticked ahead; moving into it waits on {stageLabel(current)}.</p>
+      )}
+      {selCriteria.length === 0 ? (
+        <p className="t-body mt-2 text-muted">None yet. {canEdit ? 'Write what finishes this stage.' : ''}</p>
+      ) : (
+        <ul className="t-body mt-2 space-y-0.5">
+          {selCriteria.map((c) => (
+            <CriterionRow key={c.id} c={c} canEdit={canEdit} isOwner={isOwner} busy={busy} call={call} />
+          ))}
+        </ul>
+      )}
+      {canEdit && (
+        <AddLine placeholder="This stage is finished when…" busy={busy} onAdd={(body) => call(`/api/projects/${projectId}/criteria`, 'POST', { stage: sel.key, body })} />
+      )}
+      {sel.key === current && canEdit && next && (
+        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-3">
+          <button
+            onClick={() => call(url, 'POST', { op: 'move', to: next.key })}
+            disabled={busy || unmet > 0}
+            className={BUTTON}
+            title={unmet > 0 ? `${unmet} exit ${unmet === 1 ? 'criterion is' : 'criteria are'} not met` : undefined}
+          >
+            Advance to {next.label} →
+          </button>
+          {unmet > 0 && <span className="text-[11px] text-muted">{unmet} still to meet</span>}
+        </div>
+      )}
+      {sel.key === current && !next && w.finishedAt && <p className="t-body mt-4 font-medium">Finished {formatWhen(w.finishedAt)}.</p>}
+      {sel.key === current && canEdit && pos > 1 && <MoveBack w={w} busy={busy} onMove={(to, reason) => call(url, 'POST', { op: 'move', to, reason })} />}
+      {sel.key !== current && (
+        <button onClick={() => setPicked(null)} className={`mt-4 ${BUTTON}`}>
+          Back to {stageLabel(current)}
+        </button>
+      )}
+    </section>
+  );
+
+  // ── Right column: the current stage's cards, and what waits ──────────────────
   const groups = [...tops.map((t) => t.name), 'Unassigned'];
   const byTop = (cards: WorkflowCard[]) => {
     const m = new Map<string, WorkflowCard[]>();
@@ -316,40 +339,62 @@ function StartedWorkflow({
     return m;
   };
   const openByTop = byTop(openHere);
+  const later = w.stages.filter((s) => s.position > pos && parked.some((c) => c.stage === s.key));
 
-  const main = (
-    <>
-      <Section label={`Open work · ${stageLabel(current)} · ${openHere.length}`}>
-        {canContribute && (
-          <CardForm
-            elements={w.elements}
-            stages={w.stages.filter((s) => s.position >= pos)}
-            defaultStage={current}
-            busy={busy}
-            submitLabel="Add card"
-            onSubmit={(input) => call(`/api/projects/${projectId}/cards`, 'POST', input)}
-          />
-        )}
-        {openHere.length === 0 ? (
-          <p className="t-body mt-3 text-muted">No open cards in this stage.</p>
-        ) : (
-          <div className="mt-3 space-y-4">
-            {groups
-              .filter((g) => openByTop.has(g))
-              .map((g) => (
-                <div key={g}>
-                  <h3 className="t-label mb-1">{g}</h3>
-                  <ul className="divide-y divide-line border-y border-line">
-                    {openByTop.get(g)!.map((c) => (
-                      <CardRow key={c.id} c={c} {...cardProps} elements={w.elements} stages={w.stages} />
-                    ))}
-                  </ul>
-                </div>
+  const cardsColumn = (
+    <section aria-label="Cards">
+      {sel.position > pos && (
+        <div className="mb-6">
+          <p className="t-label mb-1">
+            Parked for {sel.label} · {selParked.length}
+          </p>
+          {selParked.length === 0 ? (
+            <p className="t-body text-muted">No cards wait for this stage.</p>
+          ) : (
+            <ul className="divide-y divide-line border-y border-line">
+              {selParked.map((c) => (
+                <CardRow key={c.id} c={c} {...cardProps} elements={w.elements} stages={w.stages} />
               ))}
-          </div>
-        )}
+            </ul>
+          )}
+        </div>
+      )}
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <p className="t-label">
+          On deck · {stageLabel(current)} · {openHere.length}
+        </p>
+      </div>
+      {canContribute && (
+        <CardForm
+          elements={w.elements}
+          stages={w.stages.filter((s) => s.position >= pos)}
+          defaultStage={current}
+          busy={busy}
+          submitLabel="Add card"
+          onSubmit={(input) => call(`/api/projects/${projectId}/cards`, 'POST', input)}
+        />
+      )}
+      {openHere.length === 0 ? (
+        <p className="t-body mt-3 text-muted">No open cards in this stage.</p>
+      ) : (
+        <div className="mt-3 space-y-4">
+          {groups
+            .filter((g) => openByTop.has(g))
+            .map((g) => (
+              <div key={g}>
+                <h3 className="t-label mb-1">{g}</h3>
+                <ul className="divide-y divide-line border-y border-line">
+                  {openByTop.get(g)!.map((c) => (
+                    <CardRow key={c.id} c={c} {...cardProps} elements={w.elements} stages={w.stages} />
+                  ))}
+                </ul>
+              </div>
+            ))}
+        </div>
+      )}
+      <div className="t-body mt-6 space-y-2 border-t border-line pt-3">
         {doneHere.length > 0 && (
-          <details className="t-body mt-4">
+          <details>
             <summary className="cursor-pointer text-muted">Done in this stage · {doneHere.length}</summary>
             <ul className="mt-1 divide-y divide-line">
               {doneHere.map((c) => (
@@ -358,33 +403,13 @@ function StartedWorkflow({
             </ul>
           </details>
         )}
-      </Section>
-
-      {parked.length > 0 && (
-        <Section
-          className="scroll-mt-4"
-          label={<span id="parked-cards">Parked for later stages · {parked.length}</span>}
-          action={
-            <button onClick={() => (parkedOpen ? setParkedOpen(false) : openParked(null))} className={BUTTON}>
-              {parkedOpen ? 'Hide' : 'Show'}
-            </button>
-          }
-        >
-          {!parkedOpen ? (
-            <p className="t-body text-muted">
-              Held out of view until their stage begins. Open them here or from a stage above to read or edit them.
-            </p>
-          ) : (
-          <div className="space-y-4">
-            {parkedFocus && (
-              <button onClick={() => setParkedFocus(null)} className={BUTTON}>
-                Show every later stage
-              </button>
-            )}
-            {w.stages
-              .filter((s) => s.position > pos && parked.some((c) => c.stage === s.key))
-              .filter((s) => !parkedFocus || s.key === parkedFocus)
-              .map((s) => (
+        {later.length > 0 && (
+          <details>
+            <summary className="cursor-pointer text-muted">
+              Waiting for later stages · {later.map((s) => `${s.label} ${parked.filter((c) => c.stage === s.key).length}`).join(' · ')}
+            </summary>
+            <div className="mt-2 space-y-4">
+              {later.map((s) => (
                 <div key={s.key}>
                   <h3 className="t-label mb-1">{s.label}</h3>
                   <ul className="divide-y divide-line border-y border-line">
@@ -396,36 +421,302 @@ function StartedWorkflow({
                   </ul>
                 </div>
               ))}
-          </div>
-          )}
-        </Section>
-      )}
-
-      <Section label={`Settled decisions · ${settled.length}`}>
-        {settled.length === 0 ? (
-          <p className="t-body text-muted">None yet. Mark a card or a note settled so it is not reopened without a reason.</p>
-        ) : (
-          <ul className="t-body divide-y divide-line">
-            {settled.map((c) => (
-              <SettledRow key={c.id} c={c} elementName={elementName} canEdit={canEdit} busy={busy} call={call} />
-            ))}
-          </ul>
+            </div>
+          </details>
         )}
-      </Section>
-
-      <Section label="Elements">
-        <ElementTree projectId={projectId} elements={w.elements} canEdit={canEdit} isOwner={isOwner} busy={busy} call={call} />
-      </Section>
-    </>
+        <details>
+          <summary className="cursor-pointer text-muted">Settled decisions · {settled.length}</summary>
+          {settled.length === 0 ? (
+            <p className="mt-1 text-muted">None yet. Mark a card or a note settled so it is not reopened without a reason.</p>
+          ) : (
+            <ul className="mt-1 divide-y divide-line">
+              {settled.map((c) => (
+                <SettledRow key={c.id} c={c} elementName={elementName} canEdit={canEdit} busy={busy} call={call} />
+              ))}
+            </ul>
+          )}
+        </details>
+        <details>
+          <summary className="cursor-pointer text-muted">Session log · {w.workLog.length}</summary>
+          {w.workLog.length === 0 ? (
+            <p className="mt-1 text-muted">Sessions you end with “End session” appear here.</p>
+          ) : (
+            <ul className="mt-1 space-y-2">
+              {w.workLog.map((e) => (
+                <li key={e.id}>
+                  <span className="t-num block text-[11px] text-muted">
+                    {formatWhen(e.loggedAt)} · {e.loggedByName}
+                  </span>
+                  {e.did && <span className="block">{e.did}</span>}
+                  {e.nextMove && <span className="block text-muted">Next: {e.nextMove}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </details>
+        <details>
+          <summary className="cursor-pointer text-muted">Elements</summary>
+          <div className="mt-2">
+            <ElementTree projectId={projectId} elements={w.elements} canEdit={canEdit} isOwner={isOwner} busy={busy} call={call} />
+          </div>
+        </details>
+      </div>
+    </section>
   );
 
   return (
     <>
-      {strip}
+      <StageBar w={w} tally={tally} />
+      <PickUp
+        key={`${w.nextMove}|${w.blocker}`}
+        w={w}
+        url={url}
+        tops={tops.map((t) => t.name)}
+        canContribute={canContribute}
+        busy={busy}
+        call={call}
+      />
+      <TemplateReview key={w.template?.version ?? 0} w={w} url={url} canEdit={canEdit} busy={busy} call={call} />
       {review}
       {error && <p className="t-body mb-4 text-rust">{error}</p>}
-      <DetailGrid main={main} aside={aside} side="left" />
+      <div className="grid grid-cols-1 gap-x-8 gap-y-8 lg:grid-cols-12">
+        <div className="min-w-0 lg:col-span-3">{stagesColumn}</div>
+        <div className="min-w-0 lg:col-span-4">{criteriaColumn}</div>
+        <div className="min-w-0 lg:col-span-5">{cardsColumn}</div>
+      </div>
     </>
+  );
+}
+
+/** One segment per stage, filled by the share of its criteria met; the current one outlined (W-24). */
+function StageBar({ w, tally }: { w: Workflow; tally: (key: string) => { met: number; total: number } }) {
+  const pos = stagePosition(w, w.stage);
+  const cur = w.stages.find((s) => s.key === w.stage);
+  const all = w.stages.map((s) => tally(s.key));
+  const met = all.reduce((n, t) => n + t.met, 0);
+  const total = all.reduce((n, t) => n + t.total, 0);
+  const columns = { gridTemplateColumns: `repeat(${w.stages.length}, minmax(0, 1fr))` };
+  return (
+    <section aria-label="Progress" className="mb-6">
+      <div className="grid gap-1" style={columns}>
+        {w.stages.map((s, i) => {
+          const t = all[i];
+          const share = t.total ? t.met / t.total : s.position < pos ? 1 : 0;
+          return (
+            <span key={s.key} className={`relative block h-2.5 overflow-hidden rounded-sm bg-line ${s.key === w.stage ? 'ring-1 ring-ink' : ''}`}>
+              <span className={`absolute inset-y-0 left-0 ${share >= 1 ? 'bg-ink' : 'bg-ink/40'}`} style={{ width: `${Math.round(share * 100)}%` }} />
+            </span>
+          );
+        })}
+      </div>
+      <div className="mt-1 grid gap-1 font-mono text-[10px] uppercase tracking-wide" style={columns}>
+        {w.stages.map((s) => (
+          <span key={s.key} className={`min-w-0 truncate ${s.key === w.stage ? 'font-medium text-ink' : 'text-muted'}`}>
+            {s.label}
+          </span>
+        ))}
+      </div>
+      <p className="t-num mt-1 text-[11px] text-muted">
+        {w.finishedAt
+          ? `Finished · ${met} of ${total} criteria met`
+          : `Stage ${pos} of ${w.stages.length} · ${cur?.label ?? ''}${cur?.standard ? `: ${cur.standard}` : ''} · ${met} of ${total} criteria met`}
+      </p>
+    </section>
+  );
+}
+
+/** The re-entry note and ending a session (W-19, W-20). */
+function PickUp({
+  w,
+  url,
+  tops,
+  canContribute,
+  busy,
+  call,
+}: {
+  w: Workflow;
+  url: string;
+  tops: string[];
+  canContribute: boolean;
+  busy: boolean;
+  call: Call;
+}) {
+  const [next, setNext] = useState(w.nextMove);
+  const [blocker, setBlocker] = useState(w.blocker);
+  const [ending, setEnding] = useState(false);
+  const [did, setDid] = useState('');
+  const [after, setAfter] = useState('');
+  const [lines, setLines] = useState('');
+  const last = w.workLog[0];
+  const sessions = w.blocker ? w.sessionsSinceBlocker : 0;
+
+  return (
+    <section aria-label="Pick up here" className="t-body mb-6 rounded border border-ink p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="t-label">Pick up here</p>
+        <p className="t-num text-[11px] text-muted">{last ? `Last session ${formatWhen(last.loggedAt)} · ${last.loggedByName}` : 'No session ended yet'}</p>
+      </div>
+      <div className="mt-2 grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <div className="space-y-3 lg:col-span-9">
+          <label className="block">
+            <span className="text-[11px] text-muted">Next move: one action you could start within five minutes of opening the set</span>
+            {canContribute ? (
+              <textarea
+                value={next}
+                onChange={(e) => setNext(e.target.value)}
+                onBlur={() => next.trim() !== w.nextMove && void call(url, 'POST', { op: 'next', next })}
+                rows={2}
+                placeholder="Resample the reese into a one-bar loop and chop a call phrase"
+                className={`${FIELD} mt-1 block w-full text-[17px] font-medium`}
+              />
+            ) : (
+              <span className="mt-1 block text-[17px] font-medium">{w.nextMove || 'None set.'}</span>
+            )}
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-muted">
+              Blocker{sessions > 0 ? ` · ${sessions} ${sessions === 1 ? 'session' : 'sessions'} now` : ''}
+            </span>
+            {canContribute ? (
+              <input
+                value={blocker}
+                onChange={(e) => setBlocker(e.target.value)}
+                onBlur={() => blocker.trim() !== w.blocker && void call(url, 'POST', { op: 'next', blocker })}
+                placeholder="What keeps stopping you?"
+                className={`${FIELD} mt-1 block w-full`}
+              />
+            ) : (
+              <span className="mt-1 block">{w.blocker || 'None.'}</span>
+            )}
+          </label>
+          {sessions >= 2 && (
+            <p className="text-[12px] text-muted">
+              This blocker has lasted {sessions} sessions. Try another way in: bounce the part to audio, pull a reference, send it to a
+              collaborator, or leave it for a later stage.
+            </p>
+          )}
+        </div>
+        {canContribute && (
+          <div className="flex flex-col items-start gap-2 lg:col-span-3">
+            {w.nextMove && (
+              <button onClick={() => call(url, 'POST', { op: 'pull-next' })} disabled={busy} className={BUTTON}>
+                Done · pull the next card up
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setAfter(w.nextMove);
+                setEnding(true);
+              }}
+              disabled={busy || ending}
+              className={BUTTON_PRIMARY}
+            >
+              End session…
+            </button>
+            <p className="text-[11px] text-muted">Ending a session logs what you did, sets the next move and turns loose lines into cards.</p>
+          </div>
+        )}
+      </div>
+      {ending && (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (await call(url, 'POST', { op: 'end-session', did, next: after, lines: lines.split('\n') })) setEnding(false);
+          }}
+          className="mt-4 space-y-3 rounded border border-line bg-card p-3"
+        >
+          <label className="block">
+            <span className="text-[11px] text-muted">What did you get done?</span>
+            <textarea value={did} onChange={(e) => setDid(e.target.value)} rows={2} className={`${FIELD} mt-1 block w-full`} autoFocus />
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-muted">Next move for next time</span>
+            <textarea value={after} onChange={(e) => setAfter(e.target.value)} rows={2} className={`${FIELD} mt-1 block w-full`} />
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-muted">
+              Loose thoughts, one per line; each becomes a card. A #tag names the part (#bass, #hats) or parks it for a later stage
+              (#mixdown); after “--”, how you will know it is done.
+            </span>
+            <textarea
+              value={lines}
+              onChange={(e) => setLines(e.target.value)}
+              rows={4}
+              placeholder={'Snare too loud against the hats in drop 1 #tactus #mixdown\nReverb throw on the last snare before drop 2 #bus -- the throw lands on the downbeat'}
+              className={`${FIELD} mt-1 block w-full font-mono text-[12px]`}
+            />
+          </label>
+          {tops.length > 0 && <p className="text-[11px] text-muted">Parts: {tops.join(', ')}, and the parts under them.</p>}
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setEnding(false)} className={BUTTON}>
+              Cancel
+            </button>
+            <button type="submit" disabled={busy || (!did.trim() && !after.trim())} className={BUTTON_PRIMARY}>
+              Save session
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
+  );
+}
+
+/** What the template offers since the project took it (W-17). */
+function TemplateReview({ w, url, canEdit, busy, call }: { w: Workflow; url: string; canEdit: boolean; busy: boolean; call: Call }) {
+  const [open, setOpen] = useState(false);
+  const [chosen, setChosen] = useState<Set<string>>(() => new Set(w.templateChanges.map((c) => c.uid)));
+  if (!w.template || w.templateChanges.length === 0) return null;
+  const n = w.templateChanges.length;
+  const toggle = (uid: string) =>
+    setChosen((s) => {
+      const t = new Set(s);
+      if (t.has(uid)) t.delete(uid);
+      else t.add(uid);
+      return t;
+    });
+  return (
+    <section aria-label="Template changes" className="t-body mb-6 rounded border border-line px-3 py-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <p className="t-label">
+          The template “{w.template.name}” has changed · {n} to review
+        </p>
+        <button onClick={() => setOpen((o) => !o)} className={BUTTON}>
+          {open ? 'Hide' : 'Review'}
+        </button>
+      </div>
+      {open && (
+        <>
+          <ul className="mt-2 divide-y divide-line">
+            {w.templateChanges.map((c) => (
+              <li key={c.uid} className="flex items-start gap-2 py-1.5">
+                {canEdit && (
+                  <input type="checkbox" checked={chosen.has(c.uid)} onChange={() => toggle(c.uid)} aria-label={c.body} className="mt-1" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <span className="block text-[11px] text-muted">
+                    {c.change === 'new' ? 'New' : 'Changed'} · {c.stageLabel}
+                  </span>
+                  <span className="block">{c.body}</span>
+                  {c.was && c.was.body !== c.body && <span className="block text-[12px] text-muted line-through">{c.was.body}</span>}
+                  {c.hint.trim() && <HintText hint={c.hint} />}
+                </div>
+              </li>
+            ))}
+          </ul>
+          {canEdit && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <button onClick={() => call(url, 'POST', { op: 'template', uids: [...chosen] })} disabled={busy || chosen.size === 0} className={BUTTON_PRIMARY}>
+                Bring in {chosen.size}
+              </button>
+              <button onClick={() => call(url, 'POST', { op: 'template', uids: [] })} disabled={busy} className={BUTTON}>
+                Dismiss all
+              </button>
+              <span className="text-[11px] text-muted">A changed criterion keeps whether it is met. Dismissed ones come back only when the template changes again.</span>
+            </div>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 
@@ -437,20 +728,55 @@ function describeElement(e: { top: string; part: string | null }): string {
 
 type Call = (url: string, method: string, body?: unknown) => Promise<boolean>;
 
+/** A hint's lines; each two spaces of indent nest one level (W-14). */
+function HintText({ hint }: { hint: string }) {
+  type Node = { text: string; children: Node[] };
+  const lines = hint.split('\n').filter((l) => l.trim());
+  if (lines.length <= 1) return <span className="block text-[12px] text-muted">{hint.trim()}</span>;
+  const root: Node = { text: '', children: [] };
+  const stack: { depth: number; node: Node }[] = [{ depth: -1, node: root }];
+  for (const l of lines) {
+    const depth = Math.floor((l.length - l.trimStart().length) / 2);
+    const node: Node = { text: l.trim(), children: [] };
+    while (stack.length > 1 && stack[stack.length - 1].depth >= depth) stack.pop();
+    stack[stack.length - 1].node.children.push(node);
+    stack.push({ depth, node });
+  }
+  const list = (nodes: Node[]) => (
+    <ul className="list-disc pl-4">
+      {nodes.map((n, i) => (
+        <li key={i}>
+          {n.text}
+          {n.children.length > 0 && list(n.children)}
+        </li>
+      ))}
+    </ul>
+  );
+  return <div className="text-[12px] text-muted">{list(root.children)}</div>;
+}
+
 function CriterionRow({ c, canEdit, isOwner, busy, call }: { c: ExitCriterion; canEdit: boolean; isOwner: boolean; busy: boolean; call: Call }) {
   return (
-    <li className="flex items-baseline gap-2">
+    <li className="flex items-start gap-2 rounded px-1 py-1.5 hover:bg-ink/5">
       <input
+        id={`criterion-${c.id}`}
         type="checkbox"
         checked={!!c.metAt}
         disabled={!canEdit || busy}
         onChange={(e) => call(`/api/criteria/${c.id}`, 'PATCH', { met: e.target.checked })}
-        aria-label={c.body}
-        className="translate-y-0.5"
+        className="mt-1"
       />
-      <span className={`min-w-0 flex-1 ${c.metAt ? 'text-muted line-through' : ''}`} title={c.metAt ? `Met · ${c.metByName ?? ''} · ${formatWhen(c.metAt)}` : undefined}>
-        {c.body}
-      </span>
+      <div className="min-w-0 flex-1">
+        <label htmlFor={`criterion-${c.id}`} className={`block ${c.metAt ? 'text-muted line-through' : 'font-medium'}`}>
+          {c.body}
+        </label>
+        {c.hint.trim() && <HintText hint={c.hint} />}
+        {c.metAt && (
+          <span className="block text-[11px] text-muted">
+            Met · {c.metByName ?? ''} · {formatWhen(c.metAt)}
+          </span>
+        )}
+      </div>
       {isOwner && (
         <button onClick={() => call(`/api/criteria/${c.id}`, 'DELETE')} disabled={busy} className={BUTTON_DANGER} aria-label="Delete criterion">
           ×
@@ -698,7 +1024,9 @@ function CardRow({
           <span className="text-[11px] text-muted">{c.status}</span>
         )}
       </div>
-      <p className="text-[11px] text-muted">Done when: {c.doneWhen}</p>
+      <p className="text-[11px] text-muted">
+        {c.doneWhen === DONE_WHEN_UNWRITTEN ? <span className="italic">Done when: not written yet{changeable ? ' · Edit to add it' : ''}</span> : `Done when: ${c.doneWhen}`}
+      </p>
       <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-[11px] text-muted">
         {el.part && <span>{el.part}</span>}
         {c.kind && <span>· {c.kind}</span>}

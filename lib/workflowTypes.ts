@@ -29,6 +29,8 @@ export type ExitCriterion = {
   hint: string;
   /** A check from workflow_checks that can mark it likely done, or null. */
   checkKey: string | null;
+  /** The template criterion it was copied from, to compare with the template. */
+  templateUid: string | null;
   position: number;
   metAt: string | null;
   metByName: string | null;
@@ -75,6 +77,22 @@ export type WorkflowTemplateStatus = {
   seenVersion: number;
 };
 
+/** One template change a project can bring in (W-17). */
+export type TemplateChange = {
+  uid: string;
+  stage: string;
+  stageLabel: string;
+  /** 'new': not in the project yet; 'changed': the project's copy differs. */
+  change: 'new' | 'changed';
+  body: string;
+  hint: string;
+  /** The project's own text, for a changed one. */
+  was: { body: string; hint: string } | null;
+};
+
+/** One ended session (W-20). */
+export type WorkLogEntry = { id: number; did: string; nextMove: string; loggedByName: string; loggedAt: string };
+
 export type Workflow = {
   /** The project's stages in order (its own once started); empty when it has none. */
   stages: WorkflowStage[];
@@ -88,6 +106,12 @@ export type Workflow = {
   /** Set while the project is in its last stage with every criterion there met. */
   finishedAt: string | null;
   template: WorkflowTemplateStatus | null;
+  /** What the template offers when it has moved on; empty otherwise. */
+  templateChanges: TemplateChange[];
+  /** The latest ended sessions, newest first. */
+  workLog: WorkLogEntry[];
+  /** Sessions ended since the blocker was set. */
+  sessionsSinceBlocker: number;
   moves: StageMove[];
   criteria: ExitCriterion[];
   elements: WorkflowElement[];
