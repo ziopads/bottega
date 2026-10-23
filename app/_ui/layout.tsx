@@ -53,16 +53,36 @@ export function PageHeader({
   );
 }
 
+/**
+ * A page's columns, general to detail from left to right (23 October). With an
+ * outline (a contents list, the stages, the sections), three columns: the
+ * outline on the left, kept in view; the work in the middle; context such as
+ * members or notes on the right. Without one, the work and a narrow column.
+ */
 export function DetailGrid({
   main,
   aside,
+  outline,
   side = 'right',
 }: {
   main: React.ReactNode;
   aside?: React.ReactNode;
-  /** Where the narrow column sits from lg up. Below lg, main always comes first. */
+  /** The general view on the left from lg up: what the page is part of, to move around it. */
+  outline?: React.ReactNode;
+  /** Where the narrow column sits from lg up when there is no outline. Below lg, main always comes first. */
   side?: 'left' | 'right';
 }) {
+  if (outline) {
+    return (
+      <div className="grid grid-cols-1 gap-x-10 gap-y-8 lg:grid-cols-12">
+        <div className="min-w-0 lg:col-span-3">
+          <div className="lg:sticky lg:top-4">{outline}</div>
+        </div>
+        <div className={`min-w-0 ${aside ? 'lg:col-span-6' : 'lg:col-span-9'}`}>{main}</div>
+        {aside && <aside className="min-w-0 lg:col-span-3">{aside}</aside>}
+      </div>
+    );
+  }
   return (
     <div className="grid grid-cols-1 gap-x-10 gap-y-8 lg:grid-cols-12">
       <div className={`min-w-0 ${aside ? 'lg:col-span-8' : 'lg:col-span-12'}`}>{main}</div>

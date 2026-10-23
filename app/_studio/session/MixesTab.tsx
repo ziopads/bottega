@@ -107,7 +107,13 @@ export default function MixesTab({
   const markersFor = (id: number): Marker[] =>
     notesFor(id)
       .filter((n) => n.positionS !== null)
-      .map((n) => ({ id: n.id, at: n.positionS!, label: `${formatMoment(n.positionS!)} · ${n.body.slice(0, 60)}` }));
+      .map((n) => ({
+        id: n.id,
+        at: n.positionS!,
+        label: `${formatMoment(n.positionS!)} · ${n.body.slice(0, 60)}`,
+        author: n.authorName,
+        body: n.body.replace(/\s+/g, ' ').trim(),
+      }));
   const asideNotes = selected
     ? [...notesFor(selected)].sort((a, b) => (a.positionS ?? Infinity) - (b.positionS ?? Infinity) || b.createdAt.localeCompare(a.createdAt))
     : [];

@@ -31,8 +31,14 @@ story IDs below (S-3, W-6 and so on) refer to it.
   `setReading`. The `.als` parser (version 2) reads the set's key and scale
   from `LiveSet/ScaleInformation` (`Root`, or `RootNote`; `Name`, a number
   in Live 12, named through `SCALE_NAMES`) and Scale
-  Mode from `LiveSet/InKey`; saves read by version 1 are read again when the
-  folder is dropped.
+  Mode from `LiveSet/InKey` (confirmed on Khione's sets, 23 October); saves read by version 1 are read again when the
+  folder is dropped. `DetailGrid` takes an `outline` (left, kept in view;
+  the work in the middle; context right), used by the Learning group's
+  Syllabus tab and lessons (`app/_learning/Contents.tsx`). The player bar's
+  "Note at" offers the moment to the open project page (`requestNote` /
+  `onNoteRequest` in `deck.ts`), which opens its Mixes tab and note box
+  itself; with no page to take it, the bar navigates. Waveform marks carry the
+  note's author and text.
 - **0.16** (2026-10-14) — Terms: project (an Ableton project folder) and set
   (an `.als` file); code, tables and connector tool names keep `session`
   where they had it (§1, Terms). Migration 023: a project's `bpm` follows its

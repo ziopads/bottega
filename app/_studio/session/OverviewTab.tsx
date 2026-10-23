@@ -61,7 +61,13 @@ export default function OverviewTab({
   const markers = current
     ? notes
         .filter((n) => n.trackId === current.id && n.positionS !== null)
-        .map((n) => ({ id: n.id, at: n.positionS!, label: `${formatMoment(n.positionS!)} · ${n.body.slice(0, 60)}` }))
+        .map((n) => ({
+          id: n.id,
+          at: n.positionS!,
+          label: `${formatMoment(n.positionS!)} · ${n.body.slice(0, 60)}`,
+          author: n.authorName,
+          body: n.body.replace(/\s+/g, ' ').trim(),
+        }))
     : [];
 
   const main = (

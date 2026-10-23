@@ -4,14 +4,28 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 // A mix's waveform (REQUIREMENTS S-10): bars from its stored loudness outline,
 // the played part dark and the rest grey, a hover line showing where a click
-// will land, and ticks beneath for notes pinned to a moment (S-11). A file
-// with no outline yet gets an even, low bar so every player looks alike.
+// will land, and beneath it a mark for each note pinned to a moment (S-11):
+// a small disc with the author's initials, as SoundCloud shows comments.
+// Pointing at a mark (or tabbing to it) shows the note beside it, to the
+// right, or to the left near the end of the mix. A file with no outline yet
+// gets an even, low bar so every player looks alike.
 
-export type Marker = { id: number; at: number; label: string };
+export type Marker = { id: number; at: number; label: string; author?: string; body?: string };
 
 const BAR = 2;
 const GAP = 1;
-const TICKS = 6; // height of the marker row beneath the bars
+const MARKS = 16; // height of the row of marks beneath the bars
+
+function initials(name: string | undefined): string {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '·';
+  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+}
+
+function clock(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
 
 function fit(peaks: number[] | null, bars: number): number[] {
   if (bars <= 0) return [];
@@ -49,6 +63,7 @@ export default function Waveform({
   const box = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [hover, setHover] = useState<number | null>(null);
+  const [shown, setShown] = useState<number | null>(null);
   const clip = useId();
 
   useEffect(() => {
@@ -75,7 +90,7 @@ export default function Waveform({
     <div
       ref={box}
       className="relative w-full cursor-pointer select-none"
-      style={{ height: height + (markers.length ? TICKS : 0) }}
+      style={{ height: height + (markers.length ? MARKS : 0) }}
       onMouseMove={(e) => setHover(fraction(e.clientX))}
       onMouseLeave={() => setHover(null)}
       onClick={(e) => onSeek(fraction(e.clientX))}
@@ -105,22 +120,45 @@ export default function Waveform({
         </svg>
       )}
       {duration && markers.length > 0 && (
-        <div className="absolute inset-x-0 bottom-0" style={{ height: TICKS }}>
-          {markers.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              title={m.label}
-              aria-label={`Note at ${m.label}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onSeek(Math.min(1, m.at / duration));
-                onMarker?.(m);
-              }}
-              className="absolute top-0 h-full w-[3px] -translate-x-1/2 bg-ink/60 hover:bg-ink"
-              style={{ left: `${Math.min(100, (m.at / duration) * 100)}%` }}
-            />
-          ))}
+        <div className="absolute inset-x-0 bottom-0" style={{ height: MARKS }}>
+          {markers.map((m) => {
+            const left = Math.min(100, (m.at / duration) * 100);
+            const open = shown === m.id;
+            return (
+              <div key={m.id} className={`absolute top-0 ${open ? 'z-20' : 'z-0'}`} style={{ left: `${left}%` }}>
+                <button
+                  type="button"
+                  aria-label={`Note at ${m.label}`}
+                  onMouseEnter={() => setShown(m.id)}
+                  onMouseLeave={() => setShown((s) => (s === m.id ? null : s))}
+                  onFocus={() => setShown(m.id)}
+                  onBlur={() => setShown((s) => (s === m.id ? null : s))}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSeek(Math.min(1, m.at / duration));
+                    onMarker?.(m);
+                  }}
+                  className={`flex h-3.5 w-3.5 -translate-x-1/2 items-center justify-center rounded-full border border-parchment text-[7px] font-medium leading-none text-parchment ${
+                    open ? 'bg-ink' : 'bg-ink/55 hover:bg-ink'
+                  }`}
+                >
+                  {initials(m.author)}
+                </button>
+                {open && (
+                  <div
+                    role="tooltip"
+                    className={`pointer-events-none absolute top-[-3px] flex max-w-[22rem] items-baseline gap-2 whitespace-nowrap rounded border border-line bg-parchment px-2 py-0.5 text-[12px] shadow-sm ${
+                      left > 65 ? 'right-3' : 'left-3'
+                    }`}
+                  >
+                    {m.author && <span className="font-medium">{m.author}</span>}
+                    <span className="font-mono text-[10px] text-muted">{clock(m.at)}</span>
+                    <span className="min-w-0 truncate">{m.body ?? m.label}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

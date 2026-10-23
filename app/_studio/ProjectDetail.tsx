@@ -1,6 +1,8 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
+
+import { onNoteRequest, type NoteRequest } from '@/app/_ui/audio/deck';
 
 import { TabBar } from '@/app/_ui/layout';
 import type {
@@ -103,6 +105,22 @@ export default function ProjectDetail({
   const [sessionState, setSessionState] = useState(initialSessionState);
   // The variant last chosen, so a slower answer for an earlier choice is dropped.
   const wanted = useRef(initialVariant);
+  // The note box to open on a mix: from the address (?track=&at=) on arrival,
+  // then from the player bar's "Note at" while the page is open. Each request
+  // counts up, and the Mixes tab starts afresh for it.
+  const [noteAt, setNoteAt] = useState<{ trackId: number | null; at: number | null; count: number }>({
+    trackId: initialTrackId,
+    at: initialAt,
+    count: 0,
+  });
+  const takeNoteRequest = useEffectEvent((r: NoteRequest): boolean => {
+    if (r.projectId !== project.id) return false;
+    if (r.variant !== variant) selectVariant(r.variant);
+    selectTab('mixes');
+    setNoteAt((n) => ({ trackId: r.trackId, at: r.at, count: n.count + 1 }));
+    return true;
+  });
+  useEffect(() => onNoteRequest((r) => takeNoteRequest(r)), []);
   const [error, setError] = useState('');
 
   const isOwner = project.level === 'owner';
@@ -309,11 +327,11 @@ export default function ProjectDetail({
       )}
       {tab === 'mixes' && (
         <MixesTab
-          key={variant}
+          key={`${variant}:${noteAt.count}`}
           projectId={project.id}
           session={{ code: `${project.artist.code} ${project.canonicalId}`, title: project.workingName }}
-          initialTrackId={initialTrackId}
-          initialAt={initialAt}
+          initialTrackId={noteAt.trackId}
+          initialAt={noteAt.at}
           tracks={variantTracks}
           variant={variant}
           setTracks={setTracks}

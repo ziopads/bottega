@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react';
 import Exercise, { type Call } from '@/app/_learning/Exercise';
 import { NotesTab, ProgressTab, SessionsTab } from '@/app/_learning/Journal';
 import LessonBody, { titlesOf } from '@/app/_learning/LessonBody';
+import Contents from '@/app/_learning/Contents';
 import { VideosSection } from '@/app/_learning/Resources';
 import { api, InlineEdit } from '@/app/_studio/controls';
 import { formatWhen } from '@/app/_studio/Notes';
@@ -28,6 +29,7 @@ import {
 //                   custodian to accept or reject
 //   main column     the syllabus: topics in order, each with its lessons
 //                   (linking to the lesson page) and exercises with progress
+//   outline         on the Syllabus tab, its contents on the left (Contents.tsx)
 //   aside           members and invitations; the documents the lessons cite
 //                   and whether each is shared with the group
 //
@@ -37,7 +39,7 @@ import {
 // Tabs, as on the session page (the chosen one in the address as ?tab=, kept
 // with history.replaceState so switching does not reload): Syllabus, Sessions
 // and Notes (Journal.tsx), Resources (next build), Progress. The aside is the
-// same on every tab, with the syllabus's contents on the Syllabus tab.
+// same on every tab; the syllabus's contents sit on the left on the Syllabus tab.
 
 export type ListCandidate = { id: number; title: string; about: string; library: boolean };
 
@@ -210,7 +212,6 @@ export default function GroupView({
   // ── Aside: members and documents ────────────────────────────────────────────
   const aside = (
     <>
-      {tab === 'syllabus' && accepted.length > 0 && <Contents g={g} viewerId={viewerId} />}
       <Members g={g} viewerId={viewerId} custodian={custodian} busy={busy} call={call} />
       <Section label="Reading list">
         <p className="t-body">
@@ -282,53 +283,11 @@ export default function GroupView({
           }))}
         />
       </div>
-      <DetailGrid main={main} aside={aside} />
+      <DetailGrid main={main} aside={aside} outline={tab === 'syllabus' && accepted.length > 0 ? <Contents g={g} viewerId={viewerId} /> : undefined} />
     </div>
   );
 }
 
-/** The syllabus at a glance, beside it: topics and their lessons, with the viewer's exercises done. */
-function Contents({ g, viewerId }: { g: StudyGroup; viewerId: string }) {
-  const topics = g.topics.filter((t) => t.review === 'accepted');
-  return (
-    <Section label="Contents">
-      <ol className="t-body space-y-2">
-        {topics.map((t, i) => {
-          const lessons = g.lessons.filter((l) => l.topicId === t.id && l.review === 'accepted');
-          const exercises = g.exercises.filter((e) => e.topicId === t.id && e.review === 'accepted');
-          const done = exercises.filter((e) => e.progress.some((p) => p.accountId === viewerId && p.status === 'done')).length;
-          return (
-            <li key={t.id}>
-              <a href={`#topic-${t.id}`} className="flex items-baseline gap-2 hover:text-rust">
-                <span className="t-num w-5 shrink-0 text-muted">{i + 1}</span>
-                <span className="min-w-0 flex-1">{t.title}</span>
-                {exercises.length > 0 && (
-                  <span className={`t-num text-[11px] ${done === exercises.length ? 'text-moss' : 'text-muted'}`}>
-                    {done}/{exercises.length}
-                  </span>
-                )}
-              </a>
-              {lessons.length > 0 && (
-                <ol className="ml-7 mt-0.5 space-y-0.5 text-[12px]">
-                  {lessons.map((l, j) => (
-                    <li key={l.id}>
-                      <Link href={lessonHref(g.id, l.id)} className="flex gap-2 text-muted hover:text-rust">
-                        <span className="t-num w-6 shrink-0">
-                          {i + 1}.{j + 1}
-                        </span>
-                        <span className="min-w-0">{l.title}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-    </Section>
-  );
-}
 
 function ReviewRow({
   kind,

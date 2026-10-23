@@ -21,7 +21,11 @@ built is in `ARCHITECTURE.md`.
   W-23), now the home page; the projects list moved to /projects; and
   Preferences with the board's limits and the template editor (W-13, W-22);
   and the likely-done marks (W-18), read from the newest saved set of the
-  main mix, with the set's key and scale now read too. Loose lines at the end
+  main mix, with the set's key and scale now read too. Layout: general to
+  detail, left to right; a study group's contents sit on the left of its
+  Syllabus tab and of each lesson. A mix's notes show under its waveform as
+  marks with the author's initials, the note beside the mark on hover (S-11);
+  the player bar's "Note at" opens the note box every time it is pressed. Loose lines at the end
   of a session become cards whose done-when reads "Not written yet" unless
   the line gives one after "--".
 

@@ -200,6 +200,28 @@ export function itemOfProject(p: StudioProject): PlayItem | null {
   };
 }
 
+// "Note at 1:35" from the bar. A project page that is open listens and opens
+// its note box itself, so pressing it again on the same page works every time
+// and nothing reloads; with no such page open, the bar navigates instead.
+
+export type NoteRequest = { projectId: number; trackId: number; variant: string; at: number };
+type NoteHandler = (r: NoteRequest) => boolean;
+const noteHandlers = new Set<NoteHandler>();
+
+/** A project page listens for note requests while it is open. */
+export function onNoteRequest(handler: NoteHandler): () => void {
+  noteHandlers.add(handler);
+  return () => {
+    noteHandlers.delete(handler);
+  };
+}
+
+/** Offers a note request to the open page; false when no page took it. */
+export function requestNote(r: NoteRequest): boolean {
+  for (const h of noteHandlers) if (h(r)) return true;
+  return false;
+}
+
 /** The mix's place on its session page; with a moment, the note box opens there. */
 export function mixHref(item: PlayItem, at?: number): string {
   const q = new URLSearchParams({ tab: 'mixes' });

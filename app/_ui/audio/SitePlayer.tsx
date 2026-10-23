@@ -8,7 +8,7 @@ import { Stars } from '@/app/_studio/controls';
 import { BUTTON } from '@/app/_ui/styles';
 import { formatDuration } from '@/lib/studioTypes';
 
-import { currentTime, element, mixHref, seek, setAutoAdvance, step, stop, toggle, useDeck, useDeckTime } from './deck';
+import { currentTime, element, mixHref, requestNote, seek, setAutoAdvance, step, stop, toggle, useDeck, useDeckTime } from './deck';
 import { applyVolume, useVolume } from './volume';
 import VolumeControl from './VolumeControl';
 
@@ -105,7 +105,13 @@ export default function SitePlayer() {
           <div className="flex items-center gap-3 text-[11px] text-muted">
             {item.kind === 'mix' && (
               <button
-                onClick={() => router.push(mixHref(item, Math.round(currentTime() * 10) / 10))}
+                onClick={() => {
+                  const moment = Math.round(currentTime() * 10) / 10;
+                  // The project's page, when open, opens its note box itself; otherwise go there.
+                  if (!requestNote({ projectId: item.projectId, trackId: item.trackId, variant: item.variant ?? '', at: moment })) {
+                    router.push(mixHref(item, moment));
+                  }
+                }}
                 className={BUTTON}
                 title="Open the mix with a note at this moment"
               >

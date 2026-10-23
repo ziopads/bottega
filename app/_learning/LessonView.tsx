@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
+import Contents from '@/app/_learning/Contents';
 import Exercise, { type Call } from '@/app/_learning/Exercise';
 import { LessonForm } from '@/app/_learning/GroupView';
 import { NoteForm, NoteItem } from '@/app/_learning/Journal';
@@ -153,7 +154,7 @@ export default function LessonView({ initial, lessonId, viewerId }: { initial: S
           ) : undefined
         }
       />
-      <DetailGrid main={main} aside={aside} />
+      <DetailGrid main={main} aside={aside} outline={<Contents g={g} viewerId={viewerId} lessonId={lesson.id} />} />
     </div>
   );
 }
