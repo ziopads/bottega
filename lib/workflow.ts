@@ -367,15 +367,16 @@ export async function addCriteria(
   stage: string,
   bodies: string[],
   origin: 'human' | 'assistant',
+  hints: string[] = [],
 ): Promise<number[]> {
   return run(async () => {
     const assistant = origin === 'assistant';
     const results = await db.tx(
-      bodies.map((body) => ({
-        text: `insert into exit_criteria (project_id, stage, body, position, origin, reviewed)
-               values ($1, $2, $3, (select coalesce(max(position), 0) + 1 from exit_criteria where project_id = $1 and stage = $2), $4, $5)
+      bodies.map((body, i) => ({
+        text: `insert into exit_criteria (project_id, stage, body, hint, position, origin, reviewed)
+               values ($1, $2, $3, $4, (select coalesce(max(position), 0) + 1 from exit_criteria where project_id = $1 and stage = $2), $5, $6)
                returning id`,
-        params: [projectId, stage, body, assistant ? 'assistant' : 'human', !assistant],
+        params: [projectId, stage, body, hints[i] ?? '', assistant ? 'assistant' : 'human', !assistant],
       })),
     );
     return results.map((rows) => num(rows[0].id));

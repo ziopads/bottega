@@ -8,7 +8,9 @@
 // list_documents, search and read_pages; then Learning (12 October):
 // get_study_group, draft_topic, draft_lesson and draft_exercise; then study
 // sessions and notes: record_study_session, list_study_notes,
-// get_study_history.
+// get_study_history. 0.9.0 (23 October): each project's own stages from its
+// template, criteria hints and likely-done marks, the next move, blocker and
+// work log, and the person's board (db/024).
 
 import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
@@ -31,12 +33,16 @@ import {
 
 const INSTRUCTIONS = `Bottega is a music studio's working platform: every Ableton Live project with its mixes, references and notes, where each project stands in the production process, and the studio's gear and manuals. A project is one Ableton project folder: its saved sets (the .als files, one per working sitting, grouped into variants such as a radio edit) and the samples they share. The tool names and fields from before this naming still say session (get_session, session_id, the session field): each means a project. You act as a production collaborator and teacher for the person connected: you help them see where a track stands, decide what to do next, and get unstuck. You propose; they decide.
 
-Each project moves through stages one at a time (music: sketch, arrange, mix, master). A stage is finished when its exit criteria are met. Open work is written as cards, each on one element of the track (the elements follow the studio's Live template: TACTUS for drums and percussion, BASS, BACKGROUND, LEADS, TEXTURE, VOX, plus STRUCTURE for arrangement work and BUS for returns and the master chain), each saying what needs to happen and how it will be known to be done. Sound design is a kind of card, not a stage.
+Each project moves through its stages one at a time. The stages and the criteria each starts with come from the person's workflow template, so they can differ between people and projects; get_session gives a project's own. Bottega's default for music is Seed (a loop worth looping), Palette (sounds locked), Structure (plays start to finish), Detail (the second drop earns its place), Mixdown (translates everywhere), Master (ready for a system) and Release (out in the world). A stage is finished when its exit criteria are met; a criterion may carry a hint (how to check it or what to aim for), and a project is finished when every criterion of its last stage is met. Open work is written as cards, each on one element of the track (the elements follow the studio's Live template: TACTUS for drums and percussion, BASS, BACKGROUND, LEADS, TEXTURE, VOX, plus STRUCTURE for arrangement work and BUS for returns and the master chain), each saying what needs to happen and how it will be known to be done. Sound design is also a kind of card, done in whichever stage needs it.
 
 Three habits matter most:
 - Keep the person in the current stage. When they reach ahead (asking about mastering while arranging), say so, suggest a card parked for that later stage, and bring them back to the current stage's exit criteria.
 - Respect settled decisions. When a question touches one, show the decision and its reason first; reopening it is their explicit choice, with a reason.
 - Tie advice to evidence in the project: notes pinned to moments in a mix (cite the version and the time, such as v3 at 1:35), the open cards, the references.
+
+Each project has a next move (one action the person can start within five minutes of opening the set) and may have a blocker; get_session gives both, the latest sessions they ended, and how many sessions a blocker has lasted. When they ask where they were, start from the next move. When a blocker has lasted two sessions or more, suggest another way in (bounce the part to audio, pull a reference, send it to a collaborator, leave it for a later stage). Criteria that name a check carry likely_done: what Bottega read from the newest saved set (tempo and key, locators, track names, gaps, the master chain and so on). It is a suggestion from the set, never a decision: say what the set shows and let the person tick it in the app.
+
+Each person keeps their own board: projects in their backlog, in rotation (the few they are working on now, up to a limit they set) and finished. list_projects gives each project's place on the person's board. Keep advice to the projects in rotation unless they ask about another; when they want to start something new while rotation is full, say so and let them choose what goes back to the backlog.
 
 Start with list_projects to find a project, then get_session for its state. Cards and criteria with status 'proposed' or under awaiting_review are pending proposals, not the person's decisions; say so when you mention them.
 
@@ -71,7 +77,8 @@ export const handler = createMcpHandler(
         description:
           'The music projects the person can see: their own first, then those shared with them. Each gives its id, ' +
           'canonical id (the Ableton folder date, YYYY MMDD), working name, artist, genre, BPM, rating, the workflow ' +
-          'stage it is in (null when not started), its current mix, its owner and the access the person has. ' +
+          'stage it is in (null when not started), its place on the person\'s board (rotation, backlog, finished, or ' +
+          'null when not on it), its next move, its current mix, its owner and the access the person has. ' +
           'Optionally filtered by text in the canonical id, name, artist or genre. Pass an id to get_session.',
         inputSchema: z.object({
           query: z.string().optional().describe('text in the canonical id, working name, artist or genre'),
@@ -85,8 +92,10 @@ export const handler = createMcpHandler(
       {
         title: 'Get project',
         description:
-          "One project's state: its details; the workflow stage, since when, and the stage's exit criteria with " +
-          'which are met; open cards in the current stage by element; cards parked for later stages; settled ' +
+          "One project's state: its details; the next move, the blocker and the latest ended sessions; its own " +
+          'stages with how many criteria of each are met; the current stage, since when, and its exit criteria with ' +
+          'their hints, which are met, and what the newest saved set suggests (likely_done); whether its template ' +
+          'has changes to offer; open cards in the current stage by element; cards parked for later stages; settled ' +
           "decisions with their reasons; proposals awaiting the person's review; recent stage moves with reasons; " +
           'the element tree; every mix (version, length, which is current, how many notes); the references; and the ' +
           'latest notes, each with the mix version and moment it is about. Use it to answer where a project stands ' +
@@ -107,11 +116,14 @@ export const handler = createMcpHandler(
           "Propose exit criteria for one stage of a project: the conditions under which the stage is finished. " +
           'Stored as proposals awaiting the person\'s review on the Workflow tab; they do not count until accepted. ' +
           'Criteria the stage already has (accepted or waiting) are skipped. At most 12 per call, each at most 500 ' +
-          'characters. Needs the person to have edit access to the project and the workflow to be started.',
+          'characters; each may carry a hint (how to check it or what to aim for; lines indented by two spaces nest), ' +
+          'at most 2000 characters. Needs the person to have edit access to the project and the workflow to be started.',
         inputSchema: z.object({
           session_id: z.number().int().describe('a project id from list_projects'),
-          stage: z.string().optional().describe('stage name, such as Arrange; the current stage when omitted'),
-          criteria: z.array(z.string()).describe('one checkable condition each'),
+          stage: z.string().optional().describe('stage name, such as Structure; the current stage when omitted'),
+          criteria: z
+            .array(z.union([z.string(), z.object({ criterion: z.string(), hint: z.string().optional() })]))
+            .describe('one checkable condition each, as text or { criterion, hint }'),
         }),
       },
       async (args, ctx) => run(() => draftCriteriaTool(personFrom(ctx), args)),
@@ -363,7 +375,7 @@ export const handler = createMcpHandler(
   },
   {
     instructions: INSTRUCTIONS,
-    serverInfo: { name: 'bottega', version: '0.8.0' },
+    serverInfo: { name: 'bottega', version: '0.9.0' },
     // No subscriptions: this server never sends notifications, and on Vercel
     // each subscriptions/listen stream stayed open until the function timed
     // out, billing memory for the whole wait. Refused with the protocol's

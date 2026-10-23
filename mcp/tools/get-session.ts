@@ -1,8 +1,11 @@
-// get_session: everything needed to say where a session stands and what to
+// get_session: everything needed to say where a project stands and what to
 // do next (REQUIREMENTS W-10, the "where was I?" scenario): its details, the
-// stage and its exit criteria, open cards by element, cards parked for later
-// stages, settled decisions, Claude's pending proposals, the latest notes
-// with their moments, and the mixes and references.
+// next move, blocker and latest ended sessions (W-19, W-20), its own stages
+// with how far each has come, the current stage's exit criteria with hints and
+// likely-done marks (W-18), template changes on offer (W-17), open cards by
+// element, cards parked for later stages, settled decisions, Claude's pending
+// proposals, the latest notes with their moments, and the mixes and
+// references.
 
 import type { Scoped } from '@/lib/db';
 import { getProject, listNotes, listReferences, listTracks } from '@/lib/studio';
@@ -48,6 +51,7 @@ export async function getSessionTool(db: Scoped, args: { id: number; notes?: num
 
   const current = tracks.find((t) => t.id === project.currentMixId) ?? tracks[0] ?? null;
   const live = w.cards.filter((c) => !c.settled && c.status !== 'proposed' && c.status !== 'rejected');
+  const accepted = w.criteria.filter((c) => c.reviewed && !c.rejected);
   const limit = Math.min(Math.max(args.notes ?? 15, 0), 100);
 
   return {
@@ -65,12 +69,35 @@ export async function getSessionTool(db: Scoped, args: { id: number; notes?: num
     },
     workflow: w.stage
       ? {
-          stages: w.stages.map((s) => s.label),
+          next_move: w.nextMove || null,
+          blocker: w.blocker ? { text: w.blocker, sessions_since: w.sessionsSinceBlocker } : null,
+          latest_sessions: w.workLog.slice(0, 5).map((e) => ({ on: e.loggedAt.slice(0, 10), by: e.loggedByName, did: e.did || null, next: e.nextMove || null })),
+          stages: w.stages.map((s) => {
+            const cs = accepted.filter((c) => c.stage === s.key);
+            return { stage: s.label, standard: s.standard || null, criteria_met: `${cs.filter((c) => c.metAt).length} of ${cs.length}` };
+          }),
           stage: stageLabel(w.stage),
           in_stage_since: w.enteredAt?.slice(0, 10) ?? null,
-          exit_criteria: w.criteria
-            .filter((c) => c.stage === w.stage && c.reviewed && !c.rejected)
-            .map((c) => ({ id: c.id, criterion: c.body, met: !!c.metAt })),
+          finished: w.finishedAt?.slice(0, 10) ?? null,
+          exit_criteria: accepted
+            .filter((c) => c.stage === w.stage)
+            .map((c) => {
+              const r = c.checkKey ? w.setReading?.results[c.checkKey] : undefined;
+              return {
+                id: c.id,
+                criterion: c.body,
+                hint: c.hint || undefined,
+                met: !!c.metAt,
+                likely_done: r && !c.metAt ? { verdict: r.verdict, read: r.reading } : undefined,
+              };
+            }),
+          set_read: w.setReading?.fileName ? { file: w.setReading.fileName, saved: w.setReading.savedAt?.slice(0, 10) ?? null } : undefined,
+          template: w.template
+            ? {
+                name: w.template.name,
+                changes_on_offer: w.templateChanges.length || undefined,
+              }
+            : null,
           open_cards: live.filter((c) => c.stage === w.stage && c.status !== 'done').map(card),
           done_this_stage: live.filter((c) => c.stage === w.stage && c.status === 'done').length,
           parked_for_later_stages: live.filter((c) => stagePosition(w, c.stage) > pos).map(card),

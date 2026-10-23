@@ -25,7 +25,10 @@ built is in `ARCHITECTURE.md`.
   detail, left to right; a study group's contents sit on the left of its
   Syllabus tab and of each lesson. A mix's notes show under its waveform as
   marks with the author's initials, the note beside the mark on hover (S-11);
-  the player bar's "Note at" opens the note box every time it is pressed. Loose lines at the end
+  the player bar's "Note at" opens the note box every time it is pressed.
+  Connector 0.9.0 reads the new workflow: each project's own stages, criteria
+  hints and likely-done marks, the next move, blocker and latest sessions,
+  template changes on offer, and the person's board. Loose lines at the end
   of a session become cards whose done-when reads "Not written yet" unless
   the line gives one after "--".
 

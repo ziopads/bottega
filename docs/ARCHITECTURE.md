@@ -38,7 +38,12 @@ story IDs below (S-3, W-6 and so on) refer to it.
   "Note at" offers the moment to the open project page (`requestNote` /
   `onNoteRequest` in `deck.ts`), which opens its Mixes tab and note box
   itself; with no page to take it, the bar navigates. Waveform marks carry the
-  note's author and text.
+  note's author and text. Connector 0.9.0: `get_session` adds `next_move`,
+  `blocker` (with sessions since), `latest_sessions`, each stage's criteria
+  met, `finished`, criteria `hint` and `likely_done`, `set_read` and
+  `template`; `list_projects` adds `board` and `next_move`; `draft_criteria`
+  takes `{ criterion, hint }` as well as text; the instructions describe
+  templates, the default stages, the next move and the board.
 - **0.16** (2026-10-14) — Terms: project (an Ableton project folder) and set
   (an `.als` file); code, tables and connector tool names keep `session`
   where they had it (§1, Terms). Migration 023: a project's `bpm` follows its

@@ -72,27 +72,35 @@ function readable<T>(fn: () => Promise<T>): Promise<T> {
   });
 }
 
-export async function draftCriteriaTool(db: Scoped, args: { session_id: number; stage?: string; criteria: string[] }) {
+type CriterionArg = string | { criterion: string; hint?: string };
+
+export async function draftCriteriaTool(db: Scoped, args: { session_id: number; stage?: string; criteria: CriterionArg[] }) {
   const w = await started(db, args.session_id);
   const stage = stageKey(w, args.stage);
   if (!args.criteria.length) throw new ToolError('Give at least one criterion.');
   if (args.criteria.length > 12) throw new ToolError('Propose at most 12 criteria at a time.');
 
   const clean: string[] = [];
-  for (const raw of args.criteria) {
+  const hintOf = new Map<string, string>();
+  for (const item of args.criteria) {
+    const raw = typeof item === 'string' ? item : item.criterion;
     const p = parseCriterion(raw);
     if ('error' in p) throw new ToolError(`${p.error} (“${String(raw).slice(0, 60)}”)`);
+    const hint = typeof item === 'string' ? '' : (item.hint ?? '').replace(/\s+$/, '');
+    if (hint.length > 2000) throw new ToolError(`Keep each hint under 2000 characters (“${p.value.slice(0, 60)}”).`);
     clean.push(p.value);
+    if (hint) hintOf.set(norm(p.value), hint);
   }
   // Skip what the stage already has, accepted or waiting.
   const existing = new Set(w.criteria.filter((c) => c.stage === stage && !c.rejected).map((c) => norm(c.body)));
   const fresh = clean.filter((c, i) => !existing.has(norm(c)) && clean.findIndex((d) => norm(d) === norm(c)) === i);
   const skipped = clean.length - fresh.length;
-  const ids = fresh.length ? await readable(() => addCriteria(db, args.session_id, stage, fresh, 'assistant')) : [];
+  const hints = fresh.map((c) => hintOf.get(norm(c)) ?? '');
+  const ids = fresh.length ? await readable(() => addCriteria(db, args.session_id, stage, fresh, 'assistant', hints)) : [];
 
   const label = w.stages.find((s) => s.key === stage)?.label ?? stage;
   return {
-    proposed: ids.map((id, i) => ({ id, stage: label, criterion: fresh[i] })),
+    proposed: ids.map((id, i) => ({ id, stage: label, criterion: fresh[i], hint: hints[i] || undefined })),
     skipped_as_already_there: skipped || undefined,
     next:
       'These wait in the review band on the project’s Workflow tab. They do not count toward the stage until the person accepts them; ' +
