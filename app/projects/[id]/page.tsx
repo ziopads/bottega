@@ -68,7 +68,7 @@ export default async function ProjectPage({ params, searchParams }: Params) {
 
   return (
     <div>
-      <Link href="/" className="t-body text-muted hover:text-ink">
+      <Link href="/projects" className="t-body text-muted hover:text-ink">
         ← Projects
       </Link>
       <ProjectDetail

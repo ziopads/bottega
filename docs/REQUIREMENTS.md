@@ -17,7 +17,8 @@ built is in `ARCHITECTURE.md`.
   note and ending a session (W-19, W-20); each person's board with a rotation
   limit, and finishing (W-21 to W-23); the Workflow tab's new layout (W-24).
   From a friend's prototype, Finish Line. Built so far: the data (migration
-  024) and the Workflow tab (W-17, W-19, W-20, W-24). Loose lines at the end
+  024), the Workflow tab (W-17, W-19, W-20, W-24) and the board (W-21, W-22,
+  W-23), now the home page; the projects list moved to /projects. Loose lines at the end
   of a session become cards whose done-when reads "Not written yet" unless
   the line gives one after "--".
 

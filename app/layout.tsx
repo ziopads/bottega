@@ -22,7 +22,8 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 const NAV = [
-  { href: '/', label: 'Projects' },
+  { href: '/', label: 'Board' },
+  { href: '/projects', label: 'Projects' },
   { href: '/collections', label: 'Collections' },
   { href: '/gear', label: 'Gear' },
   { href: '/library', label: 'Library' },

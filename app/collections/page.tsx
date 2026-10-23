@@ -14,7 +14,7 @@ export default async function CollectionsPage() {
   const [releases, artists] = await Promise.all([listReleases(db), listArtists(db)]);
   return (
     <div>
-      <Link href="/" className="t-body text-muted hover:text-rust">
+      <Link href="/projects" className="t-body text-muted hover:text-rust">
         ← Projects
       </Link>
       <h1 className="mb-6 mt-2 t-title">Collections</h1>

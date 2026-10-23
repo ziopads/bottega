@@ -16,7 +16,11 @@ story IDs below (S-3, W-6 and so on) refer to it.
   `workflow_stages` is no longer read. The Workflow tab rebuilt to W-24:
   `POST /api/projects/:id/workflow` gains `next`, `end-session` and
   `pull-next` (contribute) and `template` (edit); `parseSessionLine()` in
-  `lib/workflowInput.ts` reads a loose line's #tags and "--".
+  `lib/workflowInput.ts` reads a loose line's #tags and "--". The board:
+  `lib/board.ts` and `lib/boardTypes.ts`, `GET`/`POST /api/board` (place,
+  swap, remove), `app/_board/BoardView.tsx` at `/`; the projects list moved
+  from `/` to `/projects`. A project's last touch is the latest of its work
+  log, cards, met criteria, stage moves, mixes and saved sets.
 - **0.16** (2026-10-14) — Terms: project (an Ableton project folder) and set
   (an `.als` file); code, tables and connector tool names keep `session`
   where they had it (§1, Terms). Migration 023: a project's `bpm` follows its
