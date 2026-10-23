@@ -4,8 +4,36 @@
 //
 // Times are in beats, as Live stores them; a 4/4 bar is four beats.
 
-/** Raised when the parser's output changes shape or meaning; older snapshots are read again. */
-export const PARSER_VERSION = 1;
+/**
+ * Raised when the parser's output changes shape or meaning; older snapshots are read again.
+ * 2 (23 October 2026): the set's key and scale.
+ */
+export const PARSER_VERSION = 2;
+
+/** Pitch classes as Live numbers them, C = 0. */
+export const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const;
+
+/**
+ * Live 12 stores the scale as a number (ScaleInformation/Name Value="0"). The
+ * first seven follow the order of Live's scale menu; 0 (Major) is confirmed
+ * from a real set (Khione, 23 October 2026), the rest are to be confirmed.
+ * Others read as "scale 12" until named here.
+ */
+export const SCALE_NAMES: Record<number, string> = {
+  0: 'Major',
+  1: 'Minor',
+  2: 'Dorian',
+  3: 'Mixolydian',
+  4: 'Lydian',
+  5: 'Phrygian',
+  6: 'Locrian',
+};
+
+/** A scale's name from what the set stores: a number in Live 12, a name in older sets. */
+export function scaleName(raw: string): string {
+  if (!/^\d+$/.test(raw)) return raw;
+  return SCALE_NAMES[Number(raw)] ?? `scale ${raw}`;
+}
 
 export const ZONES = ['TACTUS', 'BASS', 'BACKGROUND', 'LEADS', 'TEXTURE', 'VOX'] as const;
 export type Zone = (typeof ZONES)[number];
@@ -70,6 +98,13 @@ export type AlsSet = {
   /** "Ableton Live 12.2.6". */
   live: string;
   tempo: number | null;
+  /**
+   * The set's key and scale (Live 12's Scale Mode), from LiveSet/ScaleInformation:
+   * root as a pitch class (C = 0), the scale's name, and whether Scale Mode is on
+   * (LiveSet/InKey; null when the set does not say). Null when the set has no
+   * scale, and absent from snapshots read by parser 1.
+   */
+  key?: { root: number; scale: string; inKey: boolean | null } | null;
   /** The end of the last enabled Arrangement clip. */
   lengthBeats: number;
   locators: { name: string; beat: number }[];

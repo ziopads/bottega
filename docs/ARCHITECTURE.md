@@ -25,7 +25,14 @@ story IDs below (S-3, W-6 and so on) refer to it.
   /api/account/template` (board settings, choosing, copying, renaming and
   deleting a template, stages and criteria), `app/account/TemplateEditor.tsx`.
   The platform default is read only; editing starts from one's own copy. A
-  new stage's key comes from its name.
+  new stage's key comes from its name. Likely done: `lib/workflowChecks.ts`
+  runs the checks the project's criteria name against the newest saved set of
+  the main mix (and the count of references); `getWorkflow` returns them as
+  `setReading`. The `.als` parser (version 2) reads the set's key and scale
+  from `LiveSet/ScaleInformation` (`Root`, or `RootNote`; `Name`, a number
+  in Live 12, named through `SCALE_NAMES`) and Scale
+  Mode from `LiveSet/InKey`; saves read by version 1 are read again when the
+  folder is dropped.
 - **0.16** (2026-10-14) — Terms: project (an Ableton project folder) and set
   (an `.als` file); code, tables and connector tool names keep `session`
   where they had it (§1, Terms). Migration 023: a project's `bpm` follows its

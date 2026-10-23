@@ -90,6 +90,17 @@ export type TemplateChange = {
   was: { body: string; hint: string } | null;
 };
 
+/** What a check read from the newest saved set (W-18). */
+export type CheckResult = { verdict: 'likely' | 'not yet' | 'unknown'; reading: string };
+
+/** The checks the project's criteria name, run against its newest saved set of the main mix. */
+export type SetReading = {
+  /** The set read; null when no set has been read for the project. */
+  fileName: string | null;
+  savedAt: string | null;
+  results: Record<string, CheckResult>;
+};
+
 /** One ended session (W-20). */
 export type WorkLogEntry = { id: number; did: string; nextMove: string; loggedByName: string; loggedAt: string };
 
@@ -112,6 +123,8 @@ export type Workflow = {
   workLog: WorkLogEntry[];
   /** Sessions ended since the blocker was set. */
   sessionsSinceBlocker: number;
+  /** Likely-done marks for criteria with a check; null when none has one. */
+  setReading: SetReading | null;
   moves: StageMove[];
   criteria: ExitCriterion[];
   elements: WorkflowElement[];

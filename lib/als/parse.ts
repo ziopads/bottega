@@ -8,6 +8,7 @@ import {
   PARSER_VERSION,
   ZONE_PREFIX,
   ZONES,
+  scaleName,
   type AlsDevice,
   type AlsSample,
   type AlsSet,
@@ -239,10 +240,20 @@ export function parseSet(xml: string): AlsSet {
     .map((l) => ({ name: val(l, 'Name') ?? '', beat: num(val(l, 'Time')) ?? 0 }))
     .sort((a, b) => a.beat - b.beat);
 
+  // Live 12 keeps the set's scale beside its tracks, the scale as a number
+  // (Root Value="0", Name Value="0" is C Major); Live 11 clips name the root
+  // RootNote, which is read too in case a set carries it that way.
+  const scale = find(set, 'ScaleInformation');
+  const root = scale ? num(val(scale, 'Root') ?? val(scale, 'RootNote')) : null;
+  const inKey = val(set, 'InKey');
+
   return {
     parserVersion: PARSER_VERSION,
     live: ableton.a.Creator ?? '',
     tempo: num(val(main, 'DeviceChain/Mixer/Tempo/Manual')),
+    key: scale && root !== null
+      ? { root: ((root % 12) + 12) % 12, scale: scaleName(val(scale, 'Name') ?? ''), inKey: inKey === undefined ? null : inKey === 'true' }
+      : null,
     lengthBeats: tracks.reduce((m, t) => Math.max(m, t.spans.length ? t.spans[t.spans.length - 1][1] : 0), 0),
     locators,
     tracks,

@@ -19,7 +19,9 @@ built is in `ARCHITECTURE.md`.
   From a friend's prototype, Finish Line. Built so far: the data (migration
   024), the Workflow tab (W-17, W-19, W-20, W-24) and the board (W-21, W-22,
   W-23), now the home page; the projects list moved to /projects; and
-  Preferences with the board's limits and the template editor (W-13, W-22). Loose lines at the end
+  Preferences with the board's limits and the template editor (W-13, W-22);
+  and the likely-done marks (W-18), read from the newest saved set of the
+  main mix, with the set's key and scale now read too. Loose lines at the end
   of a session become cards whose done-when reads "Not written yet" unless
   the line gives one after "--".
 

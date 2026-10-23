@@ -10,11 +10,14 @@ import type {
   Workflow,
   WorkflowCard,
   WorkflowElement,
+  SetReading,
   TemplateChange,
   WorkLogEntry,
   WorkflowStage,
   WorkflowTemplateStatus,
 } from '@/lib/workflowTypes';
+import type { AlsSet } from '@/lib/als/types';
+import { runChecks } from '@/lib/workflowChecks';
 import { parseSessionLine } from '@/lib/workflowInput';
 
 // A project's workflow (REQUIREMENTS W-1 to W-10, db/011): reads for the
@@ -157,6 +160,7 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
   }));
   const blockerSetAt = current[0] ? isoOrNull(current[0].blocker_set_at) : null;
   const sessionsSinceBlocker = blockerSetAt ? workLog.filter((e) => e.loggedAt > blockerSetAt).length : 0;
+  const setReading = await readSet(db, projectId, criteria);
   const moves: StageMove[] = moveRows.map((r) => ({
     id: num(r.id),
     fromStage: r.from_stage === null ? null : String(r.from_stage),
@@ -183,6 +187,7 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
     templateChanges,
     workLog,
     sessionsSinceBlocker,
+    setReading,
     moves,
     criteria,
     elements,
@@ -233,6 +238,29 @@ export async function startWorkflow(db: Scoped, projectId: number): Promise<void
 
 export async function moveStage(db: Scoped, projectId: number, to: string, reason: string): Promise<void> {
   await run(() => db.q('select workflow_move($1, $2, $3)', [projectId, to, reason]));
+}
+
+// ── Likely done (W-18) ───────────────────────────────────────────────────────
+
+/** Runs the checks the criteria name against the newest saved set of the main mix. */
+async function readSet(db: Scoped, projectId: number, criteria: ExitCriterion[]): Promise<SetReading | null> {
+  const keys = new Set(criteria.filter((c) => c.checkKey && c.reviewed && !c.rejected).map((c) => c.checkKey as string));
+  if (!keys.size) return null;
+  const [snap, refs] = await db.tx([
+    {
+      text: `select file_name, saved_at, data from als_snapshots where project_id = $1 and variant = ''
+              order by saved_at desc, id desc limit 1`,
+      params: [projectId],
+    },
+    { text: `select count(*) as n from audio where project_id = $1 and role = 'reference'`, params: [projectId] },
+  ]);
+  const s = snap[0];
+  const set = s ? (s.data as AlsSet) : null;
+  return {
+    fileName: s ? String(s.file_name) : null,
+    savedAt: s ? iso(s.saved_at) : null,
+    results: runChecks(keys, { set, references: num(refs[0]?.n ?? 0) }),
+  };
 }
 
 // ── Template changes (W-17, db/024) ──────────────────────────────────────────

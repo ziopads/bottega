@@ -10,6 +10,7 @@ import {
   CARD_KINDS,
   PERSON_STATUSES,
   stagePosition,
+  type CheckResult,
   type CardKind,
   type CardStatus,
   type ExitCriterion,
@@ -298,9 +299,25 @@ function StartedWorkflow({
       ) : (
         <ul className="t-body mt-2 space-y-0.5">
           {selCriteria.map((c) => (
-            <CriterionRow key={c.id} c={c} canEdit={canEdit} isOwner={isOwner} busy={busy} call={call} />
+            <CriterionRow
+              key={c.id}
+              c={c}
+              result={c.checkKey ? w.setReading?.results[c.checkKey] : undefined}
+              setDay={w.setReading?.savedAt ? formatDay(w.setReading.savedAt) : null}
+              canEdit={canEdit}
+              isOwner={isOwner}
+              busy={busy}
+              call={call}
+            />
           ))}
         </ul>
+      )}
+      {selCriteria.some((c) => c.checkKey && !c.metAt) && w.setReading && (
+        <p className="mt-1 text-[11px] text-muted">
+          {w.setReading.fileName
+            ? `Marks read from the set “${w.setReading.fileName}”${w.setReading.savedAt ? `, saved ${formatDay(w.setReading.savedAt)}` : ''}. They only suggest; you tick.`
+            : 'Drop the project folder on the State tab and the set will mark criteria it can read as likely done. They only suggest; you tick.'}
+        </p>
       )}
       {canEdit && (
         <AddLine placeholder="This stage is finished when…" busy={busy} onAdd={(body) => call(`/api/projects/${projectId}/criteria`, 'POST', { stage: sel.key, body })} />
@@ -755,7 +772,29 @@ function HintText({ hint }: { hint: string }) {
   return <div className="text-[12px] text-muted">{list(root.children)}</div>;
 }
 
-function CriterionRow({ c, canEdit, isOwner, busy, call }: { c: ExitCriterion; canEdit: boolean; isOwner: boolean; busy: boolean; call: Call }) {
+function formatDay(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+const VERDICT: Record<CheckResult['verdict'], string> = { likely: 'Likely done', 'not yet': 'Likely not yet', unknown: 'Cannot tell from the set' };
+
+function CriterionRow({
+  c,
+  result,
+  setDay,
+  canEdit,
+  isOwner,
+  busy,
+  call,
+}: {
+  c: ExitCriterion;
+  result: CheckResult | undefined;
+  setDay: string | null;
+  canEdit: boolean;
+  isOwner: boolean;
+  busy: boolean;
+  call: Call;
+}) {
   return (
     <li className="flex items-start gap-2 rounded px-1 py-1.5 hover:bg-ink/5">
       <input
@@ -771,6 +810,16 @@ function CriterionRow({ c, canEdit, isOwner, busy, call }: { c: ExitCriterion; c
           {c.body}
         </label>
         {c.hint.trim() && <HintText hint={c.hint} />}
+        {result && !c.metAt && (
+          <span
+            className={`mt-1 inline-block rounded-[3px] border px-1.5 py-px font-mono text-[10px] ${
+              result.verdict === 'likely' ? 'border-dashed border-ink text-ink' : 'border-dashed border-ink/30 text-muted'
+            }`}
+          >
+            {VERDICT[result.verdict]}
+            {setDay && result.verdict !== 'unknown' ? ` · set ${setDay}` : ''}: {result.reading}
+          </span>
+        )}
         {c.metAt && (
           <span className="block text-[11px] text-muted">
             Met · {c.metByName ?? ''} · {formatWhen(c.metAt)}

@@ -101,7 +101,7 @@ export function TemplateEditor({ initial }: { initial: Editor }) {
             {ed.templates.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
-                {t.isDefault ? ' (Bottega’s default)' : ''}
+                {t.isDefault && t.name !== 'Bottega default' ? ' (Bottega’s default)' : ''}
               </option>
             ))}
           </select>
