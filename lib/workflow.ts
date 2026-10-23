@@ -11,6 +11,7 @@ import type {
   WorkflowCard,
   WorkflowElement,
   SetReading,
+  StructureChange,
   TemplateChange,
   WorkLogEntry,
   WorkflowStage,
@@ -41,7 +42,7 @@ function pgMessage(err: unknown): string {
 
 // The messages db/011 raises on purpose, passed on as they are.
 const READABLE =
-  /needs (edit|contribute|a reason|what was done)|not met|one at a time|already in|not a stage|not been started|not a settled|has no stages|no stages yet|belongs to the same project|stays with its|cannot sit under|template no longer exists/;
+  /no structure template|needs (edit|contribute|a reason|what was done)|not met|one at a time|already in|not a stage|not been started|not a settled|has no stages|no stages yet|belongs to the same project|stays with its|cannot sit under|template no longer exists/;
 
 async function run<T>(fn: () => Promise<T>): Promise<T> {
   try {
@@ -125,7 +126,11 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
               where project_id = $1 order by stage, position, id`,
       params: [projectId],
     },
-    { text: 'select id, parent_id, name, position from elements where project_id = $1 order by position, id', params: [projectId] },
+    {
+      text: `select id, parent_id, name, position, description, color, is_zone, prefixes, group_names, template_uid
+               from elements where project_id = $1 order by position, id`,
+      params: [projectId],
+    },
     { text: `${CARD_SELECT} where c.project_id = $1 order by c.created_at, c.id`, params: [projectId] },
     {
       text: `select id, did, next_move, logged_by, logged_at from work_log
@@ -174,7 +179,14 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
     parentId: numOrNull(r.parent_id),
     name: String(r.name),
     position: num(r.position),
+    description: String(r.description ?? ''),
+    color: r.color === null || r.color === undefined ? null : String(r.color),
+    isZone: r.is_zone === true,
+    prefixes: Array.isArray(r.prefixes) ? r.prefixes.map(String) : [],
+    groupNames: Array.isArray(r.group_names) ? r.group_names.map(String) : [],
+    templateUid: r.template_uid === null || r.template_uid === undefined ? null : String(r.template_uid),
   }));
+  const { structure, structureChanges } = await readStructureChanges(db, projectId, elements);
   return {
     stages,
     stage: current[0] ? String(current[0].stage) : null,
@@ -185,6 +197,8 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
     finishedAt: current[0] ? isoOrNull(current[0].finished_at) : null,
     template,
     templateChanges,
+    structure,
+    structureChanges,
     workLog,
     sessionsSinceBlocker,
     setReading,
@@ -213,7 +227,9 @@ export async function startWorkflow(db: Scoped, projectId: number): Promise<void
     const kind = String(kindRows[0]?.kind ?? '');
     const hasElements = num(kindRows[0]?.elements ?? 0) > 0;
     const statements: Statement[] = [{ text: 'select workflow_start($1)', params: [projectId] }];
-    if (!hasElements) {
+    // Music takes its elements from the owner's track structure inside
+    // workflow_start (db/025); other kinds from lib/elementTemplate.ts.
+    if (!hasElements && kind !== 'music') {
       // Parents first, then children found by name under the parent just
       // inserted: the transaction is non-interactive, so ids cannot pass
       // from one statement to the next.
@@ -283,6 +299,63 @@ async function readTemplateChanges(db: Scoped, projectId: number, criteria: Exit
     else if (own.body !== body || own.hint !== hint) changes.push({ ...base, change: 'changed', was: { body: own.body, hint: own.hint } });
   }
   return changes;
+}
+
+// ── Track structure changes (W-28, db/025) ───────────────────────────────────
+
+const describe = (name: string, isZone: boolean, prefixes: string[], groupNames: string[]) =>
+  [name, isZone ? [...prefixes, ...groupNames.map((g) => `group “${g}”`)].join(', ') || 'zone' : 'not a zone'].join(' · ');
+
+/** What the project's track structure offers since the project took it. */
+async function readStructureChanges(
+  db: Scoped,
+  projectId: number,
+  elements: WorkflowElement[],
+): Promise<{ structure: Workflow['structure']; structureChanges: StructureChange[] }> {
+  const status = await db.q('select name, version, seen_version from structure_template_status($1)', [projectId]);
+  if (!status.length) return { structure: null, structureChanges: [] };
+  const structure = { name: String(status[0].name), version: num(status[0].version), seenVersion: num(status[0].seen_version) };
+  if (structure.version <= structure.seenVersion) return { structure, structureChanges: [] };
+  const rows = await db.q(
+    'select uid, parent_uid, name, description, color, is_zone, prefixes, group_names from structure_template_elements($1)',
+    [projectId],
+  );
+  const mine = new Map(elements.filter((e) => e.templateUid).map((e) => [e.templateUid as string, e]));
+  const names = new Map(rows.map((r) => [String(r.uid), String(r.name)]));
+  const changes: StructureChange[] = [];
+  for (const r of rows) {
+    const uid = String(r.uid);
+    const parentUid = r.parent_uid === null ? null : String(r.parent_uid);
+    const prefixes = Array.isArray(r.prefixes) ? r.prefixes.map(String) : [];
+    const groupNames = Array.isArray(r.group_names) ? r.group_names.map(String) : [];
+    const own = mine.get(uid);
+    const now = parentUid ? String(r.name) : describe(String(r.name), r.is_zone === true, prefixes, groupNames);
+    const parentName = parentUid ? (names.get(parentUid) ?? null) : null;
+    if (!own) {
+      // A new part can only come in under a parent the project has.
+      if (parentUid && !mine.has(parentUid)) continue;
+      changes.push({ uid, change: 'new', name: String(r.name), parentName, was: null, now });
+      continue;
+    }
+    const differs = parentUid
+      ? own.name !== r.name || own.description !== String(r.description ?? '')
+      : own.name !== r.name ||
+        own.description !== String(r.description ?? '') ||
+        own.color !== (r.color ?? null) ||
+        own.isZone !== (r.is_zone === true) ||
+        JSON.stringify(own.prefixes) !== JSON.stringify(prefixes) ||
+        JSON.stringify(own.groupNames) !== JSON.stringify(groupNames);
+    if (differs) {
+      const was = parentUid ? own.name : describe(own.name, own.isZone, own.prefixes, own.groupNames);
+      changes.push({ uid, change: 'changed', name: String(r.name), parentName, was: was === now ? null : was, now });
+    }
+  }
+  return { structure, structureChanges: changes };
+}
+
+/** Brings the chosen structure changes in and marks the version seen; an empty list dismisses. */
+export async function applyStructureChanges(db: Scoped, projectId: number, uids: string[]): Promise<void> {
+  await run(() => db.q('select structure_apply($1, $2::uuid[])', [projectId, uids]));
 }
 
 /** Brings the chosen template changes in and marks the template's version seen; an empty list dismisses. */

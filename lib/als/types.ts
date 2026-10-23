@@ -42,8 +42,15 @@ export function scaleName(raw: string): string {
   return SCALE_NAMES[Number(raw)] ?? `scale ${raw}`;
 }
 
+/**
+ * The default zones (docs/ableton-session-template.md). Since 25 October the
+ * zones come from the project's track structure (db/025) and are decided when
+ * a set is read for display (lib/als/zones.ts); the parser still fills `zone`
+ * with these, which the server replaces.
+ */
 export const ZONES = ['TACTUS', 'BASS', 'BACKGROUND', 'LEADS', 'TEXTURE', 'VOX'] as const;
-export type Zone = (typeof ZONES)[number];
+/** A zone's name: one of the project's structure, any text. */
+export type Zone = string;
 
 /** Track-name prefixes from the Live template (docs/ableton-session-template.md). */
 export const ZONE_PREFIX: Record<string, Zone> = { TAC: 'TACTUS', BAS: 'BASS', BKG: 'BACKGROUND', LDS: 'LEADS', TEX: 'TEXTURE', VOX: 'VOX' };

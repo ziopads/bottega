@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.26
+**Version:** 0.27
 **Date:** 2026-10-23
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -9,6 +9,14 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.27** (2026-10-23) — Track structure per account (W-25 to W-29): the
+  zones a set's tracks are sorted into, matched by track-name prefixes, the
+  zone's name or group names, with parts and non-track elements, from a
+  platform default; each project's copy and the changes offered to it; zones
+  decided when a set is read, so a changed mapping sorts old sets too. Built
+  with migration 025. Rescanning a folder without dragging it and the Mac
+  watcher (A-9) come next.
 
 - **0.26** (2026-10-23) — Workflow templates per account, stages and exit
   criteria both, from a platform default (W-13 to W-18); music stages become
@@ -475,8 +483,9 @@ there may be lost in the move.
   added, changed and ticked in any stage. Advancing from the current stage
   needs each of its accepted criteria met.
 - **W-4** Moving back to an earlier stage requires a reason, which is kept.
-- **W-5** Elements: a tree of the parts of a work, one template per kind,
-  copied to each project when its workflow starts and editable there. For
+- **W-5** Elements: a tree of the parts of a work, copied to each project
+  when its workflow starts and editable there; for music from the owner's
+  track structure (W-25), for other kinds from a template in code. For
   music the top level is the zones of the studio's Live template
   (`docs/ableton-session-template.md`): TACTUS, BASS, BACKGROUND, LEADS,
   TEXTURE, VOX, plus STRUCTURE (sections and transitions) and BUS (returns
@@ -557,6 +566,31 @@ there may be lost in the move.
 - **W-23** A project is finished when it is in its last stage and every
   accepted criterion there is met; unticking one or moving back undoes it.
   Release work beyond the checklist becomes its own module later.
+- **W-25** Track structure. A structure holds the elements of a track: zones
+  (where tracks belong), each with a name, a description, a colour, track-name
+  prefixes and group names, and the parts under it; and elements that are not
+  zones (STRUCTURE, BUS), which hold work belonging to no track. The platform
+  default is the Sirsinate Live template (`docs/ableton-session-template.md`);
+  an account copies it and edits its copy in Preferences, and chooses the
+  structure its new music projects take.
+- **W-26** Prefixes and group names are trimmed, at most 40 characters and 20
+  of each per zone, and no two alike whatever the case. Only a zone has them.
+- **W-27** Matching. A track belongs to a zone when its name (after the number
+  Live puts before an unnamed track) starts with one of the zone's prefixes or
+  with the zone's name, as a word: "TAC Kick", "TAC-hat", "TACTUS snare". The
+  longest match wins. A group also belongs to a zone when its name is one of
+  the zone's group names. A track that matches nothing takes its group's zone.
+  Matching happens when a set is read for display, with the project's zones,
+  so a changed mapping sorts every stored set at once. Preferences has a field
+  to try a track name.
+- **W-28** A project takes a copy of its owner's structure when its workflow
+  starts (its elements, W-5), and keeps the structure and version it took.
+  When the structure has changed since, the Workflow tab offers the changes:
+  renamed or re-mapped elements and new ones, chosen one by one; cards stay on
+  their elements. Projects with elements before 0.27 were matched to the
+  default by name.
+- **W-29** Before its workflow starts, a project's sets are read with its
+  owner's current structure.
 - **W-24** The Workflow tab, from 23 October: the stage bar across the top
   (one segment per stage, filled by the share of its criteria met, the
   current one outlined, labels under it); "Pick up here" with the next move,

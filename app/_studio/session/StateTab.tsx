@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { api } from '@/app/_studio/controls';
 import { DetailGrid, Section } from '@/app/_ui/layout';
@@ -19,16 +19,15 @@ import { formatBytes, type StudioVariant } from '@/lib/studioTypes';
 // every saved set in it here in the browser; the database sorts each save
 // into a variant by its file name (db/015), and a save can be moved by hand.
 
-const ZONE_COLOR: Record<string, string> = {
-  TACTUS: '#b5543c',
-  BASS: '#3d5a80',
-  BACKGROUND: '#6b8f71',
-  LEADS: '#c49a1f',
-  TEXTURE: '#8a6fa8',
-  VOX: '#c46a8a',
-  none: '#9a948a',
-};
-const color = (z: Zone | null) => ZONE_COLOR[z ?? 'none'];
+// Zones and their colours come from the project's track structure (db/025);
+// a zone without a colour takes one from this list by its place.
+const SPARE = ['#b5543c', '#3d5a80', '#6b8f71', '#c49a1f', '#8a6fa8', '#c46a8a', '#4f8a8b', '#a0522d'];
+const NONE = '#9a948a';
+type ZoneColor = (z: Zone | null) => string;
+function zoneColors(zones: SessionState['zones']): ZoneColor {
+  const map = new Map(zones.map((z, i) => [z.name, z.color ?? SPARE[i % SPARE.length]]));
+  return (z) => (z === null ? NONE : (map.get(z) ?? NONE));
+}
 
 type Line = { name: string; state: 'reading' | 'stored' | 'replaced' | 'kept' | 'error'; detail?: string };
 
@@ -382,7 +381,7 @@ export default function StateTab({
     <div className={loading || switching ? 'opacity-60' : ''}>
       <ChangesSection save={sel} />
       <Zones state={state} set={latest} />
-      <ArrangementMap set={latest} />
+      <ArrangementMap set={latest} zones={state.zones} />
       <MaintenanceSection m={m} folderRead={!!state.folder} />
     </div>
   );
@@ -405,6 +404,7 @@ function countKinds(tracks: AlsTrack[]): string {
 
 function Zones({ state, set }: { state: SessionState; set: AlsSet }) {
   const anyZone = state.coverage.some((z) => z.zone !== null && z.tracks > 0);
+  const color = zoneColors(state.zones);
   return (
     <Section label="Zones · what the set shows">
       <ul className="t-body space-y-1.5">
@@ -427,8 +427,9 @@ function Zones({ state, set }: { state: SessionState; set: AlsSet }) {
       </p>
       {!anyZone && (
         <p className="t-body mt-2 text-muted">
-          No track name starts with a zone prefix yet (TAC, BAS, BKG, LDS, TEX, VOX), so every track counts as having no zone. Renaming tracks in
-          Live (&ldquo;TAC Kick&rdquo;), or putting them in a group named for its zone, sorts them here on the next save.
+          No track matches a zone yet, so every track counts as having no zone. A track belongs to a zone when its name starts with one of the
+          zone&rsquo;s prefixes or its name, or when it sits in a group named for the zone; the zones and their prefixes are under Account ›
+          Preferences › Track structure. Renaming tracks in Live sorts them here on the next save; changing the structure sorts every save at once.
         </p>
       )}
     </Section>
@@ -437,13 +438,13 @@ function Zones({ state, set }: { state: SessionState; set: AlsSet }) {
 
 // ── Arrangement map ────────────────────────────────────────────────────────────
 
-function ArrangementMap({ set }: { set: AlsSet }) {
-  const tracks = useMemo(() => {
-    const order = ['TACTUS', 'BASS', 'BACKGROUND', 'LEADS', 'TEXTURE', 'VOX'];
-    return playable(set)
-      .filter((t) => t.clips > 0)
-      .sort((a, b) => (a.zone ? order.indexOf(a.zone) : 99) - (b.zone ? order.indexOf(b.zone) : 99));
-  }, [set]);
+function ArrangementMap({ set, zones }: { set: AlsSet; zones: SessionState['zones'] }) {
+  const color = zoneColors(zones);
+  const order = zones.map((z) => z.name);
+  const rank = (z: string | null) => (z === null || !order.includes(z) ? 99 : order.indexOf(z));
+  const tracks = playable(set)
+    .filter((t) => t.clips > 0)
+    .sort((a, b) => rank(a.zone) - rank(b.zone));
   const len = set.lengthBeats || 1;
   const pct = (b: number) => `${Math.min(100, Math.max(0, (b / len) * 100))}%`;
 

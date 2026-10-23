@@ -38,11 +38,11 @@ export type ZoneCoverage = {
   automation: number;
 };
 
-/** One row per zone, then the tracks with no zone. Only tracks that are switched on count. */
-export function coverage(set: AlsSet): ZoneCoverage[] {
+/** One row per zone, in the structure's order, then the tracks with no zone. Only tracks that are switched on count. */
+export function coverage(set: AlsSet, zones: readonly Zone[] = ZONES): ZoneCoverage[] {
   const rows: ZoneCoverage[] = [];
   const tracks = playable(set).filter((t) => t.on);
-  for (const zone of [...ZONES, null] as (Zone | null)[]) {
+  for (const zone of [...zones, null] as (Zone | null)[]) {
     const ts = tracks.filter((t) => t.zone === zone);
     if (zone === null && !ts.length) continue;
     const covered = mergeAll(ts.flatMap((t) => t.spans));
@@ -158,8 +158,8 @@ function times(name: string, n: number): string {
   return n > 1 ? `${name} ×${n}` : name;
 }
 
-/** What changed from one save to the next (A-8). */
-export function diff(prev: AlsSet, next: AlsSet): SetChange {
+/** What changed from one save to the next (A-8), by the given zones. */
+export function diff(prev: AlsSet, next: AlsSet, zoneNames: readonly Zone[] = ZONES): SetChange {
   const before = new Map(prev.tracks.filter((t) => t.kind !== 'main').map((t) => [t.id, t]));
   const after = new Map(next.tracks.filter((t) => t.kind !== 'main').map((t) => [t.id, t]));
   const pa = pluginCounts(prev);
@@ -168,10 +168,10 @@ export function diff(prev: AlsSet, next: AlsSet): SetChange {
   const pluginsRemoved: string[] = [];
   for (const [name, n] of pb) if (n > (pa.get(name) ?? 0)) pluginsAdded.push(times(name, n - (pa.get(name) ?? 0)));
   for (const [name, n] of pa) if (n > (pb.get(name) ?? 0)) pluginsRemoved.push(times(name, n - (pb.get(name) ?? 0)));
-  const ca = new Map(coverage(prev).map((z) => [z.zone, z.coveredBeats]));
-  const cb = new Map(coverage(next).map((z) => [z.zone, z.coveredBeats]));
+  const ca = new Map(coverage(prev, zoneNames).map((z) => [z.zone, z.coveredBeats]));
+  const cb = new Map(coverage(next, zoneNames).map((z) => [z.zone, z.coveredBeats]));
   const zones: SetChange['zones'] = [];
-  for (const zone of [...ZONES, null] as (Zone | null)[]) {
+  for (const zone of [...zoneNames, null] as (Zone | null)[]) {
     const from = ca.get(zone) ?? 0;
     const to = cb.get(zone) ?? 0;
     if (Math.abs(to - from) >= 1) zones.push({ zone, from, to });

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { apiAccount, projectRefusal } from '@/lib/access';
-import { applyTemplateChanges, endSession, getWorkflow, moveStage, pullNext, setNext, startWorkflow } from '@/lib/workflow';
+import { applyStructureChanges, applyTemplateChanges, endSession, getWorkflow, moveStage, pullNext, setNext, startWorkflow } from '@/lib/workflow';
 import { parseReason, parseStage, text } from '@/lib/workflowInput';
 import { answer, bad, parseId, readBody } from '@/lib/workflowRoutes';
 
@@ -23,7 +23,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 // POST /api/projects/:id/workflow
-//   edit:       { op: 'start' } | { op: 'move', to, reason? } | { op: 'template', uids: string[] }
+//   edit:       { op: 'start' } | { op: 'move', to, reason? } | { op: 'template', uids: string[] } | { op: 'structure', uids: string[] }
 //   contribute: { op: 'next', next?, blocker? } | { op: 'end-session', did, next, lines: string[] } | { op: 'pull-next' }
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const account = await apiAccount();
@@ -54,6 +54,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return answer(db, id, async () => endSession(db, id, { did: did.value, next: next.value, lines }, await getWorkflow(db, id)));
   }
   if (body.op === 'pull-next') return answer(db, id, async () => pullNext(db, id, await getWorkflow(db, id)));
+  if (body.op === 'structure') {
+    const uids = Array.isArray(body.uids) ? body.uids : [];
+    if (uids.length > 200 || !uids.every((u) => typeof u === 'string' && UUID.test(u))) return bad('Invalid list of changes');
+    return answer(db, id, () => applyStructureChanges(db, id, uids as string[]));
+  }
   if (body.op === 'template') {
     const uids = Array.isArray(body.uids) ? body.uids : [];
     if (uids.length > 200 || !uids.every((u) => typeof u === 'string' && UUID.test(u))) return bad('Invalid list of changes');

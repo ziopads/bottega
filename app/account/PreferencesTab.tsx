@@ -5,9 +5,11 @@ import { useState } from 'react';
 import { api } from '@/app/_studio/controls';
 import { Section } from '@/app/_ui/layout';
 import type { MyArtist } from '@/lib/account';
+import type { StructureEditor as StructureData } from '@/lib/structureTypes';
 import type { TemplateEditor as Editor } from '@/lib/templateTypes';
 
 import { ComingSoon, FIELD } from './parts';
+import StructureEditor from './StructureEditor';
 import { BoardSettings, TemplateEditor } from './TemplateEditor';
 
 // Preferences (REQUIREMENTS AC-13, W-13, W-22; db/010, db/024): the artist new
@@ -18,10 +20,12 @@ export default function PreferencesTab({
   artists,
   initialDefaultArtistId,
   editor,
+  structure,
 }: {
   artists: MyArtist[];
   initialDefaultArtistId: number | null;
   editor: Editor;
+  structure: StructureData;
 }) {
   const [artistId, setArtistId] = useState<number | null>(initialDefaultArtistId);
   const [state, setState] = useState<'' | 'saving' | 'saved'>('');
@@ -77,6 +81,9 @@ export default function PreferencesTab({
       <div id="template" className="scroll-mt-4">
         <TemplateEditor initial={editor} />
       </div>
+      <div id="structure" className="scroll-mt-4">
+        <StructureEditor initial={structure} />
+      </div>
       <Section label="Display">
         <ComingSoon>Date format, and the time zone used for dates.</ComingSoon>
       </Section>
@@ -94,6 +101,7 @@ export default function PreferencesTab({
             ['general', 'New projects'],
             ['board', 'Board'],
             ['template', 'Workflow template'],
+            ['structure', 'Track structure'],
           ].map(([id, label]) => (
             <li key={id}>
               <a href={`#${id}`} className="text-muted hover:text-ink">

@@ -40,7 +40,32 @@ export type ExitCriterion = {
   rejected: boolean;
 };
 
-export type WorkflowElement = { id: number; parentId: number | null; name: string; position: number };
+export type WorkflowElement = {
+  id: number;
+  parentId: number | null;
+  name: string;
+  position: number;
+  /** From the track structure (db/025). */
+  description: string;
+  color: string | null;
+  isZone: boolean;
+  prefixes: string[];
+  groupNames: string[];
+  templateUid: string | null;
+};
+
+/** One change the project's track structure offers (W-28). */
+export type StructureChange = {
+  uid: string;
+  change: 'new' | 'changed';
+  name: string;
+  /** The zone or element a part belongs to; null for a top-level element. */
+  parentName: string | null;
+  /** What the project has now, for a changed one: "TACTUS · TAC". */
+  was: string | null;
+  /** What the template has: "PULSE · TAC, DRM". */
+  now: string;
+};
 
 export type WorkflowCard = {
   id: number;
@@ -119,6 +144,9 @@ export type Workflow = {
   template: WorkflowTemplateStatus | null;
   /** What the template offers when it has moved on; empty otherwise. */
   templateChanges: TemplateChange[];
+  /** The track structure the project took, and what it offers since (W-28). */
+  structure: { name: string; version: number; seenVersion: number } | null;
+  structureChanges: StructureChange[];
   /** The latest ended sessions, newest first. */
   workLog: WorkLogEntry[];
   /** Sessions ended since the blocker was set. */

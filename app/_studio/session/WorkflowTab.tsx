@@ -494,6 +494,7 @@ function StartedWorkflow({
         call={call}
       />
       <TemplateReview key={w.template?.version ?? 0} w={w} url={url} canEdit={canEdit} busy={busy} call={call} />
+      <StructureReview key={`s${w.structure?.version ?? 0}`} w={w} url={url} canEdit={canEdit} busy={busy} call={call} />
       {review}
       {error && <p className="t-body mb-4 text-rust">{error}</p>}
       <div className="grid grid-cols-1 gap-x-8 gap-y-8 lg:grid-cols-12">
@@ -673,6 +674,63 @@ function PickUp({
             </button>
           </div>
         </form>
+      )}
+    </section>
+  );
+}
+
+/** What the track structure offers since the project took it (W-28). */
+function StructureReview({ w, url, canEdit, busy, call }: { w: Workflow; url: string; canEdit: boolean; busy: boolean; call: Call }) {
+  const [open, setOpen] = useState(false);
+  const [chosen, setChosen] = useState<Set<string>>(() => new Set(w.structureChanges.map((c) => c.uid)));
+  if (!w.structure || w.structureChanges.length === 0) return null;
+  const n = w.structureChanges.length;
+  const toggle = (uid: string) =>
+    setChosen((s) => {
+      const t = new Set(s);
+      if (t.has(uid)) t.delete(uid);
+      else t.add(uid);
+      return t;
+    });
+  return (
+    <section aria-label="Track structure changes" className="t-body mb-6 rounded border border-line px-3 py-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <p className="t-label">
+          The track structure “{w.structure.name}” has changed · {n} to review
+        </p>
+        <button onClick={() => setOpen((o) => !o)} className={BUTTON}>
+          {open ? 'Hide' : 'Review'}
+        </button>
+      </div>
+      {open && (
+        <>
+          <ul className="mt-2 divide-y divide-line">
+            {w.structureChanges.map((c) => (
+              <li key={c.uid} className="flex items-start gap-2 py-1.5">
+                {canEdit && <input type="checkbox" checked={chosen.has(c.uid)} onChange={() => toggle(c.uid)} aria-label={c.name} className="mt-1" />}
+                <div className="min-w-0 flex-1">
+                  <span className="block text-[11px] text-muted">
+                    {c.change === 'new' ? 'New' : 'Changed'}
+                    {c.parentName ? ` · part of ${c.parentName}` : ''}
+                  </span>
+                  <span className="block font-mono text-[12px]">{c.now}</span>
+                  {c.was && <span className="block font-mono text-[12px] text-muted line-through">{c.was}</span>}
+                </div>
+              </li>
+            ))}
+          </ul>
+          {canEdit && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <button onClick={() => call(url, 'POST', { op: 'structure', uids: [...chosen] })} disabled={busy || chosen.size === 0} className={BUTTON_PRIMARY}>
+                Bring in {chosen.size}
+              </button>
+              <button onClick={() => call(url, 'POST', { op: 'structure', uids: [] })} disabled={busy} className={BUTTON}>
+                Dismiss all
+              </button>
+              <span className="text-[11px] text-muted">Cards stay on their elements. The State tab reads the project&rsquo;s sets with the zones it has.</span>
+            </div>
+          )}
+        </>
       )}
     </section>
   );
@@ -1197,7 +1255,9 @@ function ElementTree({
         <ul className="space-y-1">
           {tops.map((t) => (
             <li key={t.id}>
+              {t.color && <span className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle" style={{ background: t.color }} aria-hidden />}
               <span className="font-medium">{t.name}</span>
+              {t.isZone && t.prefixes.length > 0 && <span className="ml-1.5 font-mono text-[10px] text-muted">{t.prefixes.join(', ')}</span>}
               {children(t.id).length > 0 && <span className="text-muted"> · {children(t.id).map((c) => c.name).join(', ')}</span>}
             </li>
           ))}

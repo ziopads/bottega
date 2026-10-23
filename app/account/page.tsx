@@ -12,6 +12,7 @@ import { requireAccount } from '@/lib/access';
 import { listConnections } from '@/lib/connections';
 import { getAllowance } from '@/lib/documents';
 import { listUnconvertedImages } from '@/lib/gear';
+import { getStructureEditor } from '@/lib/structure';
 import { getTemplateEditor } from '@/lib/templates';
 import { getUsage } from '@/lib/usage';
 
@@ -114,8 +115,13 @@ export default async function AccountPage({ searchParams }: Props) {
       />
     );
   } else if (tab === 'preferences') {
-    const [artists, preferences, editor] = await Promise.all([listMyArtists(db), getPreferences(db), getTemplateEditor(db)]);
-    body = <PreferencesTab artists={artists} initialDefaultArtistId={preferences.defaultArtistId} editor={editor} />;
+    const [artists, preferences, editor, structure] = await Promise.all([
+      listMyArtists(db),
+      getPreferences(db),
+      getTemplateEditor(db),
+      getStructureEditor(db),
+    ]);
+    body = <PreferencesTab artists={artists} initialDefaultArtistId={preferences.defaultArtistId} editor={editor} structure={structure} />;
   } else if (tab === 'billing') {
     body = (
       <DetailGrid

@@ -2,6 +2,7 @@ import type { Scoped } from '@/lib/db';
 
 import { changed, coverage, diff, maintenance, type Maintenance, type SetChange, type ZoneCoverage } from './analyse';
 import { PARSER_VERSION, type AlsSet, type FolderFile } from './types';
+import { applyZones, type ZoneRule } from './zones';
 
 // Session snapshots in the database (db/014, variants db/015): storing what the browser read
 // from a dropped project folder, and building the State tab's data from them
@@ -111,6 +112,8 @@ export type SessionState = {
   stale: number;
   /** Saves read in the whole session, every variant. */
   total: number;
+  /** The project's zones in order, with their colours (db/025). */
+  zones: { name: string; color: string | null }[];
 };
 
 /**
@@ -123,7 +126,7 @@ export async function getSessionState(
   opts: { variant?: string; saveId?: number | null } = {},
 ): Promise<SessionState> {
   const variant = opts.variant ?? '';
-  const [snaps, folders] = await db.tx([
+  const [snaps, folders, zoneRows] = await db.tx([
     {
       text: `select id, file_name, saved_at, parser_version, variant, variant_by_hand, data from als_snapshots
               where project_id = $1 order by saved_at, id`,
@@ -133,7 +136,16 @@ export async function getSessionState(
       text: 'select folder_name, files, file_count, total_bytes, scanned_at from project_folders where project_id = $1',
       params: [projectId],
     },
+    { text: 'select name, color, prefixes, group_names from project_zones($1)', params: [projectId] },
   ]);
+  // The project's zones (db/025), applied to every set as it is read.
+  const rules: ZoneRule[] = zoneRows.map((r: Row) => ({
+    name: String(r.name),
+    color: r.color === null ? null : String(r.color),
+    prefixes: (r.prefixes as string[]) ?? [],
+    groupNames: (r.group_names as string[]) ?? [],
+  }));
+  const zoneNames = rules.map((r) => r.name);
   const all = snaps.map((r: Row) => ({
     id: Number(r.id),
     fileName: String(r.file_name),
@@ -141,7 +153,7 @@ export async function getSessionState(
     parserVersion: Number(r.parser_version),
     variant: String(r.variant ?? ''),
     byHand: r.variant_by_hand === true,
-    set: r.data as AlsSet,
+    set: applyZones(r.data as AlsSet, rules),
   }));
   const mine = all.filter((s) => s.variant === variant);
   const entries = mine.map((s, i) => {
@@ -152,7 +164,7 @@ export async function getSessionState(
       prev = [...all].reverse().find((x) => x.variant === '' && x.savedAt <= s.savedAt) ?? null;
       comparedWith = prev?.fileName ?? null;
     }
-    const c = prev ? diff(prev.set, s.set) : null;
+    const c = prev ? diff(prev.set, s.set, zoneNames) : null;
     const entry: SaveEntry = {
       id: s.id,
       fileName: s.fileName,
@@ -179,7 +191,8 @@ export async function getSessionState(
     folder: f
       ? { name: String(f.folder_name), scannedAt: iso(f.scanned_at), fileCount: Number(f.file_count), totalBytes: Number(f.total_bytes) }
       : null,
-    coverage: chosen ? coverage(chosen.set) : [],
+    coverage: chosen ? coverage(chosen.set, zoneNames) : [],
+    zones: rules.map((r) => ({ name: r.name, color: r.color })),
     maintenance: chosen ? maintenance(chosen.set, folderFiles, usedAnywhere) : null,
     stale: all.filter((s) => s.parserVersion < PARSER_VERSION).length,
     total: all.length,

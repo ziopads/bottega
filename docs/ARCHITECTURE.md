@@ -1,6 +1,6 @@
 # Bottega — architecture
 
-**Version:** 0.17
+**Version:** 0.18
 **Date:** 2026-10-23
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
@@ -10,6 +10,20 @@ story IDs below (S-3, W-6 and so on) refer to it.
 
 ## Changelog
 
+- **0.18** (2026-10-23) — Migration 025: track structures
+  (`structure_templates`, `structure_elements` with `prefixes` and
+  `group_names`, `structure_copy()`, `account_structure()`), each project's
+  copy in `elements` (new columns) and `project_structure`,
+  `structure_start()` called by `workflow_start()` for music,
+  `project_zones()`, `structure_template_status()`,
+  `structure_template_elements()`, `structure_apply()`. Zones are decided at
+  read time by `lib/als/zones.ts` (`applyZones`, `zoneOfName`); `coverage`
+  and `diff` take the project's zones; `getSessionState` returns `zones` with
+  colours. Preferences › Track structure: `lib/structure.ts`,
+  `lib/structureTypes.ts`, `GET`/`POST /api/account/structure`,
+  `app/account/StructureEditor.tsx`. The Workflow tab offers structure
+  changes (`structureChanges`, op `structure`). `lib/elementTemplate.ts` now
+  serves collections only.
 - **0.17** (2026-10-23) — Migration 024: workflow templates, each project's
   own stages, the re-entry note, the work log and the board (§4, Workflow).
   `lib/workflow.ts` reads a project's stages through `project_stage_list()`;

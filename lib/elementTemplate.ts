@@ -6,8 +6,10 @@
 // the music. STRUCTURE and BUS are not track zones; they hold the work that
 // belongs to no single part (a drop, a transition, the master chain).
 //
-// One default per kind for now; a template per account comes later, so that
-// other artists can bring their own (decided 11 October 2026).
+// Since migration 025 (23 October 2026) music projects take their elements
+// from the owner's track structure inside workflow_start(), and the music
+// entry here is kept only as a record; collections still copy theirs from
+// here (lib/workflow.ts startWorkflow).
 
 export type TemplateElement = { name: string; children?: string[] };
 
