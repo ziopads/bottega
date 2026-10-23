@@ -12,6 +12,7 @@ import { requireAccount } from '@/lib/access';
 import { listConnections } from '@/lib/connections';
 import { getAllowance } from '@/lib/documents';
 import { listUnconvertedImages } from '@/lib/gear';
+import { getTemplateEditor } from '@/lib/templates';
 import { getUsage } from '@/lib/usage';
 
 import ChangePasswordForm from './ChangePasswordForm';
@@ -33,7 +34,8 @@ export const metadata = { title: 'Account · Bottega' };
 //   Usage        storage by kind, largest files under each; pages processed
 //   Sharing      every share granted, to change or revoke; what is shared in
 //   Security     password, recent activity from the access log
-//   Preferences  the artist new sessions start with
+//   Preferences  the artist new projects start with, the board's limits, the
+//                workflow template
 //   Billing      coming with plans
 //   Data         coming: export and account deletion
 
@@ -112,8 +114,8 @@ export default async function AccountPage({ searchParams }: Props) {
       />
     );
   } else if (tab === 'preferences') {
-    const [artists, preferences] = await Promise.all([listMyArtists(db), getPreferences(db)]);
-    body = <PreferencesTab artists={artists} initialDefaultArtistId={preferences.defaultArtistId} />;
+    const [artists, preferences, editor] = await Promise.all([listMyArtists(db), getPreferences(db), getTemplateEditor(db)]);
+    body = <PreferencesTab artists={artists} initialDefaultArtistId={preferences.defaultArtistId} editor={editor} />;
   } else if (tab === 'billing') {
     body = (
       <DetailGrid

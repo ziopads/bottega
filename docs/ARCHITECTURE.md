@@ -20,7 +20,12 @@ story IDs below (S-3, W-6 and so on) refer to it.
   `lib/board.ts` and `lib/boardTypes.ts`, `GET`/`POST /api/board` (place,
   swap, remove), `app/_board/BoardView.tsx` at `/`; the projects list moved
   from `/` to `/projects`. A project's last touch is the latest of its work
-  log, cards, met criteria, stage moves, mixes and saved sets.
+  log, cards, met criteria, stage moves, mixes and saved sets. Preferences:
+  `lib/templates.ts`, `lib/templateTypes.ts`, `GET`/`POST
+  /api/account/template` (board settings, choosing, copying, renaming and
+  deleting a template, stages and criteria), `app/account/TemplateEditor.tsx`.
+  The platform default is read only; editing starts from one's own copy. A
+  new stage's key comes from its name.
 - **0.16** (2026-10-14) — Terms: project (an Ableton project folder) and set
   (an `.als` file); code, tables and connector tool names keep `session`
   where they had it (§1, Terms). Migration 023: a project's `bpm` follows its

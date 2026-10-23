@@ -18,7 +18,8 @@ built is in `ARCHITECTURE.md`.
   limit, and finishing (W-21 to W-23); the Workflow tab's new layout (W-24).
   From a friend's prototype, Finish Line. Built so far: the data (migration
   024), the Workflow tab (W-17, W-19, W-20, W-24) and the board (W-21, W-22,
-  W-23), now the home page; the projects list moved to /projects. Loose lines at the end
+  W-23), now the home page; the projects list moved to /projects; and
+  Preferences with the board's limits and the template editor (W-13, W-22). Loose lines at the end
   of a session become cards whose done-when reads "Not written yet" unless
   the line gives one after "--".
 
