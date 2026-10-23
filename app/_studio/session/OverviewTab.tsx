@@ -34,6 +34,7 @@ export default function OverviewTab({
   onLength,
   onTab,
   workflow,
+  setKey,
 }: {
   project: StudioProject;
   current: StudioTrack | null;
@@ -50,6 +51,8 @@ export default function OverviewTab({
   onLength: (id: number, seconds: number) => void;
   onTab: (key: string) => void;
   workflow: Workflow;
+  /** The key of the newest saved set: undefined when no set (or none read with keys) is stored, null when it has none. */
+  setKey: string | null | undefined;
 }) {
   const latest = notes.slice(0, 4);
   const stageLabel = workflow.stages.find((x) => x.key === workflow.stage)?.label ?? '';
@@ -207,6 +210,14 @@ export default function OverviewTab({
                 </span>
               ) : (
                 <span className="t-num">{project.bpm ?? '—'}</span>
+              ),
+            },
+            {
+              label: 'Key',
+              value: setKey ? (
+                <span title="From the newest saved set; change it in Live">{setKey}</span>
+              ) : (
+                <span className="text-muted">{setKey === undefined ? 'Drop the project folder on the State tab' : '—'}</span>
               ),
             },
             { label: 'Length', value: <span className="t-num">{formatDuration(current?.durationS ?? null) || '—'}</span> },

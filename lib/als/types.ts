@@ -29,6 +29,13 @@ export const SCALE_NAMES: Record<number, string> = {
   6: 'Locrian',
 };
 
+/** "C Major", with "(Scale Mode off)" when the set says so; null when the set has no scale. */
+export function keyLabel(key: AlsSet['key']): string | null {
+  if (!key) return null;
+  const name = `${NOTE_NAMES[key.root] ?? ''} ${key.scale}`.trim();
+  return key.inKey === false ? `${name} (Scale Mode off)` : name;
+}
+
 /** A scale's name from what the set stores: a number in Live 12, a name in older sets. */
 export function scaleName(raw: string): string {
   if (!/^\d+$/.test(raw)) return raw;

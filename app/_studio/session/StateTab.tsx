@@ -8,7 +8,7 @@ import { beatsToTime, playable, type SetChange } from '@/lib/als/analyse';
 import { parseSet } from '@/lib/als/parse';
 import { filesFromDrop, filesFromInput, gunzipText, listing, savedSets, sha256, type PickedFile } from '@/lib/als/readFolder';
 import type { SaveEntry, SessionState } from '@/lib/als/store';
-import { PARSER_VERSION, type AlsSet, type AlsTrack, type Zone } from '@/lib/als/types';
+import { keyLabel, PARSER_VERSION, type AlsSet, type AlsTrack, type Zone } from '@/lib/als/types';
 import { formatBytes, type StudioVariant } from '@/lib/studioTypes';
 
 // The State tab (REQUIREMENTS S-15, S-16, A-6 to A-8): what the saved Live
@@ -228,6 +228,7 @@ export default function StateTab({
             </div>
             <div className="t-num pt-1">
               {latest.tempo ? `${latest.tempo} BPM · ` : ''}
+              {latest.key === undefined ? 'key not read (drop the folder again) · ' : latest.key ? `${keyLabel(latest.key)} · ` : 'no key · '}
               {bars(latest.lengthBeats)}
               {latest.tempo ? ` · ${beatsToTime(latest.lengthBeats, latest.tempo)}` : ''}
             </div>

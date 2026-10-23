@@ -20,6 +20,7 @@ import type { SessionTab } from '@/lib/sessionTabs';
 import { levelAtLeast } from '@/lib/studioTypes';
 import type { Workflow } from '@/lib/workflowTypes';
 import type { SessionState } from '@/lib/als/store';
+import { keyLabel } from '@/lib/als/types';
 
 import { api, InlineEdit, Stars } from './controls';
 import HistoryTab from './session/HistoryTab';
@@ -323,6 +324,7 @@ export default function ProjectDetail({
           onLength={fillLength}
           onTab={selectTab}
           workflow={workflow}
+          setKey={sessionState.selected?.set.key === undefined ? undefined : keyLabel(sessionState.selected.set.key)}
         />
       )}
       {tab === 'mixes' && (
