@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getPreferences } from '@/lib/account';
 import { apiAccount } from '@/lib/access';
 import { createProject, listArtists, listProjects } from '@/lib/studio';
 import { parseCanonicalId, parseWorkingName } from '@/lib/studioTypes';
@@ -18,7 +19,8 @@ export async function GET() {
 
 // POST /api/projects   { canonicalId, workingName?, artistId? }
 // Creates a project in the signed-in person's own account, credited to one of
-// their own artists. With no artistId, their first artist; the database
+// their own artists. With no artistId, their default artist (Preferences), else
+// their first; it lands in their backlog (lib/studio.ts). The database
 // refuses another account's artist.
 export async function POST(req: Request) {
   const account = await apiAccount();
@@ -42,7 +44,9 @@ export async function POST(req: Request) {
     artistId = Number(body.artistId);
     if (!Number.isInteger(artistId)) return NextResponse.json({ error: 'Invalid artist' }, { status: 400 });
   } else {
-    artistId = (await listArtists(db)).find((a) => a.mine)?.id ?? null;
+    // The artist chosen under Account › Preferences, else the first of one's own.
+    const [artists, prefs] = await Promise.all([listArtists(db), getPreferences(db)]);
+    artistId = artists.find((a) => a.mine && a.id === prefs.defaultArtistId)?.id ?? artists.find((a) => a.mine)?.id ?? null;
   }
   if (artistId === null) {
     return NextResponse.json({ error: 'Your account has no artist yet. Add one first.' }, { status: 400 });

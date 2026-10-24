@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import BoardPlaceSelect from '@/app/_board/BoardPlaceSelect';
+import type { BoardPlace } from '@/lib/boardTypes';
 
 import { onNoteRequest, type NoteRequest } from '@/app/_ui/audio/deck';
 
@@ -63,6 +65,7 @@ export default function ProjectDetail({
   releases,
   viewerId,
   initialShares,
+  boardPlace,
   uploadsEnabled,
   initialWorkflow,
   initialSessionState,
@@ -82,6 +85,8 @@ export default function ProjectDetail({
   releases: StudioRelease[];
   viewerId: string;
   initialShares: StudioShare[];
+  /** Where the project sits on the viewer's own board (W-21). */
+  boardPlace: BoardPlace | null;
   uploadsEnabled: boolean;
   initialWorkflow: Workflow;
   initialSessionState: SessionState;
@@ -238,6 +243,7 @@ export default function ProjectDetail({
         <span className="t-num t-body text-muted" title="Canonical ID: matches the Ableton folder; permanent">
           {project.canonicalId}
         </span>
+        <BoardPlaceSelect projectId={project.id} initial={boardPlace} />
         {isOwner && artists.length > 0 ? (
           <select
             value={project.artist.id}

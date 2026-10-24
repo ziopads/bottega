@@ -109,10 +109,11 @@ export async function getBoard(db: Scoped, userId: string): Promise<Board> {
     rotationLimit: prefRows[0] ? num(prefRows[0].rotation_limit) : 4,
     coldDays: prefRows[0] ? num(prefRows[0].cold_days) : 21,
     projects: boardProjects,
+    // Newest first, one's own before those shared with one: the board's search shows the top of this list.
     candidates: projects
       .filter((p) => !onBoard.has(p.id))
-      .map((p) => ({ id: p.id, ...label(p.id) }))
-      .sort((a, b) => Number(a.ownerName !== null) - Number(b.ownerName !== null) || a.title.localeCompare(b.title)),
+      .map((p) => ({ id: p.id, ...label(p.id), createdAt: String(p.createdAt) }))
+      .sort((a, b) => Number(a.ownerName !== null) - Number(b.ownerName !== null) || b.createdAt.localeCompare(a.createdAt)),
   };
 }
 
@@ -126,4 +127,10 @@ export async function swapOnBoard(db: Scoped, inId: number, outId: number): Prom
 
 export async function takeOffBoard(db: Scoped, projectId: number): Promise<void> {
   await db.q('delete from board_places where user_id = app_user() and project_id = $1', [projectId]);
+}
+
+/** Where each project sits on the person's board, for the Projects list and a project's page. */
+export async function listBoardPlaces(db: Scoped): Promise<Record<number, BoardPlace>> {
+  const rows = await db.q('select project_id, place from board_places where user_id = app_user()');
+  return Object.fromEntries(rows.map((r) => [num(r.project_id), String(r.place) as BoardPlace]));
 }

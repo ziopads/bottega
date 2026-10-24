@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import BoardPlaceSelect from '@/app/_board/BoardPlaceSelect';
+import { listBoardPlaces } from '@/lib/board';
 
 import StudioProjects from '@/app/_studio/StudioProjects';
 import { getPreferences } from '@/lib/account';
@@ -23,12 +25,13 @@ const LEVEL_WORD: Record<AccessLevel, string> = {
 export default async function ProjectsPage() {
   const { db, userId } = await requireAccount();
 
-  const [projects, artists, genres, releases, preferences] = await Promise.all([
+  const [projects, artists, genres, releases, preferences, boardPlaces] = await Promise.all([
     listProjects(db),
     listArtists(db),
     listGenres(db),
     listReleases(db),
     getPreferences(db),
+    listBoardPlaces(db),
   ]);
   const own = projects.filter((p) => p.ownerId === userId);
   const shared = projects.filter((p) => p.ownerId !== userId);
@@ -51,6 +54,7 @@ export default async function ProjectsPage() {
         initialGenres={genres}
         initialReleases={myReleases}
         defaultArtistId={defaultArtist?.id ?? null}
+        boardPlaces={boardPlaces}
       />
 
       {shared.length > 0 && (
@@ -66,6 +70,7 @@ export default async function ProjectsPage() {
                   {p.workingName || <span className="text-muted">untitled</span>}
                 </Link>
                 <span className="text-[11px] text-muted">{formatDuration(p.latest?.durationS ?? null)}</span>
+                <BoardPlaceSelect projectId={p.id} initial={boardPlaces[p.id] ?? null} compact />
                 <span className="text-[11px] text-muted">
                   {p.ownerName} · {LEVEL_WORD[p.level]}
                 </span>

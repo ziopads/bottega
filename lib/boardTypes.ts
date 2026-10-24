@@ -29,7 +29,15 @@ export type BoardProject = {
 };
 
 /** A project the person can see that is not on their board. */
-export type BoardCandidate = { id: number; title: string; code: string; ownerName: string | null };
+export type BoardCandidate = {
+  id: number;
+  title: string;
+  /** "VIG 2025 0727". */
+  code: string;
+  ownerName: string | null;
+  /** When the project was made, for showing the newest first. */
+  createdAt: string;
+};
 
 export type Board = {
   rotationLimit: number;

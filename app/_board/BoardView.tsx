@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 import { api } from '@/app/_studio/controls';
 import { BUTTON, FIELD } from '@/app/_ui/styles';
-import { daysSince, progressOf, type Board, type BoardPlace, type BoardProject } from '@/lib/boardTypes';
+import { daysSince, progressOf, type Board, type BoardCandidate, type BoardPlace, type BoardProject } from '@/lib/boardTypes';
 
 // The board (REQUIREMENTS W-21 to W-23), layout B of 23 October: projects
 // move left to right, from the backlog into rotation and on to finished.
@@ -17,7 +17,10 @@ import { daysSince, progressOf, type Board, type BoardPlace, type BoardProject }
 //
 // Projects drag between Backlog and In rotation; stage moves stay on the
 // project's Workflow tab. When rotation is full, moving one in asks which
-// one goes out.
+// one goes out. Adding (24 October): a search box above the columns, newest
+// projects first; each result goes to the backlog or rotation with one click
+// or a drag onto either column, and a name that matches nothing can become a
+// new project there and then.
 
 type Sort = 'progress' | 'cold' | 'recent' | 'title';
 const SORTS: { key: Sort; label: string }[] = [
@@ -34,7 +37,6 @@ export default function BoardView({ initial }: { initial: Board }) {
   const [sort, setSort] = useState<Sort>('progress');
   const [swapFor, setSwapFor] = useState<number | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
-  const [adding, setAdding] = useState('');
 
   async function post(body: unknown): Promise<boolean> {
     setError('');
@@ -64,11 +66,12 @@ export default function BoardView({ initial }: { initial: Board }) {
   });
   rotation.sort(byRecent);
 
-  function moveTo(id: number, place: BoardPlace) {
+  async function moveTo(id: number, place: BoardPlace) {
     const p = board.projects.find((x) => x.id === id);
-    if (!p || p.place === place) return;
+    if (p && p.place === place) return;
     if (place === 'rotation' && full) {
-      setSwapFor(id);
+      // Rotation is full: a project not yet on the board waits in the backlog while the person picks one to swap out.
+      if (p || (await post({ op: 'place', projectId: id, place: 'backlog' }))) setSwapFor(id);
       return;
     }
     setSwapFor(null);
@@ -103,27 +106,16 @@ export default function BoardView({ initial }: { initial: Board }) {
           <h1 className="t-title">Board</h1>
           <p className="t-body text-muted">Projects move left to right: from the backlog into rotation, and on to finished.</p>
         </div>
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (adding && (await post({ op: 'place', projectId: Number(adding), place: 'backlog' }))) setAdding('');
-          }}
-          className="flex items-center gap-2"
-        >
-          <select value={adding} onChange={(e) => setAdding(e.target.value)} className={`${FIELD} max-w-72`} aria-label="A project to add to the board">
-            <option value="">Add a project to the board…</option>
-            {board.candidates.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title}
-                {c.ownerName ? ` · ${c.ownerName}` : ''}
-              </option>
-            ))}
-          </select>
-          <button type="submit" disabled={busy || !adding} className={BUTTON}>
-            Add
-          </button>
-        </form>
       </div>
+
+      <AddToBoard
+        candidates={board.candidates}
+        busy={busy}
+        onPlace={(id, place) => moveTo(id, place)}
+        onDrag={setDragging}
+        onCreated={(b) => setBoard(b)}
+        onError={setError}
+      />
 
       {error && <p className="t-body mb-4 text-rust">{error}</p>}
 
@@ -168,6 +160,9 @@ export default function BoardView({ initial }: { initial: Board }) {
             )}
           </div>
           {sorted.length === 0 && <p className="t-body text-muted">Nothing waiting. Projects you send back from rotation wait here.</p>}
+          {sorted.length + rotation.length > 0 && (
+            <p className="text-[11px] text-muted">Drag a project between the backlog and rotation, or onto either from the search above.</p>
+          )}
           {sorted.map((p) => (
             <article key={p.id} {...dragProps(p.id)} className={`t-body space-y-1.5 rounded border bg-card p-2.5 ${isCold(p, board.coldDays) ? 'border-dashed border-ink/40' : 'border-line'}`}>
               <div className="flex items-baseline justify-between gap-2">
@@ -329,5 +324,162 @@ function Foot({ p, coldDays, withCards = false }: { p: BoardProject; coldDays: n
       </span>
       <span>{age}</span>
     </p>
+  );
+}
+
+/** "2026 1024": today as a canonical id starts, as the Ableton folders are named. */
+function todaysId(): string {
+  const d = new Date();
+  return `${d.getFullYear()} ${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Adding to the board: search every project one can see, newest first, and
+ * put one in the backlog or rotation with a click or a drag; or make a new
+ * project from the name typed, which lands on the board at once.
+ */
+function AddToBoard({
+  candidates,
+  busy,
+  onPlace,
+  onDrag,
+  onCreated,
+  onError,
+}: {
+  candidates: BoardCandidate[];
+  busy: boolean;
+  onPlace: (id: number, place: BoardPlace) => void;
+  onDrag: (id: number | null) => void;
+  onCreated: (board: Board) => void;
+  onError: (msg: string) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [making, setMaking] = useState(false);
+  const [canonicalId, setCanonicalId] = useState('');
+  const [place, setPlace] = useState<BoardPlace>('backlog');
+  const [saving, setSaving] = useState(false);
+  const q = query.trim().toLowerCase();
+  const matches = (q ? candidates.filter((c) => c.title.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)) : candidates).slice(0, q ? 8 : 5);
+
+  async function make(e: React.FormEvent) {
+    e.preventDefault();
+    onError('');
+    setSaving(true);
+    const r = await api<{ project: { id: number } }>('/api/projects', {
+      method: 'POST',
+      body: JSON.stringify({ canonicalId, workingName: query.trim() }),
+    });
+    if (!r.ok) {
+      setSaving(false);
+      const hint = r.body?.suggestion ? ` Try “${r.body.suggestion}”.` : '';
+      onError((r.body?.error || 'Could not make the project.') + hint);
+      return;
+    }
+    // A new project lands in the backlog; rotation is one more step.
+    const b =
+      place === 'rotation'
+        ? await api<{ board: Board }>('/api/board', { method: 'POST', body: JSON.stringify({ op: 'place', projectId: r.data.project.id, place: 'rotation' }) })
+        : await api<{ board: Board }>('/api/board', { method: 'GET' });
+    setSaving(false);
+    if (!b.ok) {
+      onError(b.body?.error || 'The project was made but could not go into rotation; it is in the backlog.');
+      const again = await api<{ board: Board }>('/api/board', { method: 'GET' });
+      if (again.ok) onCreated(again.data.board);
+    } else {
+      onCreated(b.data.board);
+    }
+    setQuery('');
+    setMaking(false);
+  }
+
+  return (
+    <section aria-label="Add to the board" className="t-body mb-5 rounded-md border border-line p-3">
+      <label className="flex flex-wrap items-center gap-2">
+        <span className="t-label">Add to the board</span>
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setMaking(false);
+          }}
+          placeholder="Search by name or date, such as khione or 2025 0727"
+          className={`${FIELD} min-w-0 flex-1`}
+        />
+      </label>
+      {matches.length > 0 && (
+        <ul className="mt-2 divide-y divide-line">
+          {matches.map((c) => (
+            <li
+              key={c.id}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.effectAllowed = 'move';
+                onDrag(c.id);
+              }}
+              onDragEnd={() => onDrag(null)}
+              className="flex cursor-grab flex-wrap items-baseline gap-x-3 gap-y-1 py-1.5"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="font-medium">{c.title}</span> <span className="font-mono text-[11px] text-muted">{c.code}</span>
+                {c.ownerName && <span className="text-[11px] text-muted"> · {c.ownerName}</span>}
+              </span>
+              <span className="flex gap-1.5">
+                <button type="button" onClick={() => onPlace(c.id, 'backlog')} disabled={busy} className={BUTTON}>
+                  Backlog
+                </button>
+                <button type="button" onClick={() => onPlace(c.id, 'rotation')} disabled={busy} className={BUTTON}>
+                  Rotation
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!q && candidates.length > matches.length && (
+        <p className="mt-1 text-[11px] text-muted">The newest {matches.length} of {candidates.length} projects not on your board; search for the rest.</p>
+      )}
+      {q && matches.length === 0 && !making && <p className="mt-2 text-muted">No project matches “{query.trim()}”.</p>}
+      {q && !making && (
+        <button
+          type="button"
+          onClick={() => {
+            setMaking(true);
+            setCanonicalId((id) => id || todaysId());
+          }}
+          className={`mt-2 ${BUTTON}`}
+        >
+          + New project “{query.trim()}”
+        </button>
+      )}
+      {making && (
+        <form onSubmit={make} className="mt-2 flex flex-wrap items-end gap-2 rounded border border-ink p-2.5">
+          <label className="flex flex-col gap-0.5 text-[11px] text-muted">
+            Canonical ID
+            <input value={canonicalId} onChange={(e) => setCanonicalId(e.target.value)} className={`${FIELD} font-mono`} />
+          </label>
+          <label className="flex flex-col gap-0.5 text-[11px] text-muted">
+            Working name
+            <input value={query} onChange={(e) => setQuery(e.target.value)} className={FIELD} />
+          </label>
+          <label className="flex flex-col gap-0.5 text-[11px] text-muted">
+            Goes to
+            <select value={place} onChange={(e) => setPlace(e.target.value === 'rotation' ? 'rotation' : 'backlog')} className={FIELD}>
+              <option value="backlog">Backlog</option>
+              <option value="rotation">Rotation</option>
+            </select>
+          </label>
+          <button type="submit" disabled={saving || !canonicalId.trim()} className={BUTTON}>
+            {saving ? 'Making…' : 'Make it'}
+          </button>
+          <button type="button" onClick={() => setMaking(false)} className={BUTTON}>
+            Cancel
+          </button>
+          <p className="w-full text-[11px] text-muted">
+            The canonical ID is the start of the project&rsquo;s Ableton folder name (the date), so the watcher finds it. It is credited to your default artist.
+          </p>
+        </form>
+      )}
+    </section>
   );
 }

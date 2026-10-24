@@ -8,6 +8,8 @@ import { api, GenreSelect, InlineEdit, Stars } from './controls';
 import NewProject from './NewProject';
 import { BUTTON } from '@/app/_ui/styles';
 import { get as deckState, itemOfProject, setRater, toggle as deckToggle, useDeck, type PlayItem } from '@/app/_ui/audio/deck';
+import BoardPlaceSelect from '@/app/_board/BoardPlaceSelect';
+import type { BoardPlace } from '@/lib/boardTypes';
 
 // The sessions list: a sortable table with inline editing, multi-select with
 // bulk changes, filters, and one shared player that steps through the rows as
@@ -85,14 +87,18 @@ export default function StudioProjects({
   initialGenres,
   initialReleases,
   defaultArtistId,
+  boardPlaces,
 }: {
   initialProjects: StudioProject[];
   artists: StudioArtist[];
   initialGenres: string[];
   initialReleases: StudioRelease[];
   defaultArtistId: number | null;
+  /** Each project's place on the person's board (W-21). */
+  boardPlaces: Record<number, BoardPlace>;
 }) {
   const [projects, setProjects] = useState(initialProjects);
+  const [places, setPlaces] = useState(boardPlaces);
   const [genres, setGenres] = useState(initialGenres);
   const [releases, setReleases] = useState(initialReleases);
   const [error, setError] = useState('');
@@ -313,7 +319,11 @@ export default function StudioProjects({
         <NewProject
           artists={artists}
           defaultArtistId={defaultArtistId}
-          onCreated={(p) => setProjects((list) => [{ ...p, latest: null, releaseIds: [] }, ...list])}
+          onCreated={(p) => {
+            setProjects((list) => [{ ...p, latest: null, releaseIds: [] }, ...list]);
+            // A new project lands in the backlog (lib/studio.ts createProject).
+            setPlaces((m) => ({ ...m, [p.id]: 'backlog' }));
+          }}
         />
         <Link href="/collections" className="t-body text-muted underline hover:text-ink">
           Releases ({releases.length})
@@ -431,6 +441,7 @@ export default function StudioProjects({
                 <th className={th}>Collections</th>
                 <SortHead k="date">Project</SortHead>
                 <SortHead k="upload">Uploaded</SortHead>
+                <th className={th}>Board</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -451,6 +462,7 @@ export default function StudioProjects({
                   onAddGenre={addGenre}
                   onRate={(n) => rate(p, n)}
                   onPatch={(f) => patch(p, f)}
+                  boardPlace={places[p.id] ?? null}
                 />
               ))}
             </tbody>
@@ -661,6 +673,7 @@ function ProjectRow({
   onAddGenre,
   onRate,
   onPatch,
+  boardPlace,
 }: {
   project: StudioProject;
   selected: boolean;
@@ -673,6 +686,7 @@ function ProjectRow({
   onAddGenre: (name: string) => Promise<string | null>;
   onRate: (rating: number) => void;
   onPatch: (fields: Record<string, unknown>) => Promise<boolean>;
+  boardPlace: BoardPlace | null;
 }) {
   const td = 'px-2 py-2 align-middle';
   const date = (iso: string) =>
@@ -749,6 +763,9 @@ function ProjectRow({
       </td>
       <td className={`${td} whitespace-nowrap text-[11px] text-muted`}>{date(p.createdAt)}</td>
       <td className={`${td} whitespace-nowrap text-[11px] text-muted`}>{p.latest ? date(p.latest.uploadedAt) : ''}</td>
+      <td className={`${td} whitespace-nowrap`}>
+        <BoardPlaceSelect projectId={p.id} initial={boardPlace} compact />
+      </td>
     </tr>
   );
 }

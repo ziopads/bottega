@@ -225,6 +225,8 @@ export async function createProject(db: Scoped, input: {
     throw err;
   }
   await recordName(db, id, input.workingName, input.by);
+  // A new project lands in its maker's backlog, so it is on their board at once.
+  await db.q(`select board_place($1, 'backlog')`, [id]);
   const project = await getProject(db, id);
   if (!project) throw new Error(`project ${id} vanished after insert`);
   return { ok: true, project };

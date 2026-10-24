@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { listBoardPlaces } from '@/lib/board';
 
 import ProjectDetail from '@/app/_studio/ProjectDetail';
 import { SESSION_TABS, type SessionTab } from '@/lib/sessionTabs';
@@ -53,7 +54,7 @@ export default async function ProjectPage({ params, searchParams }: Params) {
   const variants = await listVariants(db, id);
   const variant = variants.find((v) => v.name.toLowerCase() === (query.variant ?? '').trim().toLowerCase())?.name ?? '';
 
-  const [tracks, names, artists, genres, notes, releases, references, shares, workflow, sessionState] = await Promise.all([
+  const [tracks, names, artists, genres, notes, releases, references, shares, workflow, sessionState, boardPlaces] = await Promise.all([
     listTracks(db, id),
     listNames(db, id),
     listArtists(db),
@@ -64,6 +65,7 @@ export default async function ProjectPage({ params, searchParams }: Params) {
     isOwner ? listShares(db, { kind: 'project', id }) : Promise.resolve([]),
     getWorkflow(db, id),
     getSessionState(db, id, { variant }),
+    listBoardPlaces(db),
   ]);
 
   return (
@@ -83,6 +85,7 @@ export default async function ProjectPage({ params, searchParams }: Params) {
         releases={releases}
         viewerId={userId}
         initialShares={shares}
+        boardPlace={boardPlaces[id] ?? null}
         uploadsEnabled={audioConfigured()}
         initialWorkflow={workflow}
         initialSessionState={sessionState}
