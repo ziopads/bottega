@@ -18,6 +18,8 @@ export type WatcherReport = {
   root: string;
   pending: number;
   unmatched: string[];
+  /** Whether the Mac found its sessions folder; null from a watcher before 1.1. */
+  rootFound: boolean | null;
 };
 
 const iso = (v: unknown): string => (v instanceof Date ? v.toISOString() : String(v));
@@ -29,7 +31,7 @@ export class TokenError extends Error {}
 export async function listTokens(person: Scoped): Promise<{ tokens: PersonalToken[]; reports: WatcherReport[] }> {
   const [tokens, reports] = await person.tx([
     { text: 'select id, name, prefix, created_at, last_used_at, revoked_at from personal_tokens order by created_at desc', params: [] },
-    { text: 'select token_id, reported_at, version, host, root, pending, unmatched from watcher_reports order by reported_at desc', params: [] },
+    { text: 'select token_id, reported_at, version, host, root, pending, unmatched, root_found from watcher_reports order by reported_at desc', params: [] },
   ]);
   return {
     tokens: tokens.map((r) => ({
@@ -48,6 +50,7 @@ export async function listTokens(person: Scoped): Promise<{ tokens: PersonalToke
       root: String(r.root),
       pending: Number(r.pending),
       unmatched: Array.isArray(r.unmatched) ? r.unmatched.map(String) : [],
+      rootFound: typeof r.root_found === 'boolean' ? r.root_found : null,
     })),
   };
 }

@@ -1,7 +1,7 @@
 # Bottega — requirements
 
-**Version:** 0.28
-**Date:** 2026-10-23
+**Version:** 0.29
+**Date:** 2026-10-24
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
 built is in `ARCHITECTURE.md`.
@@ -9,6 +9,12 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.29** (2026-10-24) — The watcher for other people (A-10 to A-12): each
+  Mac is added under Account › Security with its own sessions folder; a
+  one-time setup code inside an install command signs the Mac in with its own
+  token, installing Node.js and the watcher with no administrator rights; the
+  folder is set in Bottega and read by the watcher. Mac only. Migration 027.
 
 - **0.28** (2026-10-23) — The Mac watcher (A-9) built: a program started at
   login that sends each set Live saves, and the folder's file list, as the
@@ -286,7 +292,9 @@ group (L-18), a separate thing.
   when each was last used, and revokes them. The secret is shown once; only
   its hash is kept. A token can send sets and file lists, nothing else; at most
   ten live at once; making and revoking go to the access log; a disabled
-  account's tokens stop at once. Built 23 October 2026 (migration 026).
+  account's tokens stop at once. Built 23 October 2026 (migration 026). From
+  24 October tokens for the watcher are made per Mac by its setup code (A-10,
+  A-11); tokens made by hand before then are listed separately, to revoke.
 - **AC-13** A person manages their own account from the account page: the
   display name others see (the change is logged), their artists (add,
   rename, delete one nothing is credited to), every share they have granted
@@ -730,6 +738,25 @@ travel to the database.
   folder's project by the folder name last dropped on it, else by the date its
   name starts with; a folder with no project, or more than one, is listed in
   its status and under Account › Security, never guessed or created.
+- **A-10** Macs (built 24 October 2026, migration 027): a person adds each Mac
+  the watcher runs on under Account › Security, with a name and its own
+  sessions folder (a full path; Finder's Copy as Pathname, a path dragged into
+  Terminal, or a quoted one are all accepted), edits either, and removes a
+  Mac, which stops its token at once. At most ten. Adding and removing go to
+  the access log.
+- **A-11** Installing on a Mac: adding a Mac, or installing it again, gives an
+  install command to paste into Terminal, carrying a one-time setup code
+  (eight characters with no look-alikes, fifteen minutes, once; only its hash
+  kept). The installer needs no administrator rights: it fetches Node.js 22
+  from nodejs.org, checked against its published checksums, and the watcher
+  built with the deployed app, trades the code for a token made for that Mac
+  (kept in the keychain, never shown; the Mac's previous token revoked), and
+  starts the watcher at login. Run again without a code, it updates in place.
+  Each install goes to the access log. macOS only for now.
+- **A-12** A Mac's folder is set in Bottega: the watcher reads its name and
+  folder at every start and sweep, and reports whether it found the folder,
+  shown under the Mac with when it was last heard from, what waits to be sent
+  and the folders with no project.
 
 ## 10. Study (L)
 

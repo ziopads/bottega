@@ -1,7 +1,7 @@
 # Bottega — architecture
 
-**Version:** 0.19
-**Date:** 2026-10-23
+**Version:** 0.20
+**Date:** 2026-10-24
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
 story IDs below (S-3, W-6 and so on) refer to it.
@@ -9,6 +9,23 @@ story IDs below (S-3, W-6 and so on) refer to it.
 ---
 
 ## Changelog
+
+- **0.20** (2026-10-24) — Watcher Macs (REQUIREMENTS A-10 to A-12):
+  migration 027 adds `watcher_macs` (name, sessions folder, current token, the
+  hash and expiry of a one-time setup code) with `mac_add()`, `mac_update()`,
+  `mac_new_code()`, `mac_remove()`, `mac_claim()` (called before anyone is
+  known: trades a code for a new personal token for that Mac, revoking its
+  previous one) and `mac_config()`; `watcher_reports.root_found`, and a
+  seven-argument `watcher_report()` (the six-argument form stays as a wrapper
+  for code deployed before 027). `lib/macs.ts`; routes `/api/account/macs`,
+  `/api/watcher/claim` (unauthenticated, exempt in `scripts/check-access.mjs`)
+  and `/api/watcher/config`; `app/account/WatcherMacs.tsx` replaces
+  `WatcherTokens.tsx`. The watcher (1.1.0) gains `claim` and reads its folder
+  from `/api/watcher/config`. `scripts/watcher-bundle.mjs` joins the compiled
+  CommonJS into `public/watcher/bottega-watcher.cjs` (ignored by git), built by
+  `npm run watcher:build`, which `npm run build` now runs first;
+  `public/watcher/install.sh` installs Node.js and the watcher in the user's
+  Library. Both are served as static files, outside the sign-in redirect.
 
 - **0.19** (2026-10-23) — The Mac watcher: `watcher/main.ts`, compiled with
   the repository's TypeScript (`npm run watcher:build`, `watcher/tsconfig.json`,

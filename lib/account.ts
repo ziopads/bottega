@@ -254,6 +254,12 @@ function describe(r: Row, subjectName: string, itemLabel: string | null): string
       return `Token “${String(after.name ?? '')}” made for the Mac watcher`;
     case 'personal_token_revoked':
       return `Token “${String(before.name ?? '')}” revoked`;
+    case 'watcher_mac_added':
+      return `Mac “${String(after.name ?? '')}” added for the watcher`;
+    case 'watcher_mac_installed':
+      return `Watcher installed on “${String(after.name ?? '')}”`;
+    case 'watcher_mac_removed':
+      return `Mac “${String(before.name ?? '')}” removed; its watcher stops`;
     case 'share_granted':
       return `Shared ${item} with ${subjectName} (${String(after.level ?? '')})`;
     case 'share_changed':

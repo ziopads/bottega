@@ -47,3 +47,5 @@ __pycache__/
 
 # the Mac watcher, compiled (npm run watcher:build)
 /watcher/dist/
+# the watcher, bundled for the installer (npm run watcher:build; built on every deploy)
+/public/watcher/bottega-watcher.cjs

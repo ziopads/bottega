@@ -11,7 +11,8 @@
 //
 // Exempt: the sign-in and sign-up pages and Neon Auth's proxy (they come before anyone is
 // known), and, from Phase 1, the OAuth and .well-known paths the connector
-// uses, which check tokens instead.
+// uses, which check tokens instead, and the watcher's installer claiming a
+// Mac with its one-time setup code (api/watcher/claim, db/027).
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
@@ -20,7 +21,7 @@ const ROOT = new URL('..', import.meta.url).pathname;
 const APP = join(ROOT, 'app');
 
 const CHECKED = /(^|\/)(page\.tsx|route\.ts|actions\.ts)$/;
-const EXEMPT = [/^app\/auth\/sign-in\//, /^app\/auth\/sign-up\//, /^app\/api\/auth\//, /^app\/oauth\//, /^app\/\.well-known\//, /^app\/api\/mcp\//];
+const EXEMPT = [/^app\/auth\/sign-in\//, /^app\/auth\/sign-up\//, /^app\/api\/auth\//, /^app\/oauth\//, /^app\/\.well-known\//, /^app\/api\/mcp\//, /^app\/api\/watcher\/claim\//];
 // tokenAccount (lib/tokens.ts): the Mac watcher's routes, signed in with a personal access token.
 const GUARDS = /\b(requireAccount|requirePlatformAdmin|apiAccount|getAccount|tokenAccount)\s*\(/;
 

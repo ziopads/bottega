@@ -4,12 +4,19 @@
 // personal access token it holds: the same as dropping the folder on the
 // project's State tab, without the drop.
 //
-//   node watcher/dist/watcher/main.js setup       server, sessions folder, token (kept in the keychain)
-//   node watcher/dist/watcher/main.js run         watch and send (what launchd runs)
-//   node watcher/dist/watcher/main.js once        one sweep of every folder, then stop
-//   node watcher/dist/watcher/main.js status      what waits, what failed, folders with no project
-//   node watcher/dist/watcher/main.js install     start at login (a LaunchAgent), and now
-//   node watcher/dist/watcher/main.js uninstall   stop, and no longer start at login
+// Installed by public/watcher/install.sh, which runs `claim` with the one-time
+// setup code from Account › Security (A-10 to A-12, db/027). The commands:
+//
+//   claim --server URL --code CODE   sign this Mac in with its setup code, then install
+//   setup       server, sessions folder and token by hand (a token made before Macs)
+//   run         watch and send (what launchd runs)
+//   once        one sweep of every folder, then stop
+//   status      what waits, what failed, folders with no project
+//   install     start at login (a LaunchAgent), and now
+//   uninstall   stop, and no longer start at login
+//
+// A Mac set up with a code reads its name and sessions folder from Bottega at
+// every start and sweep, so a folder changed there reaches the Mac.
 //
 // Sets are read here with Bottega's own reader (lib/als/parse.ts); only the
 // description goes up, never audio. Nothing is lost offline: what has not
@@ -28,7 +35,7 @@ import { gunzipSync } from 'node:zlib';
 import { parseSet } from '../lib/als/parse';
 import { PARSER_VERSION } from '../lib/als/types';
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const LABEL = 'com.sirsinate.bottega-watcher';
 const KEYCHAIN_SERVICE = 'Bottega Watcher';
 // BOTTEGA_WATCHER_HOME and BOTTEGA_WATCHER_TOKEN stand in for the folder and
@@ -38,6 +45,8 @@ const CONFIG = join(DIR, 'config.json');
 const STATE = join(DIR, 'state.json');
 const LOG = join(DIR, 'watcher.log');
 const PLIST = join(homedir(), 'Library', 'LaunchAgents', `${LABEL}.plist`);
+// How to run a command, for messages: the installer's wrapper, or from the repository.
+const HOW = /bottega-watcher\.c?js$/.test(__filename) ? `"${join(DIR, 'bottega-watcher')}"` : 'node watcher/dist/watcher/main.js';
 
 const SETTLE_MS = 10_000; // quiet time after the last change in a folder before reading it
 const SWEEP_MS = 10 * 60_000; // every folder looked at again, and anything waiting retried
@@ -45,7 +54,7 @@ const RETRY_MS = 60_000; // while sets wait, try sending again this often
 // As the State tab's drop: Live's own clutter, and files of no use.
 const IGNORED = /(^|\/)(\.DS_Store|Icon\r?|\._[^/]*)$|\.asd$/;
 
-type Config = { server: string; root: string };
+type Config = { server: string; root: string; name?: string };
 type Pending = { project: number; folder: string; file: string; sha256: string; tries: number; error?: string };
 type State = {
   /** By absolute path: the version of each set already sent or found stored. */
@@ -99,7 +108,7 @@ const loadState = () => readJson<State>(STATE, emptyState());
 const saveState = (s: State) => writeJson(STATE, s);
 
 function loadConfig(): Config {
-  if (!existsSync(CONFIG)) throw new Error('Not set up yet. Run: node watcher/dist/watcher/main.js setup');
+  if (!existsSync(CONFIG)) throw new Error('Not set up yet. Under Account › Security in Bottega, add this Mac and run its install command.');
   return readJson<Config>(CONFIG, { server: '', root: '' });
 }
 
@@ -114,7 +123,7 @@ function readToken(server: string): string {
   try {
     return execFileSync('security', ['find-generic-password', '-s', KEYCHAIN_SERVICE, '-a', accountOf(server), '-w'], { encoding: 'utf8' }).trim();
   } catch {
-    throw new Error('No token in the keychain. Run: node watcher/dist/watcher/main.js setup');
+    throw new Error('No token in the keychain. Under Account › Security in Bottega, use Install again on this Mac and run the command it gives.');
   }
 }
 
@@ -125,6 +134,7 @@ function storeToken(server: string, token: string): void {
 // ── Bottega ───────────────────────────────────────────────────────────────────
 
 class Offline extends Error {}
+const TOKEN_REFUSED = 'The token was refused (the Mac may have been removed or installed again elsewhere). Under Account › Security in Bottega, use Install again on this Mac.';
 class Refused extends Error {
   constructor(
     public status: number,
@@ -139,7 +149,11 @@ async function call<T>(cfg: Config, token: string, method: string, path: string,
   try {
     res = await fetch(`${cfg.server}${path}`, {
       method,
-      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', 'user-agent': `bottega-watcher/${VERSION}` },
+      headers: {
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        'content-type': 'application/json',
+        'user-agent': `bottega-watcher/${VERSION}`,
+      },
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(60_000),
     });
@@ -211,6 +225,7 @@ class Watcher {
   known = new Map<number, Map<string, number>>(); // project → sha → parser version stored
   timers = new Map<string, NodeJS.Timeout>();
   fsWatcher: FSWatcher | null = null;
+  rootMissing = false;
   busy = Promise.resolve();
 
   constructor(
@@ -225,6 +240,31 @@ class Watcher {
       log(`error: ${(err as Error).message}`);
     });
     return this.busy;
+  }
+
+  /** The Mac's name and folder as set in Bottega; a change of folder takes effect now. */
+  async syncConfig(): Promise<void> {
+    let r: { name: string | null; root: string | null };
+    try {
+      r = await call(this.cfg, this.token, 'GET', '/api/watcher/config');
+    } catch (err) {
+      if (err instanceof Offline) return; // the folder last read stands
+      if (err instanceof Refused && err.status === 401) throw new Error(TOKEN_REFUSED);
+      throw err;
+    }
+    if (!r.root) return; // a token made by hand: the folder set on this Mac stands
+    if (r.root !== this.cfg.root) {
+      log(`the sessions folder is now ${r.root} (was ${this.cfg.root}), as set in Bottega`);
+      this.fsWatcher?.close();
+      this.fsWatcher = null;
+      this.state.unmatched = [];
+      this.rootMissing = false;
+    }
+    if (r.root !== this.cfg.root || r.name !== this.cfg.name) {
+      this.cfg = { ...this.cfg, root: r.root, name: r.name ?? undefined };
+      writeJson(CONFIG, this.cfg);
+    }
+    this.watchRoot();
   }
 
   async loadProjects(force = false): Promise<void> {
@@ -372,7 +412,7 @@ class Watcher {
         this.state.failed[path] = { size: st.size, mtimeMs: st.mtimeMs, error: refused.message };
         delete this.state.pending[path];
         log(`Bottega refused “${p.folder}/${p.file}”: ${refused.message}`);
-        if (refused.status === 401) throw new Error('The token was refused: make a new one under Account › Security and run setup again.');
+        if (refused.status === 401) throw new Error(TOKEN_REFUSED);
       }
       saveState(this.state);
     }
@@ -387,6 +427,7 @@ class Watcher {
         root: this.cfg.root,
         pending: Object.keys(this.state.pending).length,
         unmatched: this.state.unmatched,
+        rootFound: existsSync(this.cfg.root),
       });
     } catch (err) {
       if (!(err instanceof Offline)) throw err;
@@ -394,10 +435,16 @@ class Watcher {
   }
 
   async sweep(): Promise<void> {
+    await this.syncConfig();
     if (!existsSync(this.cfg.root)) {
-      log(`the sessions folder is not there (is the drive mounted?): ${this.cfg.root}`);
+      if (!this.rootMissing) log(`the sessions folder is not there (is the drive mounted?): ${this.cfg.root}`);
+      this.rootMissing = true;
+      saveState(this.state);
+      await this.report();
       return;
     }
+    if (this.rootMissing) log(`the sessions folder is back: ${this.cfg.root}`);
+    this.rootMissing = false;
     try {
       await this.loadProjects(true);
     } catch (err) {
@@ -467,13 +514,13 @@ class Watcher {
 // ── Commands ──────────────────────────────────────────────────────────────────
 
 async function setup(): Promise<void> {
-  const old = existsSync(CONFIG) ? loadConfig() : { server: 'https://studio.sirsinate.com', root: '/Volumes/VIGORISH/AUDIO   ABL VIGORISH SESSIONS' };
+  const old: Config = existsSync(CONFIG) ? loadConfig() : { server: '', root: '' };
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const server = ((await rl.question(`Bottega address [${old.server}]: `)).trim() || old.server).replace(/\/+$/, '');
   const root = (await rl.question(`Sessions folder [${old.root}]: `)).trim() || old.root;
-  const token = (await rl.question('Token from Account › Security › Mac watcher (blank keeps the one stored): ')).trim();
+  const token = (await rl.question('Personal access token (blank keeps the one stored): ')).trim();
   rl.close();
-  const cfg = { server, root };
+  const cfg: Config = { server, root };
   if (token) storeToken(server, token);
   const t = token || readToken(server);
   const r = await call<{ projects: Project[] }>(cfg, t, 'GET', '/api/watcher/projects');
@@ -485,7 +532,42 @@ async function setup(): Promise<void> {
     const matched = folders.filter((f) => matchFolder(f, r.projects));
     console.log(`${folders.length} project folders, ${matched.length} matched to a project.`);
   }
-  console.log('Next: node watcher/dist/watcher/main.js install');
+  console.log(`Next: ${HOW} install`);
+}
+
+/** The installer's step: trades the setup code for this Mac's token, then installs. */
+async function claim(args: string[]): Promise<void> {
+  const arg = (flag: string) => {
+    const i = args.indexOf(flag);
+    return i >= 0 ? args[i + 1] : undefined;
+  };
+  const server = (arg('--server') ?? '').replace(/\/+$/, '');
+  const code = arg('--code') ?? '';
+  if (!/^https:\/\/|^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(server)) throw new Error('Give --server, the Bottega address starting with https://');
+  if (!code) throw new Error('Give --code, the setup code from Account › Security.');
+  let r: { token: string; name: string; root: string };
+  try {
+    r = await call(({ server, root: '' } as Config), '', 'POST', '/api/watcher/claim', { code });
+  } catch (err) {
+    if (err instanceof Offline) throw new Error(`Bottega could not be reached at ${server}: ${err.message}`);
+    throw new Error((err as Error).message.replace(/^\d+: /, ''));
+  }
+  const cfg: Config = { server, root: r.root, name: r.name };
+  if (process.env.BOTTEGA_WATCHER_TOKEN === undefined) storeToken(server, r.token);
+  writeJson(CONFIG, cfg);
+  console.log(`Signed in as “${r.name}”, watching ${r.root}.`);
+  if (!existsSync(r.root)) console.log('That folder is not there now (is the drive mounted?); the watcher waits for it.');
+  else {
+    try {
+      const p = await call<{ projects: Project[] }>(cfg, process.env.BOTTEGA_WATCHER_TOKEN ?? r.token, 'GET', '/api/watcher/projects');
+      const folders = projectFolders(r.root);
+      console.log(`${folders.length} project folders, ${folders.filter((f) => matchFolder(f, p.projects)).length} matched to a project.`);
+    } catch {
+      // only a summary; the watcher reports for itself
+    }
+  }
+  if (args.includes('--no-install')) return;
+  install();
 }
 
 function status(): void {
@@ -499,7 +581,11 @@ function status(): void {
     loaded = false;
   }
   console.log(`Bottega watcher ${VERSION}`);
-  console.log(cfg ? `Sending to ${cfg.server}, watching ${cfg.root}${existsSync(cfg.root) ? '' : ' (not there now)'}` : 'Not set up.');
+  console.log(
+    cfg
+      ? `${cfg.name ? `“${cfg.name}”, s` : 'S'}ending to ${cfg.server}, watching ${cfg.root}${existsSync(cfg.root) ? '' : ' (not there now)'}`
+      : 'Not set up.',
+  );
   console.log(`Starts at login: ${existsSync(PLIST) ? 'yes' : 'no'} · running now: ${loaded ? 'yes' : 'no'}`);
   console.log(`Last sweep: ${s.lastSweep ?? 'never'} · last heard from Bottega: ${s.lastContact ?? 'never'}`);
   const pending = Object.values(s.pending);
@@ -560,6 +646,7 @@ function uninstall(): void {
 
 async function main(): Promise<void> {
   const cmd = process.argv[2] ?? 'status';
+  if (cmd === 'claim') return claim(process.argv.slice(3));
   if (cmd === 'setup') return setup();
   if (cmd === 'status') return status();
   if (cmd === 'install') return install();
@@ -572,7 +659,7 @@ async function main(): Promise<void> {
     return;
   }
   if (cmd === 'run') return w.run();
-  console.log('Commands: setup, run, once, status, install, uninstall');
+  console.log('Commands: claim, setup, run, once, status, install, uninstall');
 }
 
 main().catch((err) => {
