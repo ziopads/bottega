@@ -128,7 +128,15 @@ export default async function AccountPage({ searchParams }: Props) {
       getTemplateEditor(db),
       getStructureEditor(db),
     ]);
-    body = <PreferencesTab artists={artists} initialDefaultArtistId={preferences.defaultArtistId} editor={editor} structure={structure} />;
+    body = (
+      <PreferencesTab
+        look={{ theme: user.theme, mode: user.mode }}
+        artists={artists}
+        initialDefaultArtistId={preferences.defaultArtistId}
+        editor={editor}
+        structure={structure}
+      />
+    );
   } else if (tab === 'billing') {
     body = (
       <DetailGrid

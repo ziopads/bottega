@@ -6,6 +6,7 @@ import { useMemo, useState, useSyncExternalStore } from 'react';
 import { api } from '@/app/_studio/controls';
 import { BUTTON, FIELD, SEGMENT, SEGMENTS, TEXT_LINK } from '@/app/_ui/styles';
 import { TODO_COLUMNS, type Todo, type TodoStatus } from '@/lib/todoTypes';
+import { elementColor } from '@/lib/elementColors';
 
 // To-dos (REQUIREMENTS W-35, W-36; plan of 24 October): every card across the
 // person's projects in one place, as a board by status or a list.
@@ -357,7 +358,16 @@ export default function TodosView({ initial, project }: { initial: Todo[]; proje
                     {t.stageLabel}
                     {t.when === 'later' && <span className="text-muted"> · parked</span>}
                   </td>
-                  <td className="whitespace-nowrap px-2.5 py-2">{t.element ?? <span className="text-muted">unassigned</span>}</td>
+                  <td className="whitespace-nowrap px-2.5 py-2">
+                    {t.element ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: elementColor(t.elementColor) }} />
+                        {t.element}
+                      </span>
+                    ) : (
+                      <span className="text-muted">unassigned</span>
+                    )}
+                  </td>
                   <td className="whitespace-nowrap px-2.5 py-2 font-mono t-small text-muted">{t.moment ?? ''}</td>
                   <td className="whitespace-nowrap px-2.5 py-2">
                     {t.canChange && (
@@ -400,7 +410,10 @@ function TodoCard({
       className={`t-body space-y-1 rounded border bg-card px-3 py-2.5 ${t.status === 'in progress' ? 'border-ink' : 'border-line'} ${t.canChange ? 'cursor-grab' : ''}`}
     >
       <p className="flex justify-between gap-2 font-mono t-small text-muted">
-        <span className="min-w-0">{tag}</span>
+        <span className="flex min-w-0 items-center gap-1.5">
+          {t.element && <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ background: elementColor(t.elementColor) }} />}
+          <span className="min-w-0">{tag}</span>
+        </span>
         <span className="shrink-0">{t.kind ?? ''}</span>
       </p>
       <p className={t.status === 'done' ? 'font-medium text-muted line-through' : 'font-medium'}>

@@ -64,7 +64,7 @@ export default function OverviewTab({
   setKey: string | null | undefined;
 }) {
   const latest = notes.slice(0, 4);
-  const markers = current ? mixMarkers(notes, workflow.cards, current.id) : [];
+  const markers = current ? mixMarkers(notes, workflow.cards, current.id, workflow.elements) : [];
 
   const main = (
     <>

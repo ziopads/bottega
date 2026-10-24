@@ -17,10 +17,10 @@ const SHAPE = 'inline-flex items-center justify-center rounded border px-2 py-0.
 export const BUTTON = `${SHAPE} border-ink/30 text-ink hover:border-ink hover:bg-ink/5 ${OFF}`;
 
 /** The action a section or form is for, and confirming one (Save, Process, Accept, Confirm delete). */
-export const BUTTON_PRIMARY = `${SHAPE} border-rust bg-rust text-white hover:opacity-90 ${OFF}`;
+export const BUTTON_PRIMARY = `${SHAPE} border-accent bg-accent text-on-accent hover:opacity-90 ${OFF}`;
 
-/** A destructive action (Delete, Remove, Revoke). Rust is the danger colour. */
-export const BUTTON_DANGER = `${SHAPE} border-ink/30 text-ink hover:border-rust hover:bg-rust/5 hover:text-rust ${OFF}`;
+/** A destructive action (Delete, Remove, Revoke), in the theme's danger colour on hover. */
+export const BUTTON_DANGER = `${SHAPE} border-ink/30 text-ink hover:border-danger hover:bg-danger/5 hover:text-danger ${OFF}`;
 
 /** A segmented control: one choice from a set (a session's variants). The
  *  container joins the segments; SEGMENT(on) styles each, the chosen one filled. */

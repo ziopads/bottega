@@ -1,6 +1,7 @@
 import type { Scoped } from '@/lib/db';
 import { accountNames, nameOf } from '@/lib/names';
 import type { ShareLevel } from '@/lib/studioTypes';
+import type { Mode, Theme } from '@/lib/theme';
 
 // The account page's reads and writes (REQUIREMENTS AC-12, AC-13): the
 // signed-in person's name, artists, preferences, shares in both directions,
@@ -139,6 +140,17 @@ export async function setDefaultArtist(db: Scoped, artistId: number | null): Pro
     throw err;
   }
   return { ok: true, preferences: await getPreferences(db) };
+}
+
+/** The site's look (db/030): the theme and light, dark or as the computer. */
+export async function setLook(db: Scoped, look: { theme?: Theme; mode?: Mode }): Promise<{ theme: Theme; mode: Mode }> {
+  const rows = await db.q(
+    `insert into account_preferences (theme, mode) values (coalesce($1, 'minimal'), coalesce($2, 'system'))
+     on conflict (user_id) do update set theme = coalesce($1, account_preferences.theme), mode = coalesce($2, account_preferences.mode)
+     returning theme, mode`,
+    [look.theme ?? null, look.mode ?? null],
+  );
+  return { theme: rows[0].theme as Theme, mode: rows[0].mode as Mode };
 }
 
 // ── Shares ───────────────────────────────────────────────────────────────────

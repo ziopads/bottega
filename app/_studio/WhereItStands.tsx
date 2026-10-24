@@ -8,6 +8,7 @@ import { BUTTON, BUTTON_PRIMARY, FIELD, TEXT_LINK } from '@/app/_ui/styles';
 import type { WorkSession } from '@/lib/sessionTypes';
 import { DONE_WHEN_UNWRITTEN } from '@/lib/workflowInput';
 import type { Workflow } from '@/lib/workflowTypes';
+import { cardElementColor } from '@/lib/elementColors';
 
 // Where it stands (REQUIREMENTS W-39, plan of 25 October): the first section of
 // the Overview tab's main column, above the current mix, for getting back in
@@ -71,6 +72,7 @@ export default function WhereItStands({ projectId, workflow: w, setWorkflow, ses
   const unmet = criteria.filter((c) => !c.metAt);
   const proposals = w.cards.filter((c) => c.status === 'proposed').length + w.criteria.filter((c) => !c.reviewed).length;
   const last = sessions[0] ?? null;
+  const dot = (elementId: number | null) => cardElementColor(w.elements, elementId);
 
   // The last thing done: a session of saves, a to-do changed, a stage moved, a mix uploaded.
   const touched = [last?.end, ...w.cards.map((c) => c.updatedAt), w.moves[0]?.movedAt, mixUploadedAt].filter((x): x is string => !!x).sort().pop() ?? null;
@@ -119,7 +121,7 @@ export default function WhereItStands({ projectId, workflow: w, setWorkflow, ses
             {criteria.length === 0 ? 'no criteria written' : `${criteria.length - unmet.length} of ${criteria.length} criteria met`}
             {' · '}
           </span>
-          <span className={days !== null && days >= COLD_DAYS ? 'font-medium text-ink' : ''}>{since}</span>
+          <span className={days === null ? '' : days >= COLD_DAYS ? 'font-medium text-cold' : days >= 7 ? 'text-cooling' : 'text-fresh'}>{since}</span>
           {proposals > 0 && <span className="t-num">{` · ${proposals} proposed by Claude`}</span>}
         </p>
 
@@ -128,7 +130,10 @@ export default function WhereItStands({ projectId, workflow: w, setWorkflow, ses
           {next ? (
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
               <div className="min-w-0 flex-1">
-                <p className="t-lead font-medium">{next.what}</p>
+                <p className="t-lead flex items-baseline gap-2 font-medium">
+                  <span aria-hidden className="h-2 w-2 shrink-0 translate-y-[-2px] rounded-full" style={{ background: dot(next.elementId) }} />
+                  {next.what}
+                </p>
                 {next.doneWhen && next.doneWhen !== DONE_WHEN_UNWRITTEN && <p className="t-small text-muted">Done when {next.doneWhen}</p>}
               </div>
               {canContribute && (
@@ -167,6 +172,7 @@ export default function WhereItStands({ projectId, workflow: w, setWorkflow, ses
             <ul className="mt-0.5 space-y-1">
               {others.slice(0, 3).map((c) => (
                 <li key={c.id} className="flex items-baseline gap-2">
+                  <span aria-hidden className="h-2 w-2 shrink-0 translate-y-[-1px] rounded-full" style={{ background: dot(c.elementId) }} />
                   <span className="min-w-0 flex-1">
                     {c.what}
                     {c.status === 'in progress' && <span className="t-small text-muted"> · in progress</span>}
@@ -199,7 +205,7 @@ export default function WhereItStands({ projectId, workflow: w, setWorkflow, ses
         )}
 
         <div>
-          <p className="t-small text-muted">Last time</p>
+          <p className="t-small text-live">Last time · read from the saved sets</p>
           {last ? (
             <>
               <p>

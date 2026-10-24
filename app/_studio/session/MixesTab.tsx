@@ -9,7 +9,7 @@ import Player, { type PlayerHandle } from '@/app/_ui/audio/Player';
 import type { Marker } from '@/app/_ui/audio/Waveform';
 import { DetailGrid, Section } from '@/app/_ui/layout';
 import type { StudioNote, StudioReference, StudioTrack } from '@/lib/studioTypes';
-import type { WorkflowCard } from '@/lib/workflowTypes';
+import type { WorkflowCard, WorkflowElement } from '@/lib/workflowTypes';
 import { formatBytes, formatDuration } from '@/lib/studioTypes';
 
 import { audioUrl, formatDate, uploadMix, uploadReference } from './audioUpload';
@@ -38,6 +38,7 @@ export default function MixesTab({
   notes,
   setNotes,
   cards,
+  elements = [],
   currentId,
   chosenByHand,
   viewerId,
@@ -66,6 +67,8 @@ export default function MixesTab({
   setNotes: React.Dispatch<React.SetStateAction<StudioNote[]>>;
   /** The project's cards: those pinned to a moment get their own mark on the waveform. */
   cards: WorkflowCard[];
+  /** The project's elements, for the colour of each to-do's mark. */
+  elements?: WorkflowElement[];
   currentId: number | null;
   chosenByHand: boolean;
   viewerId: string;
@@ -108,7 +111,7 @@ export default function MixesTab({
     window.history.replaceState(null, '', url);
   }, [initialAt]);
   const notesFor = (id: number) => notes.filter((n) => n.trackId === id);
-  const markersFor = (id: number): Marker[] => mixMarkers(notes, cards, id);
+  const markersFor = (id: number): Marker[] => mixMarkers(notes, cards, id, elements);
   const asideNotes = selected
     ? [...notesFor(selected)].sort((a, b) => (a.positionS ?? Infinity) - (b.positionS ?? Infinity) || b.createdAt.localeCompare(a.createdAt))
     : [];

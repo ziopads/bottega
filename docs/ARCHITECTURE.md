@@ -1,6 +1,6 @@
 # Bottega — architecture
 
-**Version:** 0.23
+**Version:** 0.24
 **Date:** 2026-10-25
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
@@ -9,6 +9,12 @@ story IDs below (S-3, W-6 and so on) refer to it.
 ---
 
 ## Changelog
+
+- **0.24** (2026-10-25) — Themes (§13): `app/themes.css`, migration 030
+  (`account_preferences.theme`, `.mode`; element colours as eight slots,
+  `color_slot_hex()` and a trigger on `structure_elements` and `elements`),
+  `lib/theme.ts`, `lib/elementColors.ts`, `Wordmark.tsx`, `ThemePicker.tsx`;
+  element colours on cards, to-dos, the waveform and the State tab.
 
 - **0.23** (2026-10-25) — Type discipline: a fifth role, `t-small`, for
   secondary lines; 13px body default; every `text-[Npx]` in pages replaced
@@ -1103,13 +1109,36 @@ so pages differ in content and never in how they are built.
   breakpoint the aside follows the main column. Overview pages (the gear
   map) use all twelve. `DetailGrid` does this; pages do not lay out columns
   of their own.
+- **Themes** (REQUIREMENTS O-9, migration 030). `app/themes.css` defines
+  the colour and type tokens for each theme (minimal, console, riso,
+  gallery, rack). `account_preferences.theme` and `.mode` reach the layout
+  with the account (`getAccount` joins them); the layout puts `data-theme`
+  and `data-mode` on `<html>`, so the page draws in the right theme with no
+  flash and no cookie. Each theme block holds its light values; a generated
+  block restates every token with its dark value under
+  `[data-mode='dark']`, and under `[data-mode='system']` inside
+  `prefers-color-scheme: dark`. Selectors match any element with
+  `data-theme`, so Account › Preferences shows each theme as a live sample.
+  Tokens keep Vivarium's names where they existed (parchment, card, ink,
+  muted, rust, moss, line); `rust` is now the accent as readable text and
+  `accent`/`on-accent` the accent as a fill, with `panel`, `danger`,
+  `live`, `led-off`, `meter-done`, `meter-now`, `fresh`, `cooling`, `cold`
+  and `el-1` to `el-8`. Contrast checked for text (4.5:1) and meters (3:1)
+  in each theme and mode. Faces come from `next/font`; only Minimal's are
+  preloaded. `Wordmark.tsx` sets the name in the header per theme; `Section`
+  draws a box where the theme has one (`panel`) and its heading in
+  `t-section`. Element colours (`lib/elementColors.ts`) are stored as a
+  slot's light hex, so every function copying colours keeps working; a
+  trigger moves any other hex to its slot.
 - **Type.** Five roles, as utilities in `globals.css`, and nothing else
   sets a text size: `t-title` (18px, the page title only, below the 20px app
   name), `t-lead` (15px, the one line a section leads with, such as the next
   to-do), `t-body` (13px, everything else; also the body default, so a
   placeholder or a bare control is never the browser's 16px), `t-small`
   (11px, secondary lines: who, when, hints, counts, captions) and `t-label`
-  (11px, uppercase, grey: section labels). Medium weight is the only
+  (11px, uppercase, grey: section labels), plus `t-section` for a
+  section's heading (the label, or a theme's display capitals). Each theme
+  sets the faces and the title and lead sizes. Medium weight is the only
   emphasis. Numbers that line up (codes, times, dates, BPM) add `t-num` for
   even-width digits; no monospace face. No `text-[Npx]` or Tailwind named
   sizes in pages; the only exceptions are the wordmark and marks drawn

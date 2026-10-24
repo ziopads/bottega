@@ -4,23 +4,22 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 import { api } from '@/app/_studio/controls';
-import { BUTTON, FIELD } from '@/app/_ui/styles';
+import { BUTTON, FIELD, SEGMENT, SEGMENTS } from '@/app/_ui/styles';
 import { daysSince, progressOf, type Board, type BoardCandidate, type BoardPlace, type BoardProject } from '@/lib/boardTypes';
 
-// The board (REQUIREMENTS W-21 to W-23), layout B of 23 October: projects
-// move left to right, from the backlog into rotation and on to finished.
+// The board (REQUIREMENTS W-21 to W-23), layout B of 23 October, cleaned up
+// on 25 October: the work in hand only.
 //
-//   Backlog       sortable; ↑ rotates a project in, × takes it off the board
+//   Backlog       sortable; ↑ rotates a project in, × takes it off the board;
+//                 at its foot, + Add a project (search, the top five by
+//                 newest, last worked on or stars, or a new project)
 //   In rotation   at most the person's limit; each project with its stage bar
-//                 and the next move; ↓ sends it back
-//   Finished      projects whose last stage's criteria are all met
+//                 and the next to-do; ↓ sends it back
 //
-// Projects drag between Backlog and In rotation; stage moves stay on the
-// project's Workflow tab. When rotation is full, moving one in asks which
-// one goes out. Adding (24 October): a search box above the columns, newest
-// projects first; each result goes to the backlog or rotation with one click
-// or a drag onto either column, and a name that matches nothing can become a
-// new project there and then.
+// Finished projects leave the board: the header counts them and links to the
+// Projects list filtered to them. Projects drag between Backlog and In
+// rotation, and from Add onto either; stage moves stay on the project's
+// Workflow tab. When rotation is full, moving one in asks which one goes out.
 
 type Sort = 'progress' | 'cold' | 'recent' | 'title';
 const SORTS: { key: Sort; label: string }[] = [
@@ -104,18 +103,14 @@ export default function BoardView({ initial }: { initial: Board }) {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="t-title">Board</h1>
-          <p className="t-body text-muted">Projects move left to right: from the backlog into rotation, and on to finished.</p>
+          <p className="t-body text-muted">Projects move from the backlog into rotation; a finished one leaves the board.</p>
         </div>
+        {finished.length > 0 && (
+          <Link href="/projects?show=finished" className="t-body text-muted underline decoration-ink/30 underline-offset-2 hover:text-ink hover:decoration-ink">
+            {finished.length} finished →
+          </Link>
+        )}
       </div>
-
-      <AddToBoard
-        candidates={board.candidates}
-        busy={busy}
-        onPlace={(id, place) => moveTo(id, place)}
-        onDrag={setDragging}
-        onCreated={(b) => setBoard(b)}
-        onError={setError}
-      />
 
       {error && <p className="t-body mb-4 text-rust">{error}</p>}
 
@@ -161,10 +156,10 @@ export default function BoardView({ initial }: { initial: Board }) {
           </div>
           {sorted.length === 0 && <p className="t-body text-muted">Nothing waiting. Projects you send back from rotation wait here.</p>}
           {sorted.length + rotation.length > 0 && (
-            <p className="t-small text-muted">Drag a project between the backlog and rotation, or onto either from the search above.</p>
+            <p className="t-small text-muted">Drag a project between the backlog and rotation.</p>
           )}
           {sorted.map((p) => (
-            <article key={p.id} {...dragProps(p.id)} className={`t-body space-y-1.5 rounded border bg-card p-2.5 ${isCold(p, board.coldDays) ? 'border-dashed border-ink/40' : 'border-line'}`}>
+            <article key={p.id} {...dragProps(p.id)} className={`t-body space-y-1.5 rounded border bg-card p-2.5 ${isCold(p, board.coldDays) ? 'border-dashed border-cold' : 'border-line'}`}>
               <div className="flex items-baseline justify-between gap-2">
                 <Link href={`/projects/${p.id}?tab=workflow`} className="min-w-0 font-medium hover:text-rust">
                   {p.title}
@@ -182,6 +177,14 @@ export default function BoardView({ initial }: { initial: Board }) {
               <Foot p={p} coldDays={board.coldDays} />
             </article>
           ))}
+          <AddToBoard
+            candidates={board.candidates}
+            busy={busy}
+            onPlace={(id, place) => moveTo(id, place)}
+            onDrag={setDragging}
+            onCreated={(b) => setBoard(b)}
+            onError={setError}
+          />
         </section>
 
         <section
@@ -198,7 +201,7 @@ export default function BoardView({ initial }: { initial: Board }) {
             </p>
           </div>
           {rotation.map((p) => (
-            <article key={p.id} {...dragProps(p.id)} className={`t-body space-y-2.5 rounded border p-3.5 ${isCold(p, board.coldDays) ? 'border-dashed border-ink/40' : 'border-ink/20'}`}>
+            <article key={p.id} {...dragProps(p.id)} className={`t-body space-y-2.5 rounded border p-3.5 ${isCold(p, board.coldDays) ? 'border-dashed border-cold' : 'border-ink/20'}`}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <Link href={`/projects/${p.id}?tab=workflow`} className="t-lead font-medium hover:text-rust">
                   {p.title}
@@ -234,22 +237,10 @@ export default function BoardView({ initial }: { initial: Board }) {
           )}
         </section>
 
-        <section aria-label="Finished" className="min-w-0 flex-[0.8_1_220px] space-y-2 rounded-md bg-ink/[0.03] p-3">
-          <p className="t-label">Finished · {finished.length}</p>
-          {finished.length === 0 && <p className="t-body text-muted">A project lands here when every criterion of its last stage is met.</p>}
-          {finished.map((p) => (
-            <article key={p.id} className="t-body rounded border border-line bg-card p-2.5">
-              <Link href={`/projects/${p.id}?tab=workflow`} className="font-medium hover:text-rust">
-                {p.title}
-              </Link>
-              <p className="t-num font-mono t-small text-muted">finished {formatDay(p.finishedAt)}</p>
-            </article>
-          ))}
-        </section>
       </div>
       {board.projects.length === 0 && (
         <p className="t-body mt-6 text-muted">
-          Your board is empty. A project lands in your backlog when its workflow starts; add any project you can see with the menu above. <Link href="/projects" className="underline decoration-ink/30 underline-offset-2 hover:decoration-ink">All projects</Link>
+          Your board is empty. A project lands in your backlog when its workflow starts; add any project you can see with + Add a project in the backlog. <Link href="/projects" className="underline decoration-ink/30 underline-offset-2 hover:decoration-ink">All projects</Link>
         </p>
       )}
     </div>
@@ -283,8 +274,8 @@ function Meter({ p, size }: { p: BoardProject; size: 'small' | 'large' }) {
         {p.stages.map((s, i) => {
           const share = s.total ? s.met / s.total : i < cur ? 1 : 0;
           return (
-            <span key={s.key} className={`relative block overflow-hidden rounded-[1px] bg-line ${size === 'large' ? 'h-2' : 'h-[5px]'} ${i === cur ? 'ring-1 ring-ink' : ''}`}>
-              <span className={`absolute inset-y-0 left-0 ${share >= 1 ? 'bg-ink' : 'bg-ink/40'}`} style={{ width: `${Math.round(share * 100)}%` }} />
+            <span key={s.key} className={`relative block overflow-hidden rounded-[1px] bg-led-off ${size === 'large' ? 'h-2' : 'h-[5px]'} ${i === cur ? 'ring-1 ring-meter-now' : ''}`}>
+              <span className={`absolute inset-y-0 left-0 ${share >= 1 ? 'bg-meter-done' : 'bg-meter-now'}`} style={{ width: `${Math.round(share * 100)}%` }} />
             </span>
           );
         })}
@@ -321,7 +312,7 @@ function Foot({ p, coldDays, withCards = false }: { p: BoardProject; coldDays: n
         )}
         {!withCards && p.ownerName ? ` · ${p.ownerName}` : ''}
       </span>
-      <span>{age}</span>
+      <span className={d === null ? '' : d >= coldDays ? 'font-medium text-cold' : d >= 7 ? 'text-cooling' : 'text-fresh'}>{age}</span>
     </p>
   );
 }
@@ -332,11 +323,27 @@ function todaysId(): string {
   return `${d.getFullYear()} ${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/**
- * Adding to the board: search every project one can see, newest first, and
- * put one in the backlog or rotation with a click or a drag; or make a new
- * project from the name typed, which lands on the board at once.
- */
+type AddSort = 'new' | 'touched' | 'stars';
+const ADD_SORTS: { key: AddSort; label: string }[] = [
+  { key: 'new', label: 'Newest' },
+  { key: 'touched', label: 'Last worked on' },
+  { key: 'stars', label: 'Stars' },
+];
+
+function sortCandidates(list: BoardCandidate[], sort: AddSort): BoardCandidate[] {
+  const own = (c: BoardCandidate) => Number(c.ownerName !== null);
+  const by: Record<AddSort, (a: BoardCandidate, b: BoardCandidate) => number> = {
+    new: (a, b) => b.createdAt.localeCompare(a.createdAt),
+    touched: (a, b) => (b.touchedAt ?? '').localeCompare(a.touchedAt ?? ''),
+    stars: (a, b) => b.rating - a.rating || (b.touchedAt ?? '').localeCompare(a.touchedAt ?? ''),
+  };
+  return [...list].sort((a, b) => own(a) - own(b) || by[sort](a, b));
+}
+
+/** Adding to the board (24 October; moved to the foot of the backlog on 25
+ *  October, as Jira adds at the foot of a column): one line until opened,
+ *  then a search, the top five by newest, last worked on or stars, and a new
+ *  project from a name that matches nothing. */
 function AddToBoard({
   candidates,
   busy,
@@ -352,13 +359,22 @@ function AddToBoard({
   onCreated: (board: Board) => void;
   onError: (msg: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<AddSort>('new');
   const [making, setMaking] = useState(false);
   const [canonicalId, setCanonicalId] = useState('');
   const [place, setPlace] = useState<BoardPlace>('backlog');
   const [saving, setSaving] = useState(false);
   const q = query.trim().toLowerCase();
-  const matches = (q ? candidates.filter((c) => c.title.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)) : candidates).slice(0, q ? 8 : 5);
+  const ordered = sortCandidates(candidates, sort);
+  const matches = (q ? ordered.filter((c) => c.title.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)) : ordered).slice(0, q ? 8 : 5);
+
+  function close() {
+    setOpen(false);
+    setQuery('');
+    setMaking(false);
+  }
 
   async function make(e: React.FormEvent) {
     e.preventDefault();
@@ -387,27 +403,55 @@ function AddToBoard({
     } else {
       onCreated(b.data.board);
     }
-    setQuery('');
-    setMaking(false);
+    close();
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="t-body w-full rounded border border-dashed border-line px-2.5 py-2 text-left text-muted hover:border-ink hover:text-ink"
+      >
+        + Add a project
+      </button>
+    );
   }
 
   return (
-    <section aria-label="Add to the board" className="t-body mb-5 rounded-md border border-line p-3">
-      <label className="flex flex-wrap items-center gap-2">
-        <span className="t-label">Add to the board</span>
+    <section aria-label="Add to the board" className="t-body space-y-2 rounded border border-ink bg-card p-2.5">
+      <div className="flex items-center gap-2">
         <input
           type="search"
+          autoFocus
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
             setMaking(false);
           }}
-          placeholder="Search by name or date, such as khione or 2025 0727"
+          onKeyDown={(e) => e.key === 'Escape' && close()}
+          placeholder="Name or date, such as khione or 2025 0727"
+          aria-label="Find a project to add"
           className={`${FIELD} min-w-0 flex-1`}
         />
-      </label>
+        <button type="button" onClick={close} className={BUTTON}>
+          Close
+        </button>
+      </div>
+      {!q && (
+        <div className="flex flex-wrap items-center gap-2 t-small text-muted">
+          <span>Top five by</span>
+          <span className={SEGMENTS}>
+            {ADD_SORTS.map((s) => (
+              <button key={s.key} type="button" onClick={() => setSort(s.key)} className={SEGMENT(sort === s.key)} aria-pressed={sort === s.key}>
+                {s.label}
+              </button>
+            ))}
+          </span>
+        </div>
+      )}
       {matches.length > 0 && (
-        <ul className="mt-2 divide-y divide-line">
+        <ul className="divide-y divide-line">
           {matches.map((c) => (
             <li
               key={c.id}
@@ -417,13 +461,18 @@ function AddToBoard({
                 onDrag(c.id);
               }}
               onDragEnd={() => onDrag(null)}
-              className="flex cursor-grab flex-wrap items-baseline gap-x-3 gap-y-1 py-1.5"
+              className="flex cursor-grab flex-wrap items-baseline gap-x-2 gap-y-1 py-1.5"
             >
               <span className="min-w-0 flex-1">
-                <span className="font-medium">{c.title}</span> <span className="font-mono t-small text-muted">{c.code}</span>
+                <span className="font-medium">{c.title}</span>{' '}
+                <span className="t-num t-small text-muted">
+                  {c.code}
+                  {c.rating > 0 ? ` · ${'★'.repeat(c.rating)}` : ''}
+                  {sort === 'touched' && !q && c.touchedAt ? ` · ${formatDay(c.touchedAt)}` : ''}
+                </span>
                 {c.ownerName && <span className="t-small text-muted"> · {c.ownerName}</span>}
               </span>
-              <span className="flex gap-1.5">
+              <span className="flex gap-1">
                 <button type="button" onClick={() => onPlace(c.id, 'backlog')} disabled={busy} className={BUTTON}>
                   Backlog
                 </button>
@@ -436,9 +485,12 @@ function AddToBoard({
         </ul>
       )}
       {!q && candidates.length > matches.length && (
-        <p className="mt-1 t-small text-muted">The newest {matches.length} of {candidates.length} projects not on your board; search for the rest.</p>
+        <p className="t-small text-muted">
+          {matches.length} of {candidates.length} projects not on your board; search for the rest, or drag one into rotation.
+        </p>
       )}
-      {q && matches.length === 0 && !making && <p className="mt-2 text-muted">No project matches “{query.trim()}”.</p>}
+      {!q && candidates.length === 0 && <p className="text-muted">Every project you can see is on your board.</p>}
+      {q && matches.length === 0 && !making && <p className="text-muted">No project matches “{query.trim()}”.</p>}
       {q && !making && (
         <button
           type="button"
@@ -446,13 +498,13 @@ function AddToBoard({
             setMaking(true);
             setCanonicalId((id) => id || todaysId());
           }}
-          className={`mt-2 ${BUTTON}`}
+          className={BUTTON}
         >
           + New project “{query.trim()}”
         </button>
       )}
       {making && (
-        <form onSubmit={make} className="mt-2 flex flex-wrap items-end gap-2 rounded border border-ink p-2.5">
+        <form onSubmit={make} className="flex flex-wrap items-end gap-2 border-t border-line pt-2">
           <label className="flex flex-col gap-0.5 t-small text-muted">
             Canonical ID
             <input value={canonicalId} onChange={(e) => setCanonicalId(e.target.value)} className={`${FIELD} font-mono`} />

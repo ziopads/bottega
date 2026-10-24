@@ -10,10 +10,13 @@ import type { TemplateEditor as Editor } from '@/lib/templateTypes';
 
 import { ComingSoon, FIELD } from './parts';
 import StructureEditor from './StructureEditor';
+import ThemePicker from './ThemePicker';
 import { BoardSettings, TemplateEditor } from './TemplateEditor';
+import type { Mode, Theme } from '@/lib/theme';
 
-// Preferences (REQUIREMENTS AC-13, W-13, W-22; db/010, db/024): the artist new
-// projects are credited to, the board's limits, and the workflow template.
+// Preferences (REQUIREMENTS AC-13, W-13, W-22, O-9; db/010, db/024, db/030):
+// the look, the artist new projects are credited to, the board's limits, and
+// the workflow template and track structure.
 // The sections on the left, the chosen one's detail on the right.
 
 export default function PreferencesTab({
@@ -21,7 +24,9 @@ export default function PreferencesTab({
   initialDefaultArtistId,
   editor,
   structure,
+  look,
 }: {
+  look: { theme: Theme; mode: Mode };
   artists: MyArtist[];
   initialDefaultArtistId: number | null;
   editor: Editor;
@@ -53,6 +58,9 @@ export default function PreferencesTab({
 
   const main = (
     <>
+      <div id="look" className="scroll-mt-4">
+        <ThemePicker initial={look} />
+      </div>
       <div id="general" className="scroll-mt-4">
         <Section label="New projects">
           {error && <p className="t-body mb-2 text-rust">{error}</p>}
@@ -98,6 +106,7 @@ export default function PreferencesTab({
       <nav aria-label="Preference sections" className="t-body lg:col-span-2">
         <ul className="space-y-1 lg:sticky lg:top-4">
           {[
+            ['look', 'Look'],
             ['general', 'New projects'],
             ['board', 'Board'],
             ['template', 'Workflow template'],

@@ -355,6 +355,7 @@ export default function ProjectDetail({
           notes={notes}
           setNotes={setNotes}
           cards={workflow.cards}
+          elements={workflow.elements}
           currentId={current?.id ?? null}
           chosenByHand={chosenByHand}
           viewerId={viewerId}

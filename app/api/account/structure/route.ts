@@ -17,6 +17,7 @@ import {
 import { MATCHER_MAX, MATCHERS_MAX, parseMatchers } from '@/lib/structureTypes';
 import { text } from '@/lib/workflowInput';
 import { bad, readBody } from '@/lib/workflowRoutes';
+import { isSlotHex } from '@/lib/elementColors';
 
 export const dynamic = 'force-dynamic';
 
@@ -108,7 +109,7 @@ export async function POST(req: Request) {
           patch.description = d.value;
         }
         if (b.color !== undefined) {
-          if (b.color !== null && !(typeof b.color === 'string' && /^#[0-9a-f]{6}$/i.test(b.color))) return bad('A colour is #rrggbb');
+          if (b.color !== null && !isSlotHex(b.color)) return bad('A colour is one of the eight element colours');
           patch.color = b.color === null ? null : (b.color as string).toLowerCase();
         }
         if (b.isZone !== undefined) patch.isZone = b.isZone === true;

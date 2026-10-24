@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 
 import { auth } from '@/lib/auth/server';
 import { forPerson, type Scoped } from '@/lib/db';
+import { isMode, isTheme, type Mode, type Theme } from '@/lib/theme';
 
 // Authorization above the database's row-level security (ARCHITECTURE §11).
 //
@@ -33,6 +34,9 @@ export interface Account {
   name: string;
   status: AccountStatus;
   isPlatformAdmin: boolean;
+  /** The site's look for this person (db/030; app/themes.css). */
+  theme: Theme;
+  mode: Mode;
   /** Queries as this person. */
   db: Scoped;
 }
@@ -52,8 +56,9 @@ export const getAccount = cache(async (): Promise<Account | null> => {
   // name. A brand-new account's row is not yet visible to this statement, so
   // the join is a left join and the sign-up name stands in.
   const rows = await scoped.q(
-    `select r.status, r.is_platform_admin, a.display_name
-       from register_session($1, $2) r left join accounts a on a.user_id = app_user()`,
+    `select r.status, r.is_platform_admin, a.display_name, p.theme, p.mode
+       from register_session($1, $2) r left join accounts a on a.user_id = app_user()
+            left join account_preferences p on p.user_id = app_user()`,
     [user.email, user.name ?? ''],
   );
   const row = rows[0];
@@ -64,6 +69,8 @@ export const getAccount = cache(async (): Promise<Account | null> => {
     name: (typeof row.display_name === 'string' && row.display_name) || user.name || '',
     status: row.status as AccountStatus,
     isPlatformAdmin: row.is_platform_admin === true,
+    theme: isTheme(row.theme) ? row.theme : 'minimal',
+    mode: isMode(row.mode) ? row.mode : 'system',
     db: scoped,
   };
 });

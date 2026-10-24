@@ -17,6 +17,8 @@ export type Todo = {
   projectStageLabel: string | null;
   /** "TACTUS / Hats", or null when unassigned. */
   element: string | null;
+  /** The top-level element's colour slot (lib/elementColors.ts), or null. */
+  elementColor: string | null;
   kind: string | null;
   what: string;
   doneWhen: string;

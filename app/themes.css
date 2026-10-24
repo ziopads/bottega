@@ -1,0 +1,616 @@
+/* Themes (REQUIREMENTS O-9, ARCHITECTURE §13). The layout puts the person's
+   theme and mode on <html>: data-theme picks one of the five blocks below
+   (any element may carry it: the theme previews in Account › Preferences),
+   data-mode is light, dark or system. Each theme is written once with its
+   light values; the generated dark block after it restates every token with
+   its dark value under [data-mode='dark'], and again under system mode when
+   the computer is dark. (No light-dark(): Tailwind's build targets browsers
+   that lack it.)
+   Components never use raw colour values; they use these tokens through
+   Tailwind (text-muted, border-line, bg-accent …).
+
+   The token names are Vivarium's where they existed (parchment, card, ink,
+   muted, rust, moss, line), so the studio components ported from it keep
+   their classes:
+     parchment  the page            card    fields, sunk areas
+     panel      a boxed section     ink     text
+     muted      secondary text      line    rules and borders
+     rust       the accent as text (links on hover, the current thing):
+                always readable on the page
+     accent     the accent as a fill (primary buttons, the current stage),
+                with on-accent for text on it
+     danger     destructive actions
+     live       what Bottega read from Live (saved sets, likely-done marks),
+                apart from what people wrote
+     led-off, meter-done, meter-now   stage meters
+     fresh, cooling, cold             how recently a project was worked on
+     el-1 … el-8   element colours: the same eight slots in every theme,
+                checked for colour-blind separation, stepped for light and
+                dark (lib/elementColors.ts, db/030). Always shown with the
+                element's name. */
+:root {
+  color-scheme: light dark;
+  --el-1: #2a78d6;
+  --el-2: #eb6834;
+  --el-3: #1baf7a;
+  --el-4: #eda100;
+  --el-5: #e87ba4;
+  --el-6: #008300;
+  --el-7: #6250d6;
+  --el-8: #e34948;
+}
+:root[data-mode='dark'] {
+  --el-1: #3987e5;
+  --el-2: #d95926;
+  --el-3: #199e70;
+  --el-4: #c98500;
+  --el-5: #d55181;
+  --el-6: #008300;
+  --el-7: #9085e9;
+  --el-8: #e66767;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-mode='system'] {
+    --el-1: #3987e5;
+    --el-2: #d95926;
+    --el-3: #199e70;
+    --el-4: #c98500;
+    --el-5: #d55181;
+    --el-6: #008300;
+    --el-7: #9085e9;
+    --el-8: #e66767;
+  }
+}
+
+[data-mode='light'] {
+  color-scheme: light;
+}
+
+[data-mode='dark'] {
+  color-scheme: dark;
+}
+
+/* Minimal: the original look, black on white, and its dark counterpart.
+   Also every theme's starting point: the blocks after it change only what
+   differs, so each block applies alone, even nested in another theme. */
+:root,
+[data-theme] {
+  --parchment: #ffffff;
+  --card: #ffffff;
+  --panel: transparent;
+  --ink: #1a1a1a;
+  --muted: #666666;
+  --line: #e5e5e5;
+  --rust: var(--ink);
+  --moss: var(--muted);
+  --accent: var(--ink);
+  --on-accent: var(--parchment);
+  --danger: var(--ink);
+  --live: var(--muted);
+  --led-off: var(--line);
+  --meter-done: var(--ink);
+  --meter-now: var(--ink);
+  --fresh: var(--muted);
+  --cooling: var(--muted);
+  --cold: var(--ink);
+  --font-body: var(--font-instrument), system-ui, sans-serif;
+  --font-display: var(--font-body);
+  --font-mono-face: var(--font-geist-mono), ui-monospace, monospace;
+  --font-label: var(--font-body);
+  --font-num: inherit;
+  --title-size: 18px;
+  --title-weight: 500;
+  --title-case: none;
+  --title-spacing: -0.01em;
+  --lead-font: var(--font-body);
+  --lead-size: 15px;
+  --label-spacing: 0.05em;
+  --label-weight: 400;
+  --label-color: var(--muted);
+  --section-font: var(--font-label);
+  --section-size: 11px;
+  --section-weight: var(--label-weight);
+  --section-spacing: var(--label-spacing);
+  --section-color: var(--label-color);
+  --box-border: 0px;
+  --box-pad: 0px;
+  --rule: 1px;
+  --radius: 4px;
+}
+:root[data-mode='dark'], [data-mode='dark'][data-theme], [data-mode='dark'] [data-theme] {
+  --parchment: #121212;
+  --card: #1a1a1a;
+  --panel: transparent;
+  --ink: #ececec;
+  --muted: #9b9b9b;
+  --line: #2c2c2c;
+  --rust: var(--ink);
+  --moss: var(--muted);
+  --accent: var(--ink);
+  --on-accent: var(--parchment);
+  --danger: var(--ink);
+  --live: var(--muted);
+  --led-off: var(--line);
+  --meter-done: var(--ink);
+  --meter-now: var(--ink);
+  --fresh: var(--muted);
+  --cooling: var(--muted);
+  --cold: var(--ink);
+  --font-body: var(--font-instrument), system-ui, sans-serif;
+  --font-display: var(--font-body);
+  --font-mono-face: var(--font-geist-mono), ui-monospace, monospace;
+  --font-label: var(--font-body);
+  --font-num: inherit;
+  --title-size: 18px;
+  --title-weight: 500;
+  --title-case: none;
+  --title-spacing: -0.01em;
+  --lead-font: var(--font-body);
+  --lead-size: 15px;
+  --label-spacing: 0.05em;
+  --label-weight: 400;
+  --label-color: var(--muted);
+  --section-font: var(--font-label);
+  --section-size: 11px;
+  --section-weight: var(--label-weight);
+  --section-spacing: var(--label-spacing);
+  --section-color: var(--label-color);
+  --box-border: 0px;
+  --box-pad: 0px;
+  --rule: 1px;
+  --radius: 4px;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-mode='system'], [data-mode='system'][data-theme], [data-mode='system'] [data-theme] {
+    --parchment: #121212;
+    --card: #1a1a1a;
+    --panel: transparent;
+    --ink: #ececec;
+    --muted: #9b9b9b;
+    --line: #2c2c2c;
+    --rust: var(--ink);
+    --moss: var(--muted);
+    --accent: var(--ink);
+    --on-accent: var(--parchment);
+    --danger: var(--ink);
+    --live: var(--muted);
+    --led-off: var(--line);
+    --meter-done: var(--ink);
+    --meter-now: var(--ink);
+    --fresh: var(--muted);
+    --cooling: var(--muted);
+    --cold: var(--ink);
+    --font-body: var(--font-instrument), system-ui, sans-serif;
+    --font-display: var(--font-body);
+    --font-mono-face: var(--font-geist-mono), ui-monospace, monospace;
+    --font-label: var(--font-body);
+    --font-num: inherit;
+    --title-size: 18px;
+    --title-weight: 500;
+    --title-case: none;
+    --title-spacing: -0.01em;
+    --lead-font: var(--font-body);
+    --lead-size: 15px;
+    --label-spacing: 0.05em;
+    --label-weight: 400;
+    --label-color: var(--muted);
+    --section-font: var(--font-label);
+    --section-size: 11px;
+    --section-weight: var(--label-weight);
+    --section-spacing: var(--label-spacing);
+    --section-color: var(--label-color);
+    --box-border: 0px;
+    --box-pad: 0px;
+    --rule: 1px;
+    --radius: 4px;
+  }
+}
+
+/* Console: studio hardware. Warm charcoal or aluminium, one lime signal for
+   the action and the current stage, monospace labels and numbers, boxed panels. */
+[data-theme='console'] {
+  --parchment: #e6e4dc;
+  --card: #f1efe9;
+  --panel: var(--card);
+  --ink: #141511;
+  --muted: #57554e;
+  --line: #cbc8bd;
+  --rust: #4b6600;
+  --accent: #c8f53c;
+  --on-accent: #141511;
+  --danger: #b3261e;
+  --live: #0f6075;
+  --led-off: #d6d3c8;
+  --meter-done: var(--ink);
+  --meter-now: #4b7000;
+  --fresh: var(--rust);
+  --cooling: #7a5300;
+  --cold: #4f5c78;
+  --font-body: var(--font-geist), system-ui, sans-serif;
+  --font-display: var(--font-body);
+  --font-label: var(--font-mono-face);
+  --font-num: var(--font-mono-face);
+  --title-size: 26px;
+  --title-spacing: -0.03em;
+  --label-spacing: 0.16em;
+  --box-border: 1px;
+  --box-pad: 18px;
+  --radius: 2px;
+}
+[data-mode='dark'][data-theme='console'], [data-mode='dark'] [data-theme='console'] {
+  --parchment: #0c0d0b;
+  --card: #151712;
+  --panel: var(--card);
+  --ink: #e9e6dc;
+  --muted: #918e84;
+  --line: #2a2c27;
+  --rust: #c8f53c;
+  --accent: #c8f53c;
+  --on-accent: #141511;
+  --danger: #ff6b5b;
+  --live: #5cc8e0;
+  --led-off: #24261f;
+  --meter-done: var(--ink);
+  --meter-now: #c8f53c;
+  --fresh: var(--rust);
+  --cooling: #e0b44c;
+  --cold: #8d9abb;
+  --font-body: var(--font-geist), system-ui, sans-serif;
+  --font-display: var(--font-body);
+  --font-label: var(--font-mono-face);
+  --font-num: var(--font-mono-face);
+  --title-size: 26px;
+  --title-spacing: -0.03em;
+  --label-spacing: 0.16em;
+  --box-border: 1px;
+  --box-pad: 18px;
+  --radius: 2px;
+}
+@media (prefers-color-scheme: dark) {
+  [data-mode='system'][data-theme='console'], [data-mode='system'] [data-theme='console'] {
+    --parchment: #0c0d0b;
+    --card: #151712;
+    --panel: var(--card);
+    --ink: #e9e6dc;
+    --muted: #918e84;
+    --line: #2a2c27;
+    --rust: #c8f53c;
+    --accent: #c8f53c;
+    --on-accent: #141511;
+    --danger: #ff6b5b;
+    --live: #5cc8e0;
+    --led-off: #24261f;
+    --meter-done: var(--ink);
+    --meter-now: #c8f53c;
+    --fresh: var(--rust);
+    --cooling: #e0b44c;
+    --cold: #8d9abb;
+    --font-body: var(--font-geist), system-ui, sans-serif;
+    --font-display: var(--font-body);
+    --font-label: var(--font-mono-face);
+    --font-num: var(--font-mono-face);
+    --title-size: 26px;
+    --title-spacing: -0.03em;
+    --label-spacing: 0.16em;
+    --box-border: 1px;
+    --box-pad: 18px;
+    --radius: 2px;
+  }
+}
+
+/* Riso: underground print. Newsprint or near-black, pink and blue inks
+   (blue for what Live reports), Work Sans with Space Mono labels. */
+[data-theme='riso'] {
+  --parchment: #f1ede2;
+  --card: #f8f5ee;
+  --panel: transparent;
+  --ink: #1d1b20;
+  --muted: #58534c;
+  --line: #cbc4b5;
+  --rust: #bf0078;
+  --accent: var(--ink);
+  --on-accent: var(--parchment);
+  --danger: #c4231c;
+  --live: #006aa8;
+  --led-off: #ddd6c7;
+  --meter-done: #0078bf;
+  --meter-now: #e0198a;
+  --fresh: var(--live);
+  --cooling: var(--muted);
+  --cold: var(--rust);
+  --font-body: var(--font-work), system-ui, sans-serif;
+  --font-display: var(--font-body);
+  --font-mono-face: var(--font-space-mono), ui-monospace, monospace;
+  --font-label: var(--font-mono-face);
+  --title-size: 30px;
+  --title-weight: 600;
+  --title-spacing: -0.02em;
+  --lead-size: 16px;
+  --label-spacing: 0.08em;
+  --label-weight: 700;
+  --label-color: var(--ink);
+  --rule: 2px;
+  --radius: 0px;
+}
+[data-mode='dark'][data-theme='riso'], [data-mode='dark'] [data-theme='riso'] {
+  --parchment: #161419;
+  --card: #1e1c22;
+  --panel: transparent;
+  --ink: #f1ede2;
+  --muted: #aaa398;
+  --line: #3d3843;
+  --rust: #ff6ec4;
+  --accent: var(--ink);
+  --on-accent: var(--parchment);
+  --danger: #ff6b5b;
+  --live: #5aaef0;
+  --led-off: #2c2830;
+  --meter-done: #3d9be9;
+  --meter-now: #ff5cb8;
+  --fresh: var(--live);
+  --cooling: var(--muted);
+  --cold: var(--rust);
+  --font-body: var(--font-work), system-ui, sans-serif;
+  --font-display: var(--font-body);
+  --font-mono-face: var(--font-space-mono), ui-monospace, monospace;
+  --font-label: var(--font-mono-face);
+  --title-size: 30px;
+  --title-weight: 600;
+  --title-spacing: -0.02em;
+  --lead-size: 16px;
+  --label-spacing: 0.08em;
+  --label-weight: 700;
+  --label-color: var(--ink);
+  --rule: 2px;
+  --radius: 0px;
+}
+@media (prefers-color-scheme: dark) {
+  [data-mode='system'][data-theme='riso'], [data-mode='system'] [data-theme='riso'] {
+    --parchment: #161419;
+    --card: #1e1c22;
+    --panel: transparent;
+    --ink: #f1ede2;
+    --muted: #aaa398;
+    --line: #3d3843;
+    --rust: #ff6ec4;
+    --accent: var(--ink);
+    --on-accent: var(--parchment);
+    --danger: #ff6b5b;
+    --live: #5aaef0;
+    --led-off: #2c2830;
+    --meter-done: #3d9be9;
+    --meter-now: #ff5cb8;
+    --fresh: var(--live);
+    --cooling: var(--muted);
+    --cold: var(--rust);
+    --font-body: var(--font-work), system-ui, sans-serif;
+    --font-display: var(--font-body);
+    --font-mono-face: var(--font-space-mono), ui-monospace, monospace;
+    --font-label: var(--font-mono-face);
+    --title-size: 30px;
+    --title-weight: 600;
+    --title-spacing: -0.02em;
+    --lead-size: 16px;
+    --label-spacing: 0.08em;
+    --label-weight: 700;
+    --label-color: var(--ink);
+    --rule: 2px;
+    --radius: 0px;
+  }
+}
+
+/* Gallery: editorial. Bone and deep ink, Bodoni for names and the next
+   to-do, brass for labels and the current stage, a lot of space. */
+[data-theme='gallery'] {
+  --parchment: #f4f0e8;
+  --card: #faf7f1;
+  --panel: transparent;
+  --ink: #191714;
+  --muted: #665f55;
+  --line: #d9cfbf;
+  --rust: #7d5f22;
+  --accent: #191714;
+  --on-accent: var(--parchment);
+  --danger: #a8321f;
+  --live: #3f6b78;
+  --led-off: var(--line);
+  --meter-done: var(--ink);
+  --meter-now: var(--rust);
+  --fresh: var(--muted);
+  --cooling: var(--muted);
+  --cold: var(--rust);
+  --font-display: var(--font-bodoni), Didot, Georgia, serif;
+  --title-size: 34px;
+  --title-weight: 400;
+  --title-spacing: 0;
+  --lead-font: var(--font-display);
+  --lead-size: 18px;
+  --label-spacing: 0.2em;
+  --label-color: var(--rust);
+  --radius: 0px;
+}
+[data-mode='dark'][data-theme='gallery'], [data-mode='dark'] [data-theme='gallery'] {
+  --parchment: #12110f;
+  --card: #1a1916;
+  --panel: transparent;
+  --ink: #ebe5d8;
+  --muted: #a0988a;
+  --line: #2e2a24;
+  --rust: #c9a45c;
+  --accent: #c9a45c;
+  --on-accent: var(--parchment);
+  --danger: #e07a62;
+  --live: #8fb4bf;
+  --led-off: var(--line);
+  --meter-done: var(--ink);
+  --meter-now: var(--rust);
+  --fresh: var(--muted);
+  --cooling: var(--muted);
+  --cold: var(--rust);
+  --font-display: var(--font-bodoni), Didot, Georgia, serif;
+  --title-size: 34px;
+  --title-weight: 400;
+  --title-spacing: 0;
+  --lead-font: var(--font-display);
+  --lead-size: 18px;
+  --label-spacing: 0.2em;
+  --label-color: var(--rust);
+  --radius: 0px;
+}
+@media (prefers-color-scheme: dark) {
+  [data-mode='system'][data-theme='gallery'], [data-mode='system'] [data-theme='gallery'] {
+    --parchment: #12110f;
+    --card: #1a1916;
+    --panel: transparent;
+    --ink: #ebe5d8;
+    --muted: #a0988a;
+    --line: #2e2a24;
+    --rust: #c9a45c;
+    --accent: #c9a45c;
+    --on-accent: var(--parchment);
+    --danger: #e07a62;
+    --live: #8fb4bf;
+    --led-off: var(--line);
+    --meter-done: var(--ink);
+    --meter-now: var(--rust);
+    --fresh: var(--muted);
+    --cooling: var(--muted);
+    --cold: var(--rust);
+    --font-display: var(--font-bodoni), Didot, Georgia, serif;
+    --title-size: 34px;
+    --title-weight: 400;
+    --title-spacing: 0;
+    --lead-font: var(--font-display);
+    --lead-size: 18px;
+    --label-spacing: 0.2em;
+    --label-color: var(--rust);
+    --radius: 0px;
+  }
+}
+
+/* Rack: Gordon's Finish Line. Cool grey with white panels, amber for
+   progress and actions, teal for what Live reports, condensed capitals for
+   names and section heads, IBM Plex. */
+[data-theme='rack'] {
+  --parchment: #eceef1;
+  --card: #f4f5f7;
+  --panel: #ffffff;
+  --ink: #1a1d23;
+  --muted: #5b6270;
+  --line: #d3d7de;
+  --rust: #9a5208;
+  --accent: #a65a07;
+  --on-accent: #ffffff;
+  --danger: #b0352f;
+  --live: #1d6f88;
+  --led-off: #dfe2e7;
+  --meter-done: var(--accent);
+  --meter-now: var(--accent);
+  --fresh: #23703a;
+  --cooling: #87600a;
+  --cold: #5a6784;
+  --font-body: var(--font-plex), system-ui, sans-serif;
+  --font-display: var(--font-shoulders), 'Arial Narrow', sans-serif;
+  --font-mono-face: var(--font-plex-mono), ui-monospace, monospace;
+  --font-label: var(--font-mono-face);
+  --font-num: var(--font-mono-face);
+  --title-size: 32px;
+  --title-weight: 800;
+  --title-case: uppercase;
+  --title-spacing: 0.02em;
+  --lead-size: 16px;
+  --label-spacing: 0.12em;
+  --section-font: var(--font-display);
+  --section-size: 18px;
+  --section-weight: 700;
+  --section-spacing: 0.02em;
+  --section-color: var(--ink);
+  --box-border: 1px;
+  --box-pad: 16px;
+  --radius: 6px;
+}
+[data-mode='dark'][data-theme='rack'], [data-mode='dark'] [data-theme='rack'] {
+  --parchment: #111317;
+  --card: #14161b;
+  --panel: #181b21;
+  --ink: #e7e4dd;
+  --muted: #959baa;
+  --line: #2a2f38;
+  --rust: #f0a43a;
+  --accent: #f0a43a;
+  --on-accent: #111317;
+  --danger: #e8746d;
+  --live: #6fb7cd;
+  --led-off: #262a32;
+  --meter-done: var(--accent);
+  --meter-now: var(--accent);
+  --fresh: #7cc48a;
+  --cooling: #e0b44c;
+  --cold: #7d8bab;
+  --font-body: var(--font-plex), system-ui, sans-serif;
+  --font-display: var(--font-shoulders), 'Arial Narrow', sans-serif;
+  --font-mono-face: var(--font-plex-mono), ui-monospace, monospace;
+  --font-label: var(--font-mono-face);
+  --font-num: var(--font-mono-face);
+  --title-size: 32px;
+  --title-weight: 800;
+  --title-case: uppercase;
+  --title-spacing: 0.02em;
+  --lead-size: 16px;
+  --label-spacing: 0.12em;
+  --section-font: var(--font-display);
+  --section-size: 18px;
+  --section-weight: 700;
+  --section-spacing: 0.02em;
+  --section-color: var(--ink);
+  --box-border: 1px;
+  --box-pad: 16px;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  [data-mode='system'][data-theme='rack'], [data-mode='system'] [data-theme='rack'] {
+    --parchment: #111317;
+    --card: #14161b;
+    --panel: #181b21;
+    --ink: #e7e4dd;
+    --muted: #959baa;
+    --line: #2a2f38;
+    --rust: #f0a43a;
+    --accent: #f0a43a;
+    --on-accent: #111317;
+    --danger: #e8746d;
+    --live: #6fb7cd;
+    --led-off: #262a32;
+    --meter-done: var(--accent);
+    --meter-now: var(--accent);
+    --fresh: #7cc48a;
+    --cooling: #e0b44c;
+    --cold: #7d8bab;
+    --font-body: var(--font-plex), system-ui, sans-serif;
+    --font-display: var(--font-shoulders), 'Arial Narrow', sans-serif;
+    --font-mono-face: var(--font-plex-mono), ui-monospace, monospace;
+    --font-label: var(--font-mono-face);
+    --font-num: var(--font-mono-face);
+    --title-size: 32px;
+    --title-weight: 800;
+    --title-case: uppercase;
+    --title-spacing: 0.02em;
+    --lead-size: 16px;
+    --label-spacing: 0.12em;
+    --section-font: var(--font-display);
+    --section-size: 18px;
+    --section-weight: 700;
+    --section-spacing: 0.02em;
+    --section-color: var(--ink);
+    --box-border: 1px;
+    --box-pad: 16px;
+    --radius: 6px;
+  }
+}
+
+/* Riso's two inks overprint: multiplied on paper, screened on black. */
+.riso-ink { mix-blend-mode: multiply; }
+[data-mode='dark'] .riso-ink { mix-blend-mode: screen; }
+@media (prefers-color-scheme: dark) {
+  [data-mode='system'] .riso-ink { mix-blend-mode: screen; }
+}

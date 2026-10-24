@@ -11,6 +11,7 @@ import { filesFromDrop, filesFromInput, gunzipText, listing, savedSets, sha256, 
 import type { SaveEntry, SessionState } from '@/lib/als/store';
 import { keyLabel, PARSER_VERSION, type AlsSet, type AlsTrack, type Zone } from '@/lib/als/types';
 import { formatBytes, type StudioVariant } from '@/lib/studioTypes';
+import { elementColor } from '@/lib/elementColors';
 
 // The State tab (REQUIREMENTS S-15, S-16, A-6 to A-8): what the saved Live
 // sets show about one variant of the session (the main mix, or a radio edit
@@ -20,13 +21,12 @@ import { formatBytes, type StudioVariant } from '@/lib/studioTypes';
 // every saved set in it here in the browser; the database sorts each save
 // into a variant by its file name (db/015), and a save can be moved by hand.
 
-// Zones and their colours come from the project's track structure (db/025);
-// a zone without a colour takes one from this list by its place.
-const SPARE = ['#b5543c', '#3d5a80', '#6b8f71', '#c49a1f', '#8a6fa8', '#c46a8a', '#4f8a8b', '#a0522d'];
-const NONE = '#9a948a';
+// Zones and their colours come from the project's track structure (db/025,
+// slots since db/030); a zone without a colour takes a slot by its place.
+const NONE = 'var(--muted)';
 type ZoneColor = (z: Zone | null) => string;
 function zoneColors(zones: SessionState['zones']): ZoneColor {
-  const map = new Map(zones.map((z, i) => [z.name, z.color ?? SPARE[i % SPARE.length]]));
+  const map = new Map(zones.map((z, i) => [z.name, elementColor(z.color, i)]));
   return (z) => (z === null ? NONE : (map.get(z) ?? NONE));
 }
 

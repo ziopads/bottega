@@ -6,6 +6,7 @@ import { api } from '@/app/_studio/controls';
 import { Section } from '@/app/_ui/layout';
 import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
 import { zoneOfName } from '@/lib/als/zones';
+import { elementColor, SLOTS, slotOf } from '@/lib/elementColors';
 import type { StructureEditor as Editor, StructureElement } from '@/lib/structureTypes';
 
 import { FIELD } from './parts';
@@ -168,7 +169,7 @@ export default function StructureEditor({ initial }: { initial: Editor }) {
             {ed.elements.map((e, i) => (
               <li key={e.id} className={`t-body flex items-center gap-1.5 rounded border px-2 py-1.5 ${e.id === el?.id ? 'border-ink' : 'border-line'}`}>
                 <button onClick={() => setElementId(e.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left" aria-pressed={e.id === el?.id}>
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full border border-line" style={{ background: e.color ?? 'transparent' }} aria-hidden />
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full border border-line" style={{ background: e.color ? elementColor(e.color) : 'transparent' }} aria-hidden />
                   <span className="min-w-0 flex-1 truncate font-medium">{e.name}</span>
                   <span className="truncate font-mono t-small text-muted">{e.isZone ? list(e.prefixes) || 'zone' : 'not a zone'}</span>
                 </button>
@@ -203,17 +204,34 @@ function ElementEditor({ e, ed, readOnly, busy, post }: { e: StructureElement; e
           <span className="t-small text-muted">Name</span>
           <input key={e.name} defaultValue={e.name} disabled={readOnly} onBlur={(x) => x.target.value.trim() && x.target.value.trim() !== e.name && void save({ name: x.target.value })} className={`${FIELD} font-medium`} />
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="t-small text-muted">Colour</span>
-          <span className="flex items-center gap-1.5">
-            <input type="color" value={e.color ?? '#9a948a'} disabled={readOnly || busy} onChange={(x) => void save({ color: x.target.value })} className="h-7 w-10 cursor-pointer rounded border border-line bg-card" aria-label="Colour" />
+        <div className="flex flex-col gap-1">
+          <span className="t-small text-muted" id={`colour-${e.id}`}>Colour</span>
+          {/* Eight slots, each drawn in the theme's step for light or dark (db/030). */}
+          <span className="flex flex-wrap items-center gap-1" role="radiogroup" aria-labelledby={`colour-${e.id}`}>
+            {SLOTS.map((s, i) => {
+              const on = slotOf(e.color) === i + 1;
+              return (
+                <button
+                  key={s.hex}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  aria-label={s.name}
+                  title={s.name}
+                  disabled={readOnly || busy}
+                  onClick={() => void save({ color: s.hex })}
+                  className={`h-6 w-6 rounded-full border-2 ${on ? 'border-ink' : 'border-transparent hover:border-muted'}`}
+                  style={{ background: `var(--el-${i + 1})`, backgroundClip: 'content-box', padding: 2 }}
+                />
+              );
+            })}
             {!readOnly && e.color && (
-              <button onClick={() => save({ color: null })} disabled={busy} className={BUTTON}>
+              <button onClick={() => save({ color: null })} disabled={busy} className={`${BUTTON} ml-1`}>
                 None
               </button>
             )}
           </span>
-        </label>
+        </div>
         {e.difference === 'changed' && <span className="t-small text-muted">Edited · differs from the default</span>}
         {e.difference === 'added' && <span className="t-small text-muted">Yours · not in the default</span>}
       </div>

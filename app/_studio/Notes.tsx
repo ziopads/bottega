@@ -4,10 +4,11 @@ import { useState } from 'react';
 
 import type { Marker } from '@/app/_ui/audio/Waveform';
 import type { StudioNote, StudioTrack } from '@/lib/studioTypes';
-import type { WorkflowCard } from '@/lib/workflowTypes';
+import type { WorkflowCard, WorkflowElement } from '@/lib/workflowTypes';
 import { formatDuration } from '@/lib/studioTypes';
 import { api } from './controls';
 import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
+import { cardElementColor } from '@/lib/elementColors';
 
 // Notes on a session (REQUIREMENTS S-4, S-11): one note's display and editing,
 // and the box that writes a new one. The tabs decide which notes to show;
@@ -19,7 +20,7 @@ export function formatWhen(iso: string): string {
 }
 
 /** The waveform's marks for a mix: its notes at moments, and its to-dos at moments (W-37). */
-export function mixMarkers(notes: StudioNote[], cards: WorkflowCard[], trackId: number): Marker[] {
+export function mixMarkers(notes: StudioNote[], cards: WorkflowCard[], trackId: number, elements: WorkflowElement[] = []): Marker[] {
   const fromNotes: Marker[] = notes
     .filter((n) => n.trackId === trackId && n.positionS !== null)
     .map((n) => ({
@@ -35,6 +36,7 @@ export function mixMarkers(notes: StudioNote[], cards: WorkflowCard[], trackId: 
       id: c.id,
       kind: 'todo',
       done: c.status === 'done',
+      color: cardElementColor(elements, c.elementId),
       at: c.positionS!,
       label: `${formatMoment(c.positionS!)} · ${c.what.slice(0, 60)}`,
       body: c.what.replace(/\s+/g, ' ').trim(),

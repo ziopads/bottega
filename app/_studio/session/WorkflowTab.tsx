@@ -21,6 +21,7 @@ import {
   type WorkflowLearning,
 } from '@/lib/workflowTypes';
 import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
+import { elementColor } from '@/lib/elementColors';
 
 // The Workflow tab (REQUIREMENTS W-1 to W-24, db/011, db/024), from 23 October:
 //
@@ -265,8 +266,8 @@ function StartedWorkflow({
                   </span>
                   <span className="t-num t-small text-muted">{t.total ? `${t.met}/${t.total}` : ''}</span>
                 </span>
-                <span className="mt-1 block h-[3px] overflow-hidden rounded bg-line">
-                  <span className="block h-full bg-ink" style={{ width: `${Math.round(share * 100)}%` }} />
+                <span className="mt-1 block h-[3px] overflow-hidden rounded bg-led-off">
+                  <span className={`block h-full ${share >= 1 ? 'bg-meter-done' : 'bg-meter-now'}`} style={{ width: `${Math.round(share * 100)}%` }} />
                 </span>
                 {parkedHere > 0 && <span className="mt-0.5 block t-small text-muted">{parkedHere} parked</span>}
               </button>
@@ -376,6 +377,7 @@ function StartedWorkflow({
   // The next to-do sits above the groups, so the column opens on it (W-39).
   const nextCard = openHere.find((c) => c.isNext) ?? null;
   const openByTop = byTop(openHere.filter((c) => !c.isNext));
+  const groupColor = (name: string) => elementColor(tops.find((t) => t.name === name)?.color);
   const later = w.stages.filter((s) => s.position > pos && parked.some((c) => c.stage === s.key));
 
   const cardsColumn = (
@@ -427,7 +429,10 @@ function StartedWorkflow({
             .filter((g) => openByTop.has(g))
             .map((g) => (
               <div key={g}>
-                <h3 className="t-label mb-1">{g}</h3>
+                <h3 className="t-label mb-1 flex items-center gap-1.5">
+                  <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: groupColor(g) }} />
+                  {g}
+                </h3>
                 <ul className="divide-y divide-line border-y border-line">
                   {openByTop.get(g)!.map((c) => (
                     <CardRow key={c.id} c={c} {...cardProps} elements={w.elements} stages={w.stages} />
@@ -540,8 +545,8 @@ function StageBar({ w, tally }: { w: Workflow; tally: (key: string) => { met: nu
           const t = all[i];
           const share = t.total ? t.met / t.total : s.position < pos ? 1 : 0;
           return (
-            <span key={s.key} className={`relative block h-2.5 overflow-hidden rounded-sm bg-line ${s.key === w.stage ? 'ring-1 ring-ink' : ''}`}>
-              <span className={`absolute inset-y-0 left-0 ${share >= 1 ? 'bg-ink' : 'bg-ink/40'}`} style={{ width: `${Math.round(share * 100)}%` }} />
+            <span key={s.key} className={`relative block h-2.5 overflow-hidden rounded-sm bg-led-off ${s.key === w.stage ? 'ring-1 ring-meter-now' : ''}`}>
+              <span className={`absolute inset-y-0 left-0 ${share >= 1 ? 'bg-meter-done' : 'bg-meter-now'}`} style={{ width: `${Math.round(share * 100)}%` }} />
             </span>
           );
         })}
@@ -755,7 +760,7 @@ function CriterionRow({
         {result && !c.metAt && (
           <span
             className={`mt-1 inline-block rounded-[3px] border px-1.5 py-px font-mono t-small ${
-              result.verdict === 'likely' ? 'border-dashed border-ink text-ink' : 'border-dashed border-ink/30 text-muted'
+              result.verdict === 'likely' ? 'border-dashed border-live text-live' : 'border-dashed border-ink/30 text-muted'
             }`}
           >
             {VERDICT[result.verdict]}
@@ -1173,7 +1178,7 @@ function ElementTree({
         <ul className="space-y-1">
           {tops.map((t) => (
             <li key={t.id}>
-              {t.color && <span className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle" style={{ background: t.color }} aria-hidden />}
+              {t.color && <span className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle" style={{ background: elementColor(t.color) }} aria-hidden />}
               <span className="font-medium">{t.name}</span>
               {t.isZone && t.prefixes.length > 0 && <span className="ml-1.5 font-mono t-small text-muted">{t.prefixes.join(', ')}</span>}
               {children(t.id).length > 0 && <span className="text-muted"> · {children(t.id).map((c) => c.name).join(', ')}</span>}

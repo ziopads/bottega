@@ -103,9 +103,9 @@ export function Section({
   className?: string;
 }) {
   return (
-    <section className={`mb-8 ${className}`}>
-      <div className="mb-3 flex items-baseline gap-3 border-b border-line pb-1">
-        <h2 className="t-label">{label}</h2>
+    <section className={`panel mb-8 ${className}`}>
+      <div className="mb-3 flex items-baseline gap-3 border-b-[length:var(--rule)] border-line pb-1">
+        <h2 className="t-section">{label}</h2>
         {action && <div className="t-body ml-auto">{action}</div>}
       </div>
       {children}

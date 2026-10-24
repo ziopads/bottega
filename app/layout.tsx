@@ -1,8 +1,20 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Geist_Mono, Instrument_Sans } from 'next/font/google';
+import {
+  Anton,
+  Big_Shoulders,
+  Bodoni_Moda,
+  Geist,
+  Geist_Mono,
+  IBM_Plex_Mono,
+  IBM_Plex_Sans,
+  Instrument_Sans,
+  Space_Mono,
+  Work_Sans,
+} from 'next/font/google';
 import './globals.css';
 import MainNav from '@/app/_ui/MainNav';
+import Wordmark from '@/app/_ui/Wordmark';
 
 import { signOut } from '@/app/auth/sign-in/actions';
 import SitePlayer from '@/app/_ui/audio/SitePlayer';
@@ -11,6 +23,18 @@ import { getAccount } from '@/lib/access';
 
 const instrument = Instrument_Sans({ variable: '--font-instrument', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
+// The other themes' faces (app/themes.css). Not preloaded: a browser fetches
+// a face only when the theme in use asks for it.
+const later = { subsets: ['latin'] as ['latin'], preload: false };
+const geist = Geist({ ...later, variable: '--font-geist' });
+const work = Work_Sans({ ...later, variable: '--font-work' });
+const spaceMono = Space_Mono({ ...later, weight: ['400', '700'], variable: '--font-space-mono' });
+const anton = Anton({ ...later, weight: '400', variable: '--font-anton' });
+const bodoni = Bodoni_Moda({ ...later, style: ['normal', 'italic'], variable: '--font-bodoni' });
+const plex = IBM_Plex_Sans({ ...later, variable: '--font-plex' });
+const plexMono = IBM_Plex_Mono({ ...later, weight: ['400', '500'], variable: '--font-plex-mono' });
+const shoulders = Big_Shoulders({ ...later, variable: '--font-shoulders' });
+const FONTS = [instrument, geistMono, geist, work, spaceMono, anton, bodoni, plex, plexMono, shoulders].map((f) => f.variable).join(' ');
 
 export const metadata: Metadata = {
   title: 'Bottega',
@@ -42,13 +66,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     : NAV;
 
   return (
-    <html lang="en" className={`${instrument.variable} ${geistMono.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      data-theme={account?.theme ?? 'minimal'}
+      data-mode={account?.mode ?? 'system'}
+      className={`${FONTS} h-full antialiased`}
+    >
       <body className="flex min-h-full flex-col font-sans">
         <header className="border-b border-line">
           <div className="mx-auto flex max-w-7xl items-end gap-6 px-5 pt-2.5">
-            <Link href="/" className="pb-2.5 text-[20px] font-semibold tracking-tight">
-              Bottega
-            </Link>
+            <Wordmark theme={account?.theme ?? 'minimal'} />
             {user ? <MainNav items={nav} /> : null}
             {user ? (
               <form action={signOut} className="ml-auto flex items-center gap-4 pb-2.5 t-body">

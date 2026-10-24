@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.32
+**Version:** 0.33
 **Date:** 2026-10-25
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -9,6 +9,9 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.33** (2026-10-25) — Themes (O-9): five looks in light and dark, chosen
+  per account; element colours become eight slots. Migration 030.
 
 - **0.32** (2026-10-25) — Where it stands moves from the top of every tab to
   the Overview tab, above the current mix; On deck opens on the next to-do
@@ -989,6 +992,16 @@ travel to the database.
   kind opens to its largest files, linked to where they live.
 - **O-8** The site's navigation marks the section one is in the way a page's
   tabs mark the one shown (25 October 2026).
+- **O-9** Themes: each person chooses the site's look in Account ›
+  Preferences › Look: Minimal (the original), Console, Riso, Gallery or Rack
+  (after Gordon's Finish Line), each in light and dark, and whether it
+  follows the computer's setting. The choice is kept with the account. Colour
+  carries meaning and means the same in every theme: element colours (eight
+  slots, checked for colour-blind separation, always shown with the
+  element's name), stage meters, what Bottega read from Live set apart from
+  what people wrote, and how recently a project was worked on (fresh,
+  cooling, cold). A track structure's element colour is one of the eight
+  slots (25 October 2026).
 
 ## 13. Later
 

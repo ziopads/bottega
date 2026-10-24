@@ -18,7 +18,7 @@ function clock(s: number): string {
 export async function listTodos(db: Scoped): Promise<Todo[]> {
   const rows = await db.q(
     `select c.id, c.project_id, c.stage, c.kind, c.what, c.done_when, c.status, c.is_next, c.created_by, c.updated_at, c.position_s,
-            a.version, a.variant, e.name as element, pe.name as parent_element,
+            a.version, a.variant, e.name as element, pe.name as parent_element, coalesce(pe.color, e.color) as element_color,
             coalesce(nullif(p.title, ''), mp.canonical_id, 'untitled') as project_title,
             coalesce(ps.label, c.stage) as stage_label, ps.position as stage_position,
             cur.label as current_label, cur.position as current_position,
@@ -54,6 +54,7 @@ export async function listTodos(db: Scoped): Promise<Todo[]> {
       when: sp === null || cp === null || sp === cp ? 'current' : sp > cp ? 'later' : 'earlier',
       projectStageLabel: r.current_label === null ? null : String(r.current_label),
       element: r.element === null ? null : r.parent_element === null ? String(r.element) : `${String(r.parent_element)} / ${String(r.element)}`,
+      elementColor: r.element_color === null || r.element_color === undefined ? null : String(r.element_color),
       kind: r.kind === null ? null : String(r.kind),
       what: String(r.what),
       doneWhen: String(r.done_when),

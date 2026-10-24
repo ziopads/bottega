@@ -11,7 +11,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 // gets an even, low bar so every player looks alike. A to-do pinned to a
 // moment (W-37, db/028) has a mark of its own: a small square, faded once done.
 
-export type Marker = { id: number; at: number; label: string; author?: string; body?: string; kind?: 'note' | 'todo'; done?: boolean };
+export type Marker = { id: number; at: number; label: string; author?: string; body?: string; kind?: 'note' | 'todo'; done?: boolean; /** A to-do's element colour (lib/elementColors.ts). */ color?: string };
 
 const markKey = (m: Marker) => `${m.kind ?? 'note'}-${m.id}`;
 
@@ -143,9 +143,10 @@ export default function Waveform({
                     onSeek(Math.min(1, m.at / duration));
                     onMarker?.(m);
                   }}
+                  style={todo ? { background: m.color ?? 'var(--rust)' } : undefined}
                   className={
                     todo
-                      ? `block h-3 w-3 -translate-x-1/2 translate-y-px rounded-[2px] border border-parchment bg-rust ${m.done ? 'opacity-40' : ''} ${open ? 'ring-1 ring-ink' : ''}`
+                      ? `block h-3 w-3 -translate-x-1/2 translate-y-px rounded-[2px] border border-parchment ${m.done ? 'opacity-40' : ''} ${open ? 'ring-1 ring-ink' : ''}`
                       : `flex h-3.5 w-3.5 -translate-x-1/2 items-center justify-center rounded-full border border-parchment text-[7px] font-medium leading-none text-parchment ${
                           open ? 'bg-ink' : 'bg-ink/55 hover:bg-ink'
                         }`
