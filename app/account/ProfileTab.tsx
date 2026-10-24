@@ -1,33 +1,47 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { api } from '@/app/_studio/controls';
 import { DetailGrid, MetaList, Section } from '@/app/_ui/layout';
 import type { MyArtist } from '@/lib/account';
+import type { ArtistSettingsData } from '@/lib/artistTypes';
 
+import ArtistSettings from './ArtistSettings';
 import { FIELD } from './parts';
 import When from './When';
 import { BUTTON, BUTTON_DANGER } from '@/app/_ui/styles';
 
 // Profile (REQUIREMENTS AC-13): the name others see on shares, notes and
-// uploads; the sign-in email; the artists sessions are credited to.
+// uploads; the sign-in email; the artists sessions are credited to, each
+// with its templates and who it is shared with (db/028).
 
 export default function ProfileTab({
   initialName,
   email,
   since,
   initialArtists,
+  artistSettings,
 }: {
   initialName: string;
   email: string;
   since: string | null;
   initialArtists: MyArtist[];
+  /** Each artist's templates and sharing (db/028). */
+  artistSettings: ArtistSettingsData;
 }) {
   const [name, setName] = useState(initialName);
   const [draft, setDraft] = useState(initialName);
   const [nameState, setNameState] = useState<'' | 'saving' | 'saved'>('');
-  const [artists, setArtists] = useState(initialArtists);
+  const [artists, setArtistList] = useState(initialArtists);
+  const router = useRouter();
+  // An artist added, renamed or deleted: reload the server's data too, so the
+  // templates-and-sharing list below includes it.
+  const setArtists: React.Dispatch<React.SetStateAction<MyArtist[]>> = (next) => {
+    setArtistList(next);
+    router.refresh();
+  };
   const [error, setError] = useState('');
 
   async function saveName(e: React.FormEvent) {
@@ -75,6 +89,11 @@ export default function ProfileTab({
 
       <Section label={`Artists · ${artists.length}`}>
         <ArtistList artists={artists} setArtists={setArtists} onError={setError} />
+      </Section>
+
+      <Section label="Artists · templates and sharing">
+        {/* Keyed by the server's list, so it starts afresh when a refresh brings a new one. */}
+        <ArtistSettings key={artistSettings.artists.map((a) => `${a.id}:${a.code}:${a.name}`).join(',')} initial={artistSettings} />
       </Section>
     </>
   );

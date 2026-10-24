@@ -10,14 +10,15 @@
 // sessions and notes: record_study_session, list_study_notes,
 // get_study_history. 0.9.0 (23 October): each project's own stages from its
 // template, criteria hints and likely-done marks, the next move, blocker and
-// work log, and the person's board (db/024).
+// work log, and the person's board (db/024). 0.10.0 (24 October): learnings
+// on a template's stages in get_session, and draft_learning (db/028).
 
 import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
 
 import { appOrigin, personFrom, ToolError } from '@/mcp/context';
 import { listDocumentsTool, readPagesTool, searchTool } from '@/mcp/tools/corpus';
-import { draftCardTool, draftCriteriaTool } from '@/mcp/tools/drafts';
+import { draftCardTool, draftCriteriaTool, draftLearningTool } from '@/mcp/tools/drafts';
 import { getSessionTool } from '@/mcp/tools/get-session';
 import { listProjectsTool } from '@/mcp/tools/list-projects';
 import {
@@ -43,6 +44,8 @@ Three habits matter most:
 Each project has a next move (one action the person can start within five minutes of opening the set) and may have a blocker; get_session gives both, the latest sessions they ended, and how many sessions a blocker has lasted. When they ask where they were, start from the next move. When a blocker has lasted two sessions or more, suggest another way in (bounce the part to audio, pull a reference, send it to a collaborator, leave it for a later stage). Criteria that name a check carry likely_done: what Bottega read from the newest saved set (tempo and key, locators, track names, gaps, the master chain and so on). It is a suggestion from the set, never a decision: say what the set shows and let the person tick it in the app.
 
 Each person keeps their own board: projects in their backlog, in rotation (the few they are working on now, up to a limit they set) and finished. list_projects gives each project's place on the person's board. Keep advice to the projects in rotation unless they ask about another; when they want to start something new while rotation is full, say so and let them choose what goes back to the backlog.
+
+A workflow template also carries learnings: reminders on a stage, without a checkbox, that the person (or a collaborator sharing the template through an artist) wrote down to remember on every project, such as "pitch the kick and snare up for a two-step feel and to clear room for the bass". get_session gives the learnings for the project's template. Bring up those of the current stage when they bear on the question, and say they are the person's own. When the person says something worth keeping for every project at a stage, or asks you to remember it as a learning, propose it with draft_learning; anything to act on in one track is a card, not a learning.
 
 Start with list_projects to find a project, then get_session for its state. Cards and criteria with status 'proposed' or under awaiting_review are pending proposals, not the person's decisions; say so when you mention them.
 
@@ -154,6 +157,24 @@ export const handler = createMcpHandler(
         }),
       },
       async (args, ctx) => run(() => draftCardTool(personFrom(ctx), args)),
+    );
+
+    server.registerTool(
+      'draft_learning',
+      {
+        title: 'Propose a learning',
+        description:
+          'Propose a learning for one stage of the template a project uses: a reminder worth seeing on every project at ' +
+          'that stage, not tied to one track (that is a card). Stored as a proposal the person keeps or rejects on the ' +
+          'Workflow tab; once kept it shows on every project using the template. At most 2000 characters. Needs the ' +
+          'person to be able to edit the template (get_session says you_can_add_learnings) and the workflow to be started.',
+        inputSchema: z.object({
+          session_id: z.number().int().describe('a project id from list_projects'),
+          stage: z.string().optional().describe('stage name, such as Palette; the current stage when omitted'),
+          learning: z.string().describe('the learning, in the person’s terms'),
+        }),
+      },
+      async (args, ctx) => run(() => draftLearningTool(personFrom(ctx), args)),
     );
 
     server.registerTool(
@@ -375,7 +396,7 @@ export const handler = createMcpHandler(
   },
   {
     instructions: INSTRUCTIONS,
-    serverInfo: { name: 'bottega', version: '0.9.0' },
+    serverInfo: { name: 'bottega', version: '0.10.0' },
     // No subscriptions: this server never sends notifications, and on Vercel
     // each subscriptions/listen stream stayed open until the function timed
     // out, billing memory for the whole wait. Refused with the protocol's

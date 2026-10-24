@@ -1,6 +1,6 @@
 # Bottega — architecture
 
-**Version:** 0.20
+**Version:** 0.21
 **Date:** 2026-10-24
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
@@ -9,6 +9,26 @@ story IDs below (S-3, W-6 and so on) refer to it.
 ---
 
 ## Changelog
+
+- **0.21** (2026-10-24) — Artists, learnings and to-dos (REQUIREMENTS W-30
+  to W-37): migration 028 adds shares.artist_id with `artist_rank()`;
+  `credit_artist_check()` accepts an artist shared with the project's owner
+  at edit; artists gain `workflow_template_id` and `structure_template_id`
+  (`artist_set_templates()`); `project_template()` and
+  `project_structure_template()` give what a project starts with;
+  `workflow_start_with()` and `structure_start_with()` take a chosen template
+  (the one-argument forms stay as wrappers); templates are read and edited
+  through `template_can_read/edit()` and `structure_can_read/edit()`, which
+  the policies use; `template_learnings` with `learning_add()` and
+  `project_learnings()`; `note_to_card()`, `card_to_note()`,
+  `note_to_learning()`, `card_to_learning()`. Server: `lib/artists.ts`,
+  `lib/todos.ts`, `lib/moveRoutes.ts`; learnings, start choices and moves in
+  `lib/workflow.ts`; the template and structure editors take `editId`.
+  Routes: `/api/artists/:id/settings`, `/api/notes/:id/move`,
+  `/api/cards/:id/move`, the workflow route's `learning` op and `start`
+  choices. Pages: `/todos` (`app/_board/TodosView.tsx`), Account › Profile ›
+  templates and sharing (`ArtistSettings.tsx`). Connector 0.10.0: learnings
+  in get_session, draft_learning.
 
 - **0.20** (2026-10-24) — Watcher Macs (REQUIREMENTS A-10 to A-12):
   migration 027 adds `watcher_macs` (name, sessions folder, current token, the

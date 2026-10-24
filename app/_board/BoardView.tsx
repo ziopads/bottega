@@ -317,7 +317,14 @@ function Foot({ p, coldDays, withCards = false }: { p: BoardProject; coldDays: n
     <p className="t-num flex flex-wrap justify-between gap-2 font-mono text-[10px] text-muted">
       <span>
         {where}
-        {withCards && p.openCards > 0 ? ` · ${p.openCards} open ${p.openCards === 1 ? 'card' : 'cards'}` : ''}
+        {withCards && p.openCards > 0 && (
+          <>
+            {' · '}
+            <Link href={`/todos?project=${p.id}`} className="underline decoration-ink/30 underline-offset-2 hover:decoration-ink">
+              {p.openCards} open {p.openCards === 1 ? 'to-do' : 'to-dos'}
+            </Link>
+          </>
+        )}
         {!withCards && p.ownerName ? ` · ${p.ownerName}` : ''}
       </span>
       <span>{age}</span>

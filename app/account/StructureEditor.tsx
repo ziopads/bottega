@@ -34,7 +34,7 @@ export default function StructureEditor({ initial }: { initial: Editor }) {
   const post: Post = async (body) => {
     setError('');
     setBusy(true);
-    const r = await api<{ editor: Editor }>('/api/account/structure', { method: 'POST', body: JSON.stringify(body) });
+    const r = await api<{ editor: Editor }>('/api/account/structure', { method: 'POST', body: JSON.stringify({ editId: ed.editing.id, ...body }) });
     setBusy(false);
     if (!r.ok) {
       setError(r.body.error || 'That did not go through.');
@@ -44,7 +44,21 @@ export default function StructureEditor({ initial }: { initial: Editor }) {
     return true;
   };
 
-  const readOnly = ed.chosen.isDefault;
+  const readOnly = !ed.editing.canEdit;
+  const choosable = ed.templates.filter((t) => t.isDefault || t.mine);
+
+  async function edit(id: number) {
+    setError('');
+    setBusy(true);
+    const r = await api<{ editor: Editor }>(`/api/account/structure?edit=${id}`, { method: 'GET' });
+    setBusy(false);
+    if (!r.ok) {
+      setError(r.body.error || 'Could not open that structure.');
+      return;
+    }
+    setEd(r.data.editor);
+    setElementId(null);
+  }
   const el = ed.elements.find((e) => e.id === elementId) ?? ed.elements[0];
   const zones = ed.elements.filter((e) => e.isZone).map((e) => ({ name: e.name, color: e.color, prefixes: e.prefixes, groupNames: e.groupNames }));
   const trialZone = trial.trim() ? zoneOfName(trial, zones, trialGroup) : null;
@@ -64,29 +78,42 @@ export default function StructureEditor({ initial }: { initial: Editor }) {
             disabled={busy}
             className={`${FIELD} text-[15px] font-medium`}
           >
-            {ed.templates.map((t) => (
+            {choosable.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
               </option>
             ))}
           </select>
         </label>
-        {!readOnly && (
+        {ed.templates.length > 1 && (
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] text-muted">Editing</span>
+            <select value={ed.editing.id} onChange={(e) => edit(Number(e.target.value))} disabled={busy} className={FIELD}>
+              {ed.templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                  {t.isDefault ? ' · Bottega default' : t.mine ? '' : ` · ${t.ownerName ?? 'shared'}’s, through an artist`}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {ed.editing.mine && (
           <span className="flex flex-wrap items-end gap-2">
             <label className="flex flex-col gap-1">
               <span className="text-[11px] text-muted">Name</span>
               <input
-                key={ed.chosen.name}
-                defaultValue={ed.chosen.name}
-                onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== ed.chosen.name && void post({ op: 'rename', templateId: ed.chosen.id, name: e.target.value })}
+                key={ed.editing.name}
+                defaultValue={ed.editing.name}
+                onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== ed.editing.name && void post({ op: 'rename', templateId: ed.editing.id, name: e.target.value })}
                 className={FIELD}
               />
             </label>
-            <button onClick={() => post({ op: 'copy', sourceId: ed.chosen.id, name: `${ed.chosen.name} copy` })} disabled={busy} className={BUTTON}>
+            <button onClick={() => post({ op: 'copy', sourceId: ed.editing.id, name: `${ed.editing.name} copy` })} disabled={busy} className={BUTTON}>
               Duplicate
             </button>
             <button
-              onClick={() => confirm(`Delete “${ed.chosen.name}”? New projects then take Bottega’s default; projects already started keep theirs.`) && post({ op: 'delete', templateId: ed.chosen.id })}
+              onClick={() => confirm(`Delete “${ed.editing.name}”? New projects then take Bottega’s default; projects already started keep theirs.`) && post({ op: 'delete', templateId: ed.editing.id })}
               disabled={busy}
               className={BUTTON_DANGER}
             >
@@ -104,11 +131,14 @@ export default function StructureEditor({ initial }: { initial: Editor }) {
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            await post({ op: 'copy', sourceId: ed.chosen.id, name: copyName });
+            await post({ op: 'copy', sourceId: ed.editing.id, name: copyName });
           }}
           className="t-body mt-3 flex flex-wrap items-end gap-2 rounded border border-ink px-3 py-2.5"
         >
-          <p className="min-w-0 flex-[1_1_320px]">This is Bottega’s default, from the Sirsinate Live template. Make your own copy to rename zones, change prefixes or add your own.</p>
+          <p className="min-w-0 flex-[1_1_320px]">
+            {ed.editing.isDefault ? 'This is Bottega’s default, from the Sirsinate Live template.' : `“${ed.editing.name}” can be read here but not changed.`} Make your own
+            copy to rename zones, change prefixes or add your own.
+          </p>
           <input value={copyName} onChange={(e) => setCopyName(e.target.value)} aria-label="Name of your copy" className={FIELD} />
           <button type="submit" disabled={busy || !copyName.trim()} className={BUTTON_PRIMARY}>
             Make my copy
@@ -155,7 +185,7 @@ export default function StructureEditor({ initial }: { initial: Editor }) {
               </li>
             ))}
           </ul>
-          {!readOnly && <AddLine placeholder="A new zone or element" busy={busy} onAdd={(name) => post({ op: 'add', templateId: ed.chosen.id, name })} />}
+          {!readOnly && <AddLine placeholder="A new zone or element" busy={busy} onAdd={(name) => post({ op: 'add', templateId: ed.editing.id, name })} />}
           <p className="mt-2 text-[11px] text-muted">Zones come first on the State tab in this order; cards can hang on any element.</p>
         </div>
         <div className="min-w-0 lg:col-span-8">{el && <ElementEditor key={el.id} e={el} ed={ed} readOnly={readOnly} busy={busy} post={post} />}</div>
@@ -233,7 +263,7 @@ function ElementEditor({ e, ed, readOnly, busy, post }: { e: StructureElement; e
             </li>
           ))}
         </ul>
-        {!readOnly && <AddLine placeholder={`A part of ${e.name}`} busy={busy} onAdd={(name) => post({ op: 'add', templateId: ed.chosen.id, parentId: e.id, name })} />}
+        {!readOnly && <AddLine placeholder={`A part of ${e.name}`} busy={busy} onAdd={(name) => post({ op: 'add', templateId: ed.editing.id, parentId: e.id, name })} />}
       </div>
       {!readOnly && (
         <div className="border-t border-line pt-3">

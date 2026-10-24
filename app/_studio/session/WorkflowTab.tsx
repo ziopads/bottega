@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { api } from '@/app/_studio/controls';
 import { formatMoment, formatWhen } from '@/app/_studio/Notes';
 import { DetailGrid, Section } from '@/app/_ui/layout';
+import type { StudioNote } from '@/lib/studioTypes';
 import { DONE_WHEN_UNWRITTEN } from '@/lib/workflowInput';
 import {
   CARD_KINDS,
@@ -17,6 +18,7 @@ import {
   type Workflow,
   type WorkflowCard,
   type WorkflowElement,
+  type WorkflowLearning,
 } from '@/lib/workflowTypes';
 import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
 
@@ -31,7 +33,9 @@ import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
 //   left column     the stages, each with its share met and parked cards
 //   middle column   the chosen stage: its standard and criteria with hints;
 //                   advance and move back from the current one
-//   right column    the current stage's cards by element; folded below, done
+//                   and its learnings from the template (W-33, db/028)
+//   right column    the current stage's cards by element, each movable to a
+//                   note or a learning (W-34); folded below, done
 //                   cards, cards waiting for later stages, settled decisions,
 //                   the session log and the element tree
 //
@@ -45,26 +49,29 @@ type Props = {
   projectId: number;
   workflow: Workflow;
   setWorkflow: (w: Workflow) => void;
+  /** A card moved to a note changes the Notes tab too. */
+  setNotes?: (notes: StudioNote[]) => void;
   viewerId: string;
   canContribute: boolean;
   canEdit: boolean;
   isOwner: boolean;
 };
 
-export default function WorkflowTab({ projectId, workflow: w, setWorkflow, viewerId, canContribute, canEdit, isOwner }: Props) {
+export default function WorkflowTab({ projectId, workflow: w, setWorkflow, setNotes, viewerId, canContribute, canEdit, isOwner }: Props) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   async function call(url: string, method: string, body?: unknown): Promise<boolean> {
     setError('');
     setBusy(true);
-    const r = await api<{ workflow: Workflow }>(url, { method, body: body === undefined ? undefined : JSON.stringify(body) });
+    const r = await api<{ workflow: Workflow; notes?: StudioNote[] }>(url, { method, body: body === undefined ? undefined : JSON.stringify(body) });
     setBusy(false);
     if (!r.ok) {
       setError(r.body.error || 'That did not go through.');
       return false;
     }
     setWorkflow(r.data.workflow);
+    if (r.data.notes && setNotes) setNotes(r.data.notes);
     return true;
   }
 
@@ -91,9 +98,11 @@ export default function WorkflowTab({ projectId, workflow: w, setWorkflow, viewe
                 each finished when its exit criteria are met, with the open work on each part of the track as cards.
               </p>
               {canEdit ? (
-                <button onClick={() => call(`/api/projects/${projectId}/workflow`, 'POST', { op: 'start' })} disabled={busy} className={BUTTON}>
-                  Start at {w.stages[0].label}
-                </button>
+                <StartForm
+                  w={w}
+                  busy={busy}
+                  onStart={(templateId, structureId) => call(`/api/projects/${projectId}/workflow`, 'POST', { op: 'start', templateId, structureId })}
+                />
               ) : (
                 <p className="text-muted">Not started yet. Someone with edit access starts it.</p>
               )}
@@ -179,7 +188,7 @@ function StartedWorkflow({
   const selParked = parked.filter((c) => c.stage === sel.key);
 
   const canChange = (c: WorkflowCard) => canEdit || (canContribute && c.createdById === viewerId);
-  const cardProps = { elementName, stageLabel, canChange, canEdit, isOwner, busy, call };
+  const cardProps = { elementName, stageLabel, canChange, canEdit, isOwner, busy, call, learningsEditable: w.learningsEditable };
 
   // ── Claude's proposals ──────────────────────────────────────────────────────
   const review =
@@ -322,6 +331,15 @@ function StartedWorkflow({
       {canEdit && (
         <AddLine placeholder="This stage is finished when…" busy={busy} onAdd={(body) => call(`/api/projects/${projectId}/criteria`, 'POST', { stage: sel.key, body })} />
       )}
+      <Learnings
+        stageLabel={sel.label}
+        templateName={w.template?.name ?? null}
+        learnings={w.learnings.filter((l) => l.stage === sel.key)}
+        editable={w.learningsEditable}
+        busy={busy}
+        onCall={(body) => call(url, 'POST', { op: 'learning', ...body })}
+        onAdd={(text) => call(url, 'POST', { op: 'learning', action: 'add', stage: sel.key, body: text })}
+      />
       {sel.key === current && canEdit && next && (
         <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-3">
           <button
@@ -1070,6 +1088,7 @@ function CardRow({
   isOwner,
   busy,
   call,
+  learningsEditable,
 }: {
   c: WorkflowCard;
   elements: WorkflowElement[];
@@ -1081,9 +1100,11 @@ function CardRow({
   isOwner: boolean;
   busy: boolean;
   call: Call;
+  learningsEditable: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [settling, setSettling] = useState(false);
+  const [learning, setLearning] = useState(false);
   const [reason, setReason] = useState('');
   const el = elementName(c.elementId);
   const changeable = canChange(c);
@@ -1152,6 +1173,16 @@ function CardRow({
               Edit
             </button>
           )}
+          {changeable && c.status !== 'proposed' && c.status !== 'rejected' && (
+            <button onClick={() => call(`/api/cards/${c.id}/move`, 'POST', { to: 'note' })} disabled={busy} className={BUTTON} title="Make it a note: its element, stage and done-when are dropped">
+              → Note
+            </button>
+          )}
+          {changeable && learningsEditable && c.status !== 'proposed' && c.status !== 'rejected' && (
+            <button onClick={() => setLearning((v) => !v)} className={BUTTON} title="Keep it on the template for every project at a stage">
+              → Learning
+            </button>
+          )}
           {canEdit && (
             <button onClick={() => setSettling((s) => !s)} className={BUTTON}>
               Settle
@@ -1164,6 +1195,16 @@ function CardRow({
           )}
         </span>
       </div>
+      {learning && (
+        <LearningMove
+          text={c.what}
+          stages={stages}
+          stage={c.stage}
+          busy={busy}
+          onMove={(stage, body) => call(`/api/cards/${c.id}/move`, 'POST', { to: 'learning', stage, body })}
+          onCancel={() => setLearning(false)}
+        />
+      )}
       {settling && (
         <form
           onSubmit={async (e) => {
@@ -1323,6 +1364,224 @@ function ElementLine({ e, isOwner, busy, call, strong = false }: { e: WorkflowEl
           Delete
         </button>
       )}
+    </form>
+  );
+}
+
+/** The template's learnings for one stage (W-33): reminders with no checkbox, the same on every project using the template. */
+function Learnings({
+  stageLabel,
+  templateName,
+  learnings,
+  editable,
+  busy,
+  onCall,
+  onAdd,
+}: {
+  stageLabel: string;
+  templateName: string | null;
+  learnings: WorkflowLearning[];
+  editable: boolean;
+  busy: boolean;
+  onCall: (body: { action: 'edit' | 'accept' | 'delete'; id: number; body?: string }) => Promise<boolean>;
+  onAdd: (text: string) => Promise<boolean>;
+}) {
+  const kept = learnings.filter((l) => l.reviewed);
+  const proposed = learnings.filter((l) => !l.reviewed);
+  if (!kept.length && !proposed.length && !editable) return null;
+  return (
+    <section aria-label={`Learnings for ${stageLabel}`} className="t-body mt-5 rounded-md border border-line bg-ink/[0.03] p-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="t-label">
+          Learnings · {stageLabel} · {kept.length}
+        </p>
+        {templateName && <p className="text-[11px] text-muted">From “{templateName}” · on every project at this stage</p>}
+      </div>
+      {kept.length === 0 && proposed.length === 0 && (
+        <p className="mt-1 text-[12px] text-muted">
+          Something worth remembering at {stageLabel} on every project. A note or a card can be moved here with → Learning.
+        </p>
+      )}
+      <ul className="mt-2 space-y-1.5">
+        {kept.map((l) => (
+          <LearningRow key={l.id} l={l} busy={busy} onCall={onCall} />
+        ))}
+        {proposed.map((l) => (
+          <li key={l.id} className="space-y-1 rounded border border-dashed border-ink bg-card px-2.5 py-2">
+            <p className="font-mono text-[10px] text-muted">Proposed by Claude</p>
+            <p>{l.body}</p>
+            {l.canEdit && (
+              <span className="flex gap-2">
+                <button onClick={() => onCall({ action: 'accept', id: l.id })} disabled={busy} className={BUTTON_PRIMARY}>
+                  Keep
+                </button>
+                <button onClick={() => onCall({ action: 'delete', id: l.id })} disabled={busy} className={BUTTON_DANGER}>
+                  Reject
+                </button>
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      {editable && <AddLine placeholder={`Something to remember at ${stageLabel}, on every project`} busy={busy} onAdd={onAdd} />}
+    </section>
+  );
+}
+
+function LearningRow({
+  l,
+  busy,
+  onCall,
+}: {
+  l: WorkflowLearning;
+  busy: boolean;
+  onCall: (body: { action: 'edit' | 'accept' | 'delete'; id: number; body?: string }) => Promise<boolean>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(l.body);
+  if (editing) {
+    return (
+      <li className="rounded border border-line bg-card px-2.5 py-2">
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (await onCall({ action: 'edit', id: l.id, body: text })) setEditing(false);
+          }}
+          className="space-y-1.5"
+        >
+          <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} className={`${FIELD} w-full`} aria-label="Learning" />
+          <span className="flex gap-2">
+            <button type="submit" disabled={busy || !text.trim()} className={BUTTON_PRIMARY}>
+              Save
+            </button>
+            <button type="button" onClick={() => setEditing(false)} className={BUTTON}>
+              Cancel
+            </button>
+          </span>
+        </form>
+      </li>
+    );
+  }
+  return (
+    <li className="space-y-0.5 rounded border border-line bg-card px-2.5 py-2">
+      <p className="whitespace-pre-line">{l.body}</p>
+      <p className="flex flex-wrap items-center gap-x-2 font-mono text-[10px] text-muted">
+        <span>
+          {l.createdByName}
+          {l.source ? ` · from ${l.source}` : ''} · {formatDay(l.createdAt)}
+        </span>
+        {l.canEdit && (
+          <span className="ml-auto flex gap-2 font-sans">
+            <button onClick={() => setEditing(true)} className={BUTTON}>
+              Edit
+            </button>
+            <button onClick={() => confirm('Delete this learning from the template? Every project using it loses it.') && onCall({ action: 'delete', id: l.id })} disabled={busy} className={BUTTON_DANGER}>
+              Delete
+            </button>
+          </span>
+        )}
+      </p>
+    </li>
+  );
+}
+
+/** Moving a note or a card to a learning: the stage it is for and its wording, both changeable first. */
+export function LearningMove({
+  text,
+  stages,
+  stage,
+  busy,
+  onMove,
+  onCancel,
+}: {
+  text: string;
+  stages: { key: string; label: string }[];
+  stage: string;
+  busy: boolean;
+  onMove: (stage: string, body: string) => Promise<boolean>;
+  onCancel: () => void;
+}) {
+  const [to, setTo] = useState(stage);
+  const [body, setBody] = useState(text);
+  return (
+    <form
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (await onMove(to, body)) onCancel();
+      }}
+      className="mt-1.5 space-y-1.5 rounded border border-line p-2"
+    >
+      <p className="text-[12px] font-medium">Make it a learning</p>
+      <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={2} className={`${FIELD} w-full`} aria-label="The learning" />
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-1.5 text-[11px] text-muted">
+          Stage
+          <select value={to} onChange={(e) => setTo(e.target.value)} className={FIELD}>
+            {stages.map((s) => (
+              <option key={s.key} value={s.key}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="submit" disabled={busy || !body.trim()} className={BUTTON_PRIMARY}>
+          Move to learnings
+        </button>
+        <button type="button" onClick={onCancel} className={BUTTON}>
+          Cancel
+        </button>
+      </div>
+      <p className="text-[11px] text-muted">It goes on the project&rsquo;s template, shown on every project at that stage, and leaves this project.</p>
+    </form>
+  );
+}
+
+/** Starting the workflow: with the project's own template (its artist's, else the account's) or another (W-31). */
+function StartForm({ w, busy, onStart }: { w: Workflow; busy: boolean; onStart: (templateId: number | null, structureId: number | null) => Promise<boolean> }) {
+  const choices = w.startChoices;
+  const [templateId, setTemplateId] = useState<number | null>(choices?.templateId ?? null);
+  const [structureId, setStructureId] = useState<number | null>(choices?.structureId ?? null);
+  if (!choices || (choices.templates.length <= 1 && choices.structures.length <= 1)) {
+    return (
+      <button onClick={() => onStart(null, null)} disabled={busy} className={BUTTON}>
+        Start at {w.stages[0].label}
+      </button>
+    );
+  }
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void onStart(templateId, structureId);
+      }}
+      className="space-y-2 rounded border border-ink p-3"
+    >
+      <label className="flex flex-col gap-0.5 text-[11px] text-muted">
+        Workflow template
+        <select value={templateId ?? ''} onChange={(e) => setTemplateId(e.target.value ? Number(e.target.value) : null)} className={FIELD}>
+          {choices.templates.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name} · {t.note}
+            </option>
+          ))}
+        </select>
+      </label>
+      {choices.structures.length > 0 && (
+        <label className="flex flex-col gap-0.5 text-[11px] text-muted">
+          Track structure
+          <select value={structureId ?? ''} onChange={(e) => setStructureId(e.target.value ? Number(e.target.value) : null)} className={FIELD}>
+            {choices.structures.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name} · {t.note}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <p className="text-[11px] text-muted">The project gets its own copy of each; later changes to a template are offered, never forced.</p>
+      <button type="submit" disabled={busy} className={BUTTON_PRIMARY}>
+        Start
+      </button>
     </form>
   );
 }

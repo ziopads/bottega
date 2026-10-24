@@ -14,6 +14,9 @@ import type {
   StructureChange,
   TemplateChange,
   WorkLogEntry,
+  StartChoices,
+  TemplateChoice,
+  WorkflowLearning,
   WorkflowStage,
   WorkflowTemplateStatus,
 } from '@/lib/workflowTypes';
@@ -42,7 +45,7 @@ function pgMessage(err: unknown): string {
 
 // The messages db/011 raises on purpose, passed on as they are.
 const READABLE =
-  /no structure template|needs (edit|contribute|a reason|what was done)|not met|one at a time|already in|not a stage|not been started|not a settled|has no stages|no stages yet|belongs to the same project|stays with its|cannot sit under|template no longer exists/;
+  /no structure template|needs (edit|contribute|a reason|what was done)|not met|one at a time|already in|not a stage|not been started|not a settled|has no stages|no stages yet|belongs to the same project|stays with its|cannot sit under|template no longer exists|not one you can (use|move|copy)|no such stage|needs edit access to the (project's template|artist)|not in this project/;
 
 async function run<T>(fn: () => Promise<T>): Promise<T> {
   try {
@@ -138,6 +141,16 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
       params: [projectId],
     },
   ]);
+  const [learningRows, editableRows] = await db.tx([
+    {
+      text: 'select id, stage, position, body, origin, reviewed, source, created_by_name, created_at, can_edit from project_learnings($1)',
+      params: [projectId],
+    },
+    {
+      text: `select template_can_edit(coalesce((select template_id from project_workflow where project_id = $1), project_template($1))) as ok`,
+      params: [projectId],
+    },
+  ]);
   const who = await accountNames(db, [
     ...logRows.map((r) => String(r.logged_by)),
     ...moveRows.map((r) => String(r.moved_by)),
@@ -206,7 +219,69 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
     criteria,
     elements,
     cards: cardRows.map((r) => toCard(r, who)),
+    learnings: learningRows.map(toLearning),
+    learningsEditable: editableRows[0]?.ok === true,
+    startChoices: current[0] ? null : await readStartChoices(db, projectId),
   };
+}
+
+function toLearning(r: Row): WorkflowLearning {
+  return {
+    id: num(r.id),
+    stage: String(r.stage),
+    position: num(r.position),
+    body: String(r.body),
+    origin: r.origin === 'assistant' ? 'assistant' : 'human',
+    reviewed: r.reviewed === true,
+    source: String(r.source ?? ''),
+    createdByName: String(r.created_by_name ?? ''),
+    createdAt: iso(r.created_at),
+    canEdit: r.can_edit === true,
+  };
+}
+
+/**
+ * The templates a workflow can start with: every one the person can read
+ * (their own, the platform's, and those of artists shared with them), the
+ * project's own first (its artist's, else its owner's).
+ */
+async function readStartChoices(db: Scoped, projectId: number): Promise<StartChoices> {
+  const [own, templates, structures] = await db.tx([
+    {
+      text: `select project_template($1) as template_id,
+                    case when p.kind = 'music' then project_structure_template($1) end as structure_id, p.kind
+               from projects p where p.id = $1`,
+      params: [projectId],
+    },
+    {
+      text: `select t.id, t.name, t.owner_id from workflow_templates t
+              where t.kind = (select kind from projects where id = $1) order by t.owner_id is null, lower(t.name)`,
+      params: [projectId],
+    },
+    {
+      text: `select t.id, t.name, t.owner_id from structure_templates t
+              where (select kind from projects where id = $1) = 'music' order by t.owner_id is null, lower(t.name)`,
+      params: [projectId],
+    },
+  ]);
+  const templateId = own[0]?.template_id == null ? null : num(own[0].template_id);
+  const structureId = own[0]?.structure_id == null ? null : num(own[0].structure_id);
+  const choices = (rows: Row[], ownId: number | null): TemplateChoice[] => {
+    const list = rows.map((r) => ({
+      id: num(r.id),
+      name: String(r.name),
+      note:
+        num(r.id) === ownId
+          ? "this project's own"
+          : r.owner_id === null
+            ? 'Bottega default'
+            : String(r.owner_id) === db.person.userId
+              ? 'yours'
+              : 'shared through an artist',
+    }));
+    return [...list.filter((c) => c.id === ownId), ...list.filter((c) => c.id !== ownId)];
+  };
+  return { templates: choices(templates, templateId), structures: choices(structures, structureId), templateId, structureId };
 }
 
 // ── Stages ───────────────────────────────────────────────────────────────────
@@ -217,7 +292,11 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
  * exist exactly when the workflow does. workflow_start (db/024) copies the
  * owner's template: its stages and every stage's criteria.
  */
-export async function startWorkflow(db: Scoped, projectId: number): Promise<void> {
+export async function startWorkflow(
+  db: Scoped,
+  projectId: number,
+  choice: { templateId: number | null; structureId: number | null } = { templateId: null, structureId: null },
+): Promise<void> {
   await run(async () => {
     const kindRows = await db.q(
       `select p.kind, (select count(*) from elements e where e.project_id = p.id) as elements
@@ -226,7 +305,10 @@ export async function startWorkflow(db: Scoped, projectId: number): Promise<void
     );
     const kind = String(kindRows[0]?.kind ?? '');
     const hasElements = num(kindRows[0]?.elements ?? 0) > 0;
-    const statements: Statement[] = [{ text: 'select workflow_start($1)', params: [projectId] }];
+    // workflow_start_with (db/028): the template named, else the project's own.
+    const statements: Statement[] = [
+      { text: 'select workflow_start_with($1, $2, $3)', params: [projectId, choice.templateId, choice.structureId] },
+    ];
     // Music takes its elements from the owner's track structure inside
     // workflow_start (db/025); other kinds from lib/elementTemplate.ts.
     if (!hasElements && kind !== 'music') {
@@ -614,4 +696,108 @@ export async function settleNote(db: Scoped, noteId: number, reason: string, ele
 export async function projectOf(db: Scoped, table: 'cards' | 'elements' | 'exit_criteria' | 'notes', id: number): Promise<number | null> {
   const rows = await db.q(`select project_id from ${table} where id = $1`, [id]);
   return rows.length ? num(rows[0].project_id) : null;
+}
+
+// ── Learnings (W-33, db/028) ─────────────────────────────────────────────────
+//
+// Learnings live on the template's stages; the project names the template.
+// learning_add() checks the person can edit the template; editing, accepting
+// and deleting go through template_learnings' policies, so they touch nothing
+// the person cannot edit.
+
+export async function addLearning(
+  db: Scoped,
+  projectId: number,
+  stage: string,
+  body: string,
+  origin: 'human' | 'assistant' = 'human',
+  source = '',
+): Promise<number> {
+  return run(async () => {
+    const rows = await db.q('select learning_add($1, $2, $3, $4, $5) as id', [projectId, stage, body, source, origin]);
+    return num(rows[0].id);
+  });
+}
+
+/** The learning's id, if it belongs to the template this project uses. */
+async function learningOf(db: Scoped, projectId: number, id: number): Promise<boolean> {
+  const rows = await db.q('select 1 from project_learnings($1) where id = $2 and can_edit', [projectId, id]);
+  return rows.length > 0;
+}
+
+export async function editLearning(db: Scoped, projectId: number, id: number, body: string): Promise<boolean> {
+  if (!(await learningOf(db, projectId, id))) return false;
+  await run(() => db.q('update template_learnings set body = $2 where id = $1', [id, body]));
+  return true;
+}
+
+export async function acceptLearning(db: Scoped, projectId: number, id: number): Promise<boolean> {
+  if (!(await learningOf(db, projectId, id))) return false;
+  await run(() => db.q('update template_learnings set reviewed = true where id = $1', [id]));
+  return true;
+}
+
+/** Deletes a learning, or rejects Claude's proposal. */
+export async function deleteLearning(db: Scoped, projectId: number, id: number): Promise<boolean> {
+  if (!(await learningOf(db, projectId, id))) return false;
+  await run(() => db.q('delete from template_learnings where id = $1', [id]));
+  return true;
+}
+
+// ── Moving items between notes, to-dos and learnings (W-34, db/028) ──────────
+
+function clock(s: number): string {
+  const t = Math.max(0, Math.floor(s));
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+}
+
+/** Where an item came from, kept on a learning made from it: "Khione · v4 at 3:30". */
+async function itemSource(db: Scoped, table: 'notes' | 'cards', id: number): Promise<string> {
+  const rows = await db.q(
+    `select coalesce(nullif(p.title, ''), mp.canonical_id, 'untitled') as title, a.version, a.variant, x.position_s
+       from ${table} x join projects p on p.id = x.project_id
+       left join music_projects mp on mp.project_id = p.id
+       left join audio a on a.id = x.audio_id
+      where x.id = $1`,
+    [id],
+  );
+  const r = rows[0];
+  if (!r) return '';
+  const mix = r.version === null || r.version === undefined ? '' : mixLabel(String(r.variant ?? ''), num(r.version));
+  const at = mix && r.position_s !== null && r.position_s !== undefined ? ` at ${clock(num(r.position_s))}` : '';
+  return [String(r.title), mix + at].filter(Boolean).join(' · ').slice(0, 300);
+}
+
+export async function noteToCard(
+  db: Scoped,
+  noteId: number,
+  input: { elementId: number | null; doneWhen: string; kind: CardKind | null },
+): Promise<number> {
+  return run(async () => {
+    const rows = await db.q('select note_to_card($1, $2, $3, $4) as id', [noteId, input.elementId, input.doneWhen, input.kind]);
+    return num(rows[0].id);
+  });
+}
+
+export async function cardToNote(db: Scoped, cardId: number): Promise<number> {
+  return run(async () => {
+    const rows = await db.q('select card_to_note($1) as id', [cardId]);
+    return num(rows[0].id);
+  });
+}
+
+/** A note or a to-do becomes a learning on the stage named (else the item's own); body null keeps its text. */
+export async function itemToLearning(
+  db: Scoped,
+  table: 'notes' | 'cards',
+  id: number,
+  stage: string | null,
+  body: string | null,
+): Promise<number> {
+  return run(async () => {
+    const source = await itemSource(db, table, id);
+    const fn = table === 'notes' ? 'note_to_learning' : 'card_to_learning';
+    const rows = await db.q(`select ${fn}($1, $2, $3, $4) as id`, [id, stage, body, source]);
+    return num(rows[0].id);
+  });
 }

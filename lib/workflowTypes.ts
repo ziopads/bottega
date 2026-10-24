@@ -126,6 +126,40 @@ export type SetReading = {
   results: Record<string, CheckResult>;
 };
 
+/**
+ * A learning on a stage of the project's template (W-33, db/028): a reminder
+ * with no checkbox, read live from the template, so every project using it
+ * shows the same ones.
+ */
+export type WorkflowLearning = {
+  id: number;
+  stage: string;
+  position: number;
+  body: string;
+  origin: 'human' | 'assistant';
+  /** false: Claude's proposal, waiting for a person. */
+  reviewed: boolean;
+  /** Where it came from, as written when it was made: "Khione · v4 at 3:30". */
+  source: string;
+  createdByName: string;
+  createdAt: string;
+  /** Whether the person may change the template's learnings. */
+  canEdit: boolean;
+};
+
+/** A template the workflow can start with (W-31). */
+export type TemplateChoice = { id: number; name: string; note: string };
+
+/** What starting the workflow offers, before it starts. */
+export type StartChoices = {
+  templates: TemplateChoice[];
+  /** Empty for kinds with no track structure. */
+  structures: TemplateChoice[];
+  /** The project's own: its artist's, else its owner's. */
+  templateId: number | null;
+  structureId: number | null;
+};
+
 /** One ended session (W-20). */
 export type WorkLogEntry = { id: number; did: string; nextMove: string; loggedByName: string; loggedAt: string };
 
@@ -157,9 +191,16 @@ export type Workflow = {
   criteria: ExitCriterion[];
   elements: WorkflowElement[];
   cards: WorkflowCard[];
+  /** The learnings of the template the project uses, by stage (W-33). */
+  learnings: WorkflowLearning[];
+  /** Whether the person may add to and change the template's learnings. */
+  learningsEditable: boolean;
+  /** Before the workflow starts: the templates it can start with. */
+  startChoices: StartChoices | null;
 };
 
 export const CARD_TEXT_MAX = 1000;
+export const LEARNING_MAX = 2000;
 export const CRITERION_MAX = 500;
 export const ELEMENT_NAME_MAX = 80;
 

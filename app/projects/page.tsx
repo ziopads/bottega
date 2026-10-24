@@ -47,7 +47,7 @@ export default async function ProjectsPage() {
       </div>
       <StudioProjects
         initialProjects={own}
-        artists={myArtists}
+        artists={artists.filter((a) => a.creditable)}
         initialGenres={genres}
         initialReleases={myReleases}
         defaultArtistId={defaultArtist?.id ?? null}

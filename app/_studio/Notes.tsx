@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 
+import type { Marker } from '@/app/_ui/audio/Waveform';
 import type { StudioNote, StudioTrack } from '@/lib/studioTypes';
+import type { WorkflowCard } from '@/lib/workflowTypes';
 import { formatDuration } from '@/lib/studioTypes';
 import { api } from './controls';
 import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
@@ -14,6 +16,30 @@ import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
 
 export function formatWhen(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+/** The waveform's marks for a mix: its notes at moments, and its to-dos at moments (W-37). */
+export function mixMarkers(notes: StudioNote[], cards: WorkflowCard[], trackId: number): Marker[] {
+  const fromNotes: Marker[] = notes
+    .filter((n) => n.trackId === trackId && n.positionS !== null)
+    .map((n) => ({
+      id: n.id,
+      at: n.positionS!,
+      label: `${formatMoment(n.positionS!)} · ${n.body.slice(0, 60)}`,
+      author: n.authorName,
+      body: n.body.replace(/\s+/g, ' ').trim(),
+    }));
+  const fromCards: Marker[] = cards
+    .filter((c) => c.audioId === trackId && c.positionS !== null && !c.settled && ['accepted', 'in progress', 'done'].includes(c.status))
+    .map((c) => ({
+      id: c.id,
+      kind: 'todo',
+      done: c.status === 'done',
+      at: c.positionS!,
+      label: `${formatMoment(c.positionS!)} · ${c.what.slice(0, 60)}`,
+      body: c.what.replace(/\s+/g, ' ').trim(),
+    }));
+  return [...fromNotes, ...fromCards];
 }
 
 /** "2:31" for a moment in a mix. */
@@ -33,6 +59,9 @@ export function NoteItem({
   onMoment,
   onSettle,
   settled = false,
+  onToTodo,
+  onToLearning,
+  children,
 }: {
   note: StudioNote;
   tracks: StudioTrack[];
@@ -49,6 +78,11 @@ export function NoteItem({
   onSettle?: () => void;
   /** Already a settled decision. */
   settled?: boolean;
+  /** Move the note to a to-do or a learning (W-34); shown when the person may. */
+  onToTodo?: () => void;
+  onToLearning?: () => void;
+  /** Shown under the note: the form for a move in progress. */
+  children?: React.ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(n.body);
@@ -92,6 +126,16 @@ export function NoteItem({
         {n.editedAt && <span title={formatWhen(n.editedAt)}>edited</span>}
         {settled && <span className="text-ink">settled</span>}
         <span className="ml-auto flex gap-3">
+          {onToTodo && !settled && !editing && (
+            <button onClick={onToTodo} className={BUTTON} title="Make it a to-do in the current stage">
+              → To-do
+            </button>
+          )}
+          {onToLearning && !settled && !editing && (
+            <button onClick={onToLearning} className={BUTTON} title="Keep it on the template for every project at a stage">
+              → Learning
+            </button>
+          )}
           {onSettle && !settled && !editing && (
             <button onClick={onSettle} className={BUTTON} title="Make this note a settled decision on the Workflow tab">
               Settle
@@ -160,6 +204,7 @@ export function NoteItem({
       ) : (
         <p className="mt-0.5 whitespace-pre-wrap break-words leading-relaxed">{n.body}</p>
       )}
+      {children}
     </li>
   );
 }

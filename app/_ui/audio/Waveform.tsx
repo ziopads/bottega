@@ -8,9 +8,12 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 // a small disc with the author's initials, as SoundCloud shows comments.
 // Pointing at a mark (or tabbing to it) shows the note beside it, to the
 // right, or to the left near the end of the mix. A file with no outline yet
-// gets an even, low bar so every player looks alike.
+// gets an even, low bar so every player looks alike. A to-do pinned to a
+// moment (W-37, db/028) has a mark of its own: a small square, faded once done.
 
-export type Marker = { id: number; at: number; label: string; author?: string; body?: string };
+export type Marker = { id: number; at: number; label: string; author?: string; body?: string; kind?: 'note' | 'todo'; done?: boolean };
+
+const markKey = (m: Marker) => `${m.kind ?? 'note'}-${m.id}`;
 
 const BAR = 2;
 const GAP = 1;
@@ -63,7 +66,7 @@ export default function Waveform({
   const box = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [hover, setHover] = useState<number | null>(null);
-  const [shown, setShown] = useState<number | null>(null);
+  const [shown, setShown] = useState<string | null>(null);
   const clip = useId();
 
   useEffect(() => {
@@ -123,26 +126,32 @@ export default function Waveform({
         <div className="absolute inset-x-0 bottom-0" style={{ height: MARKS }}>
           {markers.map((m) => {
             const left = Math.min(100, (m.at / duration) * 100);
-            const open = shown === m.id;
+            const k = markKey(m);
+            const open = shown === k;
+            const todo = m.kind === 'todo';
             return (
-              <div key={m.id} className={`absolute top-0 ${open ? 'z-20' : 'z-0'}`} style={{ left: `${left}%` }}>
+              <div key={k} className={`absolute top-0 ${open ? 'z-20' : 'z-0'}`} style={{ left: `${left}%` }}>
                 <button
                   type="button"
-                  aria-label={`Note at ${m.label}`}
-                  onMouseEnter={() => setShown(m.id)}
-                  onMouseLeave={() => setShown((s) => (s === m.id ? null : s))}
-                  onFocus={() => setShown(m.id)}
-                  onBlur={() => setShown((s) => (s === m.id ? null : s))}
+                  aria-label={`${todo ? (m.done ? 'Done to-do' : 'To-do') : 'Note'} at ${m.label}`}
+                  onMouseEnter={() => setShown(k)}
+                  onMouseLeave={() => setShown((s) => (s === k ? null : s))}
+                  onFocus={() => setShown(k)}
+                  onBlur={() => setShown((s) => (s === k ? null : s))}
                   onClick={(e) => {
                     e.stopPropagation();
                     onSeek(Math.min(1, m.at / duration));
                     onMarker?.(m);
                   }}
-                  className={`flex h-3.5 w-3.5 -translate-x-1/2 items-center justify-center rounded-full border border-parchment text-[7px] font-medium leading-none text-parchment ${
-                    open ? 'bg-ink' : 'bg-ink/55 hover:bg-ink'
-                  }`}
+                  className={
+                    todo
+                      ? `block h-3 w-3 -translate-x-1/2 translate-y-px rounded-[2px] border border-parchment bg-rust ${m.done ? 'opacity-40' : ''} ${open ? 'ring-1 ring-ink' : ''}`
+                      : `flex h-3.5 w-3.5 -translate-x-1/2 items-center justify-center rounded-full border border-parchment text-[7px] font-medium leading-none text-parchment ${
+                          open ? 'bg-ink' : 'bg-ink/55 hover:bg-ink'
+                        }`
+                  }
                 >
-                  {initials(m.author)}
+                  {todo ? '' : initials(m.author)}
                 </button>
                 {open && (
                   <div
@@ -151,7 +160,7 @@ export default function Waveform({
                       left > 65 ? 'right-3' : 'left-3'
                     }`}
                   >
-                    {m.author && <span className="font-medium">{m.author}</span>}
+                    {todo ? <span className="font-medium text-rust">{m.done ? 'Done' : 'To-do'}</span> : m.author && <span className="font-medium">{m.author}</span>}
                     <span className="font-mono text-[10px] text-muted">{clock(m.at)}</span>
                     <span className="min-w-0 truncate">{m.body ?? m.label}</span>
                   </div>

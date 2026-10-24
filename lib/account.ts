@@ -143,7 +143,7 @@ export async function setDefaultArtist(db: Scoped, artistId: number | null): Pro
 
 // ── Shares ───────────────────────────────────────────────────────────────────
 
-export type ShareKind = 'project' | 'gear' | 'document';
+export type ShareKind = 'project' | 'gear' | 'document' | 'artist';
 
 export interface AccountShare {
   id: number;
@@ -160,14 +160,16 @@ export interface AccountShare {
 // The item's name and its page, per kind. Collections are projects too.
 const SHARE_SELECT = `
   select s.id, s.level, s.granted_at, s.grantee_id,
-         case when s.project_id is not null then 'project' when s.gear_id is not null then 'gear' else 'document' end as kind,
-         coalesce(s.project_id, s.gear_id, s.document_id) as item_id,
-         coalesce(p.owner_id, g.owner_id, d.owner_id) as owner_id,
+         case when s.project_id is not null then 'project' when s.gear_id is not null then 'gear'
+              when s.artist_id is not null then 'artist' else 'document' end as kind,
+         coalesce(s.project_id, s.gear_id, s.document_id, s.artist_id) as item_id,
+         coalesce(p.owner_id, g.owner_id, d.owner_id, ar.account_id) as owner_id,
          p.kind as project_kind,
          case
            when p.id is not null then coalesce(nullif(btrim(concat_ws(' · ', mp.canonical_id, nullif(p.title, ''))), ''), 'untitled')
            when g.id is not null then coalesce(nullif(g.nickname, ''),
                                                btrim(coalesce(m.manufacturer, g.manufacturer) || ' ' || coalesce(m.model, g.name)))
+           when ar.id is not null then ar.code || ' · ' || ar.name
            else d.title
          end as label
     from shares s
@@ -175,11 +177,13 @@ const SHARE_SELECT = `
     left join music_projects mp on mp.project_id = p.id
     left join gear g on g.id = s.gear_id
     left join gear_models m on m.id = g.model_id
-    left join documents d on d.id = s.document_id`;
+    left join documents d on d.id = s.document_id
+    left join artists ar on ar.id = s.artist_id`;
 
 function hrefFor(kind: ShareKind, id: number, projectKind: unknown): string {
   if (kind === 'gear') return `/gear/${id}`;
   if (kind === 'document') return `/library/${id}`;
+  if (kind === 'artist') return '/account';
   return projectKind === 'collection' ? `/collections/${id}` : `/projects/${id}`;
 }
 
@@ -203,7 +207,7 @@ async function toShares(db: Scoped, rows: Row[], person: 'grantee_id' | 'owner_i
 /** Everything this person has shared, across projects, gear and documents. */
 export async function listOutgoingShares(db: Scoped): Promise<AccountShare[]> {
   const rows = await db.q(
-    `${SHARE_SELECT} where coalesce(p.owner_id, g.owner_id, d.owner_id) = app_user() order by label, s.granted_at`,
+    `${SHARE_SELECT} where coalesce(p.owner_id, g.owner_id, d.owner_id, ar.account_id) = app_user() order by label, s.granted_at`,
   );
   return toShares(db, rows, 'grantee_id');
 }
@@ -225,7 +229,7 @@ export interface ActivityEntry {
   mine: boolean;
 }
 
-const KIND_WORD: Record<string, string> = { project: 'session', gear: 'unit', document: 'document', study_group: 'study group' };
+const KIND_WORD: Record<string, string> = { project: 'session', gear: 'unit', document: 'document', study_group: 'study group', artist: 'artist' };
 
 function describe(r: Row, subjectName: string, itemLabel: string | null): string {
   const action = String(r.action);
@@ -317,6 +321,7 @@ export async function listActivity(db: Scoped, limit = 50): Promise<ActivityEntr
                                   from gear g left join gear_models m on m.id = g.model_id where g.id = l.item_id)
               when 'document' then (select d.title from documents d where d.id = l.item_id)
               when 'study_group' then (select sg.name from study_groups sg where sg.id = l.item_id)
+              when 'artist' then (select a.code || ' · ' || a.name from artists a where a.id = l.item_id)
             end as item_label
        from access_log l
       where l.actor = app_user() or l.subject_id = app_user()
@@ -324,6 +329,7 @@ export async function listActivity(db: Scoped, limit = 50): Promise<ActivityEntr
          or (l.item_kind = 'gear' and gear_rank(l.item_id) = 4)
          or (l.item_kind = 'document' and document_rank(l.item_id) = 4)
          or (l.item_kind = 'study_group' and study_custodian(l.item_id))
+         or (l.item_kind = 'artist' and artist_rank(l.item_id) = 4)
       order by l.at desc, l.id desc
       limit $1`,
     [limit],

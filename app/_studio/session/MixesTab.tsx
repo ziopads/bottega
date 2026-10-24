@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { api, InlineEdit } from '@/app/_studio/controls';
-import { formatMoment, NoteComposer, NoteItem } from '@/app/_studio/Notes';
+import { mixMarkers, NoteComposer, NoteItem } from '@/app/_studio/Notes';
 import type { PlayItem } from '@/app/_ui/audio/deck';
 import Player, { type PlayerHandle } from '@/app/_ui/audio/Player';
 import type { Marker } from '@/app/_ui/audio/Waveform';
 import { DetailGrid, Section } from '@/app/_ui/layout';
 import type { StudioNote, StudioReference, StudioTrack } from '@/lib/studioTypes';
+import type { WorkflowCard } from '@/lib/workflowTypes';
 import { formatBytes, formatDuration } from '@/lib/studioTypes';
 
 import { audioUrl, formatDate, uploadMix, uploadReference } from './audioUpload';
@@ -36,6 +37,7 @@ export default function MixesTab({
   setReferences,
   notes,
   setNotes,
+  cards,
   currentId,
   chosenByHand,
   viewerId,
@@ -62,6 +64,8 @@ export default function MixesTab({
   setReferences: React.Dispatch<React.SetStateAction<StudioReference[]>>;
   notes: StudioNote[];
   setNotes: React.Dispatch<React.SetStateAction<StudioNote[]>>;
+  /** The project's cards: those pinned to a moment get their own mark on the waveform. */
+  cards: WorkflowCard[];
   currentId: number | null;
   chosenByHand: boolean;
   viewerId: string;
@@ -104,16 +108,7 @@ export default function MixesTab({
     window.history.replaceState(null, '', url);
   }, [initialAt]);
   const notesFor = (id: number) => notes.filter((n) => n.trackId === id);
-  const markersFor = (id: number): Marker[] =>
-    notesFor(id)
-      .filter((n) => n.positionS !== null)
-      .map((n) => ({
-        id: n.id,
-        at: n.positionS!,
-        label: `${formatMoment(n.positionS!)} · ${n.body.slice(0, 60)}`,
-        author: n.authorName,
-        body: n.body.replace(/\s+/g, ' ').trim(),
-      }));
+  const markersFor = (id: number): Marker[] => mixMarkers(notes, cards, id);
   const asideNotes = selected
     ? [...notesFor(selected)].sort((a, b) => (a.positionS ?? Infinity) - (b.positionS ?? Infinity) || b.createdAt.localeCompare(a.createdAt))
     : [];

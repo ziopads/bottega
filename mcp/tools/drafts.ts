@@ -9,7 +9,7 @@
 
 import type { Scoped } from '@/lib/db';
 import { getProject } from '@/lib/studio';
-import { addCard, addCriteria, getWorkflow, WorkflowError } from '@/lib/workflow';
+import { addCard, addCriteria, addLearning, getWorkflow, WorkflowError } from '@/lib/workflow';
 import { parseCriterion, parseDoneWhen, parseKind, parseWhat } from '@/lib/workflowInput';
 import type { Workflow } from '@/lib/workflowTypes';
 import { ToolError } from '@/mcp/context';
@@ -186,5 +186,32 @@ export async function draftCardTool(
       parked_for_later_stage: cardPos > pos || undefined,
     },
     next: 'This waits in the review band on the project’s Workflow tab until the person accepts or rejects it.',
+  };
+}
+
+/**
+ * draft_learning (db/028): a reminder for a stage of the project's template,
+ * shown on every project using it once the person keeps it. Needs edit access
+ * to the template, which owning it or an artist shared to edit gives.
+ */
+export async function draftLearningTool(db: Scoped, args: { session_id: number; stage?: string; learning: string }) {
+  const w = await started(db, args.session_id);
+  const stage = stageKey(w, args.stage);
+  const text = (args.learning ?? '').trim();
+  if (!text) throw new ToolError('Write the learning.');
+  if (text.length > 2000) throw new ToolError('Keep a learning under 2000 characters.');
+  if (!w.learningsEditable) {
+    throw new ToolError(
+      `The person cannot edit this project's template${w.template ? ` (“${w.template.name}”)` : ''}, so a learning cannot be proposed for it.`,
+    );
+  }
+  const existing = w.learnings.filter((l) => l.stage === stage && norm(l.body) === norm(text));
+  if (existing.length) return { skipped_as_already_there: { id: existing[0].id, learning: existing[0].body } };
+  const id = await readable(() => addLearning(db, args.session_id, stage, text, 'assistant', ''));
+  return {
+    proposed: { id, stage: w.stages.find((s) => s.key === stage)?.label ?? stage, learning: text, template: w.template?.name ?? null },
+    next:
+      'This waits under the stage’s learnings on the Workflow tab (and in Preferences) until the person keeps or rejects it. ' +
+      'Once kept it shows on every project using the template.',
   };
 }

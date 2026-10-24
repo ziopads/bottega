@@ -56,7 +56,7 @@ export async function POST(req: Request) {
   });
 
   if (!result.ok) {
-    if (result.reason === 'no-artist') return NextResponse.json({ error: 'Choose one of your own artists.' }, { status: 400 });
+    if (result.reason === 'no-artist') return NextResponse.json({ error: 'Choose one of your own artists, or one shared with you to edit.' }, { status: 400 });
     return NextResponse.json(
       {
         error: `This artist already has a project called “${canonical.value}”.`,

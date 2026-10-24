@@ -24,11 +24,12 @@ export const dynamic = 'force-dynamic';
 // W-29; db/025). Every change answers with the whole editor. Row-level
 // security keeps writes to one's own structures.
 
-// GET /api/account/structure
-export async function GET() {
+// GET /api/account/structure?edit=:templateId
+export async function GET(req: Request) {
   const account = await apiAccount();
   if (account instanceof NextResponse) return account;
-  return NextResponse.json({ editor: await getStructureEditor(account.db) });
+  const edit = Number(new URL(req.url).searchParams.get('edit'));
+  return NextResponse.json({ editor: await getStructureEditor(account.db, Number.isInteger(edit) && edit > 0 ? edit : null) });
 }
 
 const idOf = (raw: unknown): number | null => (Number.isInteger(raw) && (raw as number) > 0 ? (raw as number) : null);
@@ -143,5 +144,7 @@ export async function POST(req: Request) {
     if (err instanceof StructureError) return bad(err.message);
     throw err;
   }
-  return NextResponse.json({ editor: await getStructureEditor(db) });
+  // Every body may carry editId: the structure the editor shows (db/028). A deleted or copied one falls back to the chosen.
+  const editId = b.op === 'delete' || b.op === 'copy' || b.op === 'choose' ? null : idOf(b.editId);
+  return NextResponse.json({ editor: await getStructureEditor(db, editId) });
 }

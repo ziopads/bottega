@@ -7,8 +7,10 @@ export type StudioArtist = {
   id: number;
   code: string;
   name: string;
-  /** Belongs to the viewer's own account: the only artists they can credit. */
+  /** Belongs to the viewer's own account. */
   mine?: boolean;
+  /** One the viewer can credit their projects to: their own, or shared with them to edit (db/028). */
+  creditable?: boolean;
 };
 
 /** What the viewer may do with a project (db/002 project_level; REQUIREMENTS AC-5). */

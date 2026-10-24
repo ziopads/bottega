@@ -61,13 +61,22 @@ function isForeignArtist(err: unknown): boolean {
 
 // ── Artists ──────────────────────────────────────────────────────────────────
 
-/** The viewer's own artists and any artist credited on a project they can see. Own first. */
+/**
+ * The viewer's own artists, artists shared with them (db/028), and any artist
+ * credited on a project they can see. Own first, then those they can credit.
+ */
 export async function listArtists(db: Scoped): Promise<StudioArtist[]> {
   const rows = await db.q(
-    `select id, code, name, coalesce(account_id = app_user(), false) as mine
-     from artists order by mine desc, code`,
+    `select id, code, name, coalesce(account_id = app_user(), false) as mine, artist_rank(id) >= 3 as creditable
+     from artists order by mine desc, creditable desc, code`,
   );
-  return rows.map((r) => ({ id: num(r.id), code: String(r.code), name: String(r.name), mine: r.mine === true }));
+  return rows.map((r) => ({
+    id: num(r.id),
+    code: String(r.code),
+    name: String(r.name),
+    mine: r.mine === true,
+    creditable: r.creditable === true,
+  }));
 }
 
 // ── Projects ─────────────────────────────────────────────────────────────────
@@ -869,7 +878,7 @@ export async function releasesForProject(db: Scoped, projectId: number): Promise
 // database's policies and triggers enforce that and write every change to the
 // access log. A grantee sees their own share rows.
 
-export type ShareItem = { kind: 'project'; id: number } | { kind: 'gear'; id: number };
+export type ShareItem = { kind: 'project'; id: number } | { kind: 'gear'; id: number } | { kind: 'artist'; id: number };
 
 const SHARE_COLUMNS = 'id, project_id, gear_id, grantee_id, level, granted_at';
 
@@ -885,8 +894,8 @@ function toShare(r: Row, who: Map<string, string>): StudioShare {
   };
 }
 
-function itemColumn(item: ShareItem): 'project_id' | 'gear_id' {
-  return item.kind === 'project' ? 'project_id' : 'gear_id';
+function itemColumn(item: ShareItem): 'project_id' | 'gear_id' | 'artist_id' {
+  return item.kind === 'project' ? 'project_id' : item.kind === 'gear' ? 'gear_id' : 'artist_id';
 }
 
 export async function listShares(db: Scoped, item: ShareItem): Promise<StudioShare[]> {

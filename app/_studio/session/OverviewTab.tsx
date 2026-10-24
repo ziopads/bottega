@@ -3,7 +3,7 @@
 import Link from 'next/link';
 
 import { GenreSelect, InlineEdit } from '@/app/_studio/controls';
-import { formatMoment } from '@/app/_studio/Notes';
+import { formatMoment, mixMarkers } from '@/app/_studio/Notes';
 import Sharing from '@/app/_studio/Sharing';
 import Player from '@/app/_ui/audio/Player';
 import { DetailGrid, MetaList, Section } from '@/app/_ui/layout';
@@ -61,17 +61,7 @@ export default function OverviewTab({
     (c) => c.stage === workflow.stage && !c.settled && (c.status === 'accepted' || c.status === 'in progress'),
   );
   const proposals = workflow.cards.filter((c) => c.status === 'proposed').length + workflow.criteria.filter((c) => !c.reviewed).length;
-  const markers = current
-    ? notes
-        .filter((n) => n.trackId === current.id && n.positionS !== null)
-        .map((n) => ({
-          id: n.id,
-          at: n.positionS!,
-          label: `${formatMoment(n.positionS!)} · ${n.body.slice(0, 60)}`,
-          author: n.authorName,
-          body: n.body.replace(/\s+/g, ' ').trim(),
-        }))
-    : [];
+  const markers = current ? mixMarkers(notes, workflow.cards, current.id) : [];
 
   const main = (
     <>

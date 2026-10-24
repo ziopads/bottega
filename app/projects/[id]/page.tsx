@@ -76,7 +76,7 @@ export default async function ProjectPage({ params, searchParams }: Params) {
         initialProject={project}
         initialTracks={tracks}
         names={names}
-        artists={artists.filter((a) => a.mine)}
+        artists={artists.filter((a) => a.creditable)}
         initialGenres={genres}
         initialNotes={notes}
         initialReferences={references}

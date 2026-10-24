@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.29
+**Version:** 0.30
 **Date:** 2026-10-24
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -9,6 +9,12 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.30** (2026-10-24) — Templates per artist and shared artists (W-30 to
+  W-32), learnings on a template's stages (W-33), moving an item between a
+  note, a to-do and a learning (W-34), the To-dos page (W-35, W-36), to-dos
+  on the waveform (W-37). From Gordon's feedback: learnings belong to a
+  stage, actions to one list of to-dos. Migration 028.
 
 - **0.29** (2026-10-24) — The watcher for other people (A-10 to A-12): each
   Mac is added under Account › Security with its own sessions folder; a
@@ -617,7 +623,52 @@ there may be lost in the move.
   the blocker and ending a session; Claude's proposals; then three columns:
   the stages, the chosen stage's criteria with hints and likely-done marks,
   and the current stage's cards by element, with parked cards, settled
-  decisions and the work log folded below.
+  decisions and the work log folded below. From 24 October the chosen
+  stage's learnings sit under its criteria (W-33), and each card can move to
+  a note or a learning (W-34).
+- **W-30** Templates per artist (built 24 October 2026, migration 028): an
+  artist names the workflow template and track structure its projects start
+  with; one that names none uses its account's from Preferences. Set under
+  Account › Profile by anyone with edit on the artist.
+- **W-31** Starting a workflow offers every template and structure the person
+  can read, the project's own first (its artist's, else its owner's).
+- **W-32** Shared artists: an artist's account shares it with another account
+  to view or to edit (as projects are shared, logged). Edit lets the grantee
+  credit their own projects to it, choose its templates, and edit the
+  templates it uses (in Preferences, beside their own); renaming and deleting
+  a template stay its owner's. The artist stays its owner's; projects credited
+  while it was shared stay credited when the share ends. Shares show under
+  Account › Sharing with the rest.
+- **W-33** Learnings: reminders on a stage of a workflow template, without a
+  checkbox, such as "pitch the kick and snare up for a two-step feel and to
+  clear room for the bass". Read live from the template (never copied into
+  projects), they show on the Workflow tab of every project using it while it
+  is at that stage, and in Preferences under the stage. Whoever can edit the
+  template adds, rewords and removes them; Claude proposes them (draft_learning)
+  and the person keeps or rejects each. A copy of a template takes its
+  learnings. A learning does not change the template's version, so it offers
+  nothing to bring in.
+- **W-34** Moving an item: a note becomes a to-do (a card in the project's
+  current stage, with an element, done-when and kind given then or later),
+  a to-do becomes a note (its element, stage and done-when dropped), and
+  either becomes a learning on a stage of the project's template, reworded if
+  wanted, keeping where it came from ("Khione · v4 at 3:30"). The mix and
+  moment move with it between notes and to-dos, and its author and time are
+  kept. The item exists in one place only. Its author with contribute access,
+  or anyone with edit; a learning also needs edit on the template. A note
+  just moved to a to-do can be moved back at once (Undo).
+- **W-35** The To-dos page: every card across the person's projects as a
+  board (To do · In progress · Done) or a list. Filters: projects (in
+  rotation by default, the whole board, every project, or one), stage (each
+  project's current stage by default, with those parked for later, or any),
+  element and kind. Done cards shown or hidden, from the last 14 or 30 days or
+  ever; on the board, optionally one row per project. A card drags between
+  columns or moves on with its button; any card can become a note. The view
+  and those choices are remembered in the browser.
+- **W-36** On the board, a project's count of open to-dos links to the To-dos
+  page filtered to it.
+- **W-37** To-dos pinned to a moment show on the mix's waveform beside the
+  notes, as small squares (faded once done), with the to-do on hover.
 
 ## 8. Corpus (K)
 

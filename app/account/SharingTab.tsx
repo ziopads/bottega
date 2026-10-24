@@ -17,8 +17,8 @@ import { BUTTON_DANGER } from '@/app/_ui/styles';
 // one place; and what others have shared with it. Each item's own page shares
 // it with someone new.
 
-const KIND_LABEL: Record<ShareKind, string> = { project: 'Projects', gear: 'Gear', document: 'Documents' };
-const KINDS: ShareKind[] = ['project', 'gear', 'document'];
+const KIND_LABEL: Record<ShareKind, string> = { project: 'Projects', gear: 'Gear', document: 'Documents', artist: 'Artists' };
+const KINDS: ShareKind[] = ['project', 'gear', 'document', 'artist'];
 
 const LEVEL_WORD: Record<ShareLevel, string> = { view: 'view', contribute: 'contribute', edit: 'edit' };
 
@@ -91,7 +91,8 @@ export default function SharingTab({ initialOutgoing, incoming }: { initialOutgo
                                 aria-label={`Access for ${s.personName}`}
                                 className={FIELD}
                               >
-                                {SHARE_LEVELS.map((lv) => (
+                                {/* An artist is shared to view or to edit (db/028). */}
+                                {SHARE_LEVELS.filter((lv) => s.kind !== 'artist' || lv !== 'contribute').map((lv) => (
                                   <option key={lv} value={lv}>
                                     {LEVEL_WORD[lv]}
                                   </option>

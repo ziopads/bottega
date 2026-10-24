@@ -1,13 +1,28 @@
 import { NextResponse } from 'next/server';
 
 import { apiAccount, projectRefusal } from '@/lib/access';
-import { applyStructureChanges, applyTemplateChanges, endSession, getWorkflow, moveStage, pullNext, setNext, startWorkflow } from '@/lib/workflow';
-import { parseReason, parseStage, text } from '@/lib/workflowInput';
+import {
+  acceptLearning,
+  addLearning,
+  applyStructureChanges,
+  applyTemplateChanges,
+  deleteLearning,
+  editLearning,
+  endSession,
+  getWorkflow,
+  moveStage,
+  WorkflowError,
+  pullNext,
+  setNext,
+  startWorkflow,
+} from '@/lib/workflow';
+import { parseOptionalId, parseReason, parseStage, text } from '@/lib/workflowInput';
+import { LEARNING_MAX } from '@/lib/workflowTypes';
 import { answer, bad, parseId, readBody } from '@/lib/workflowRoutes';
 
 export const dynamic = 'force-dynamic';
 
-// A project's workflow (REQUIREMENTS W-1 to W-4, W-17, W-19, W-20; db/011, db/024).
+// A project's workflow (REQUIREMENTS W-1 to W-4, W-17, W-19, W-20, W-31, W-33; db/011, db/024, db/028).
 
 // GET /api/projects/:id/workflow
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -23,8 +38,12 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 // POST /api/projects/:id/workflow
-//   edit:       { op: 'start' } | { op: 'move', to, reason? } | { op: 'template', uids: string[] } | { op: 'structure', uids: string[] }
+//   edit:       { op: 'start', templateId?, structureId? } | { op: 'move', to, reason? } | { op: 'template', uids: string[] }
+//               | { op: 'structure', uids: string[] }
 //   contribute: { op: 'next', next?, blocker? } | { op: 'end-session', did, next, lines: string[] } | { op: 'pull-next' }
+//   learnings:  { op: 'learning', action: 'add', stage, body } | { op: 'learning', action: 'edit', id, body }
+//               | { op: 'learning', action: 'accept' | 'delete', id }
+//               Any access to the project; the database lets only those who can edit the template change it.
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const account = await apiAccount();
   if (account instanceof NextResponse) return account;
@@ -34,8 +53,31 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const body = await readBody(req);
   if (!body) return bad('Invalid body');
   const contributing = body.op === 'next' || body.op === 'end-session' || body.op === 'pull-next';
-  const refusal = await projectRefusal(db, id, contributing ? 'contribute' : 'edit');
+  const refusal = await projectRefusal(db, id, body.op === 'learning' ? 'view' : contributing ? 'contribute' : 'edit');
   if (refusal) return refusal;
+
+  if (body.op === 'learning') {
+    if (body.action === 'add') {
+      const stage = parseStage(body.stage);
+      if ('error' in stage) return bad(stage.error);
+      const b = text(body.body, 'The learning', LEARNING_MAX);
+      if ('error' in b) return bad(b.error);
+      return answer(db, id, () => addLearning(db, id, stage.value, b.value));
+    }
+    const lid = parseId(String(body.id ?? ''));
+    if (!lid) return bad('Name a learning');
+    const missing = () => {
+      throw new WorkflowError('That learning is not one you can change.');
+    };
+    if (body.action === 'edit') {
+      const b = text(body.body, 'The learning', LEARNING_MAX);
+      if ('error' in b) return bad(b.error);
+      return answer(db, id, async () => (await editLearning(db, id, lid, b.value)) || missing());
+    }
+    if (body.action === 'accept') return answer(db, id, async () => (await acceptLearning(db, id, lid)) || missing());
+    if (body.action === 'delete') return answer(db, id, async () => (await deleteLearning(db, id, lid)) || missing());
+    return bad('Unknown operation');
+  }
 
   if (body.op === 'next') {
     const next = body.next === undefined ? undefined : text(body.next, 'The next move', 1000, false);
@@ -65,7 +107,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return answer(db, id, () => applyTemplateChanges(db, id, uids as string[]));
   }
 
-  if (body.op === 'start') return answer(db, id, () => startWorkflow(db, id));
+  if (body.op === 'start') {
+    const templateId = parseOptionalId(body.templateId ?? null);
+    if ('error' in templateId) return bad(templateId.error);
+    const structureId = parseOptionalId(body.structureId ?? null);
+    if ('error' in structureId) return bad(structureId.error);
+    return answer(db, id, () => startWorkflow(db, id, { templateId: templateId.value, structureId: structureId.value }));
+  }
   if (body.op === 'move') {
     const to = parseStage(body.to);
     if ('error' in to) return bad(to.error);

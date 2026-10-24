@@ -5,15 +5,18 @@ import { useState } from 'react';
 import { api } from '@/app/_studio/controls';
 import { Section } from '@/app/_ui/layout';
 import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
-import type { EditorStage, TemplateEditor as Editor } from '@/lib/templateTypes';
+import type { EditorLearning, EditorStage, TemplateEditor as Editor } from '@/lib/templateTypes';
 
 import { FIELD } from './parts';
 
 // Preferences › Board and Workflow template (REQUIREMENTS W-13 to W-15, W-22;
 // db/024). General to detail, left to right: the template's stages, then the
-// chosen stage's name, standard and criteria. The platform default is read
-// only; editing starts from one's own copy. Text saves when the field is
-// left; every change answers with the whole editor.
+// chosen stage's name, standard, criteria and learnings. The platform default
+// is read only; editing starts from one's own copy. Since db/028 a template
+// used by an artist shared with one to edit can be edited here too, so which
+// template new projects start from and which one is being edited are chosen
+// apart. Text saves when the field is left; every change answers with the
+// whole editor.
 
 type Post = (body: Record<string, unknown>) => Promise<boolean>;
 
@@ -68,7 +71,7 @@ export function TemplateEditor({ initial }: { initial: Editor }) {
   const post: Post = async (body) => {
     setError('');
     setBusy(true);
-    const r = await api<{ editor: Editor }>('/api/account/template', { method: 'POST', body: JSON.stringify(body) });
+    const r = await api<{ editor: Editor }>('/api/account/template', { method: 'POST', body: JSON.stringify({ editId: ed.editing.id, ...body }) });
     setBusy(false);
     if (!r.ok) {
       setError(r.body.error || 'That did not go through.');
@@ -78,9 +81,24 @@ export function TemplateEditor({ initial }: { initial: Editor }) {
     return true;
   };
 
-  const readOnly = ed.chosen.isDefault;
+  const readOnly = !ed.editing.canEdit;
   const stage = ed.stages.find((s) => s.id === stageId) ?? ed.stages[0];
-  const own = ed.templates.filter((t) => !t.isDefault);
+  const own = ed.templates.filter((t) => t.mine);
+  const choosable = ed.templates.filter((t) => t.isDefault || t.mine);
+  const shared = ed.templates.filter((t) => !t.isDefault && !t.mine);
+
+  async function edit(id: number) {
+    setError('');
+    setBusy(true);
+    const r = await api<{ editor: Editor }>(`/api/account/template?edit=${id}`, { method: 'GET' });
+    setBusy(false);
+    if (!r.ok) {
+      setError(r.body.error || 'Could not open that template.');
+      return;
+    }
+    setEd(r.data.editor);
+    setStageId(null);
+  }
 
   return (
     <Section label="Workflow template · music">
@@ -98,7 +116,7 @@ export function TemplateEditor({ initial }: { initial: Editor }) {
             disabled={busy}
             className={`${FIELD} text-[15px] font-medium`}
           >
-            {ed.templates.map((t) => (
+            {choosable.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
                 {t.isDefault && t.name !== 'Bottega default' ? ' (Bottega’s default)' : ''}
@@ -106,22 +124,35 @@ export function TemplateEditor({ initial }: { initial: Editor }) {
             ))}
           </select>
         </label>
-        {!readOnly && (
+        {ed.templates.length > 1 && (
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] text-muted">Editing</span>
+            <select value={ed.editing.id} onChange={(e) => edit(Number(e.target.value))} disabled={busy} className={FIELD}>
+              {ed.templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                  {t.isDefault ? ' · Bottega default' : t.mine ? '' : ` · ${t.ownerName ?? 'shared'}’s, through an artist`}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {ed.editing.mine && (
           <span className="flex flex-wrap items-end gap-2">
             <label className="flex flex-col gap-1">
               <span className="text-[11px] text-muted">Name</span>
               <input
-                key={ed.chosen.name}
-                defaultValue={ed.chosen.name}
-                onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== ed.chosen.name && void post({ op: 'rename', templateId: ed.chosen.id, name: e.target.value })}
+                key={ed.editing.name}
+                defaultValue={ed.editing.name}
+                onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== ed.editing.name && void post({ op: 'rename', templateId: ed.editing.id, name: e.target.value })}
                 className={FIELD}
               />
             </label>
-            <button onClick={() => post({ op: 'copy', sourceId: ed.chosen.id, name: `${ed.chosen.name} copy` })} disabled={busy} className={BUTTON}>
+            <button onClick={() => post({ op: 'copy', sourceId: ed.editing.id, name: `${ed.editing.name} copy` })} disabled={busy} className={BUTTON}>
               Duplicate
             </button>
             <button
-              onClick={() => confirm(`Delete “${ed.chosen.name}”? New projects then start from Bottega’s default; projects already started keep their own copies.`) && post({ op: 'delete', templateId: ed.chosen.id })}
+              onClick={() => confirm(`Delete “${ed.editing.name}”? New projects then start from Bottega’s default; projects already started keep their own copies.`) && post({ op: 'delete', templateId: ed.editing.id })}
               disabled={busy}
               className={BUTTON_DANGER}
             >
@@ -133,17 +164,26 @@ export function TemplateEditor({ initial }: { initial: Editor }) {
       <p className="mt-2 text-[11px] text-muted">
         Projects already started keep their own copy; their Workflow tab offers your changes to bring in.
         {own.length === 0 ? '' : ` Your templates: ${own.map((t) => t.name).join(', ')}.`}
+        {shared.length === 0 ? '' : ` Shared with you through artists: ${shared.map((t) => t.name).join(', ')}; an artist’s own templates are chosen under Profile.`}
       </p>
+      {!ed.editing.mine && ed.editing.canEdit && (
+        <p className="t-body mt-2 rounded border border-line px-3 py-2">
+          “{ed.editing.name}” is {ed.editing.ownerName ?? 'someone else'}’s, shared with you through an artist: your changes reach everyone using it.
+        </p>
+      )}
 
       {readOnly && (
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            await post({ op: 'copy', sourceId: ed.chosen.id, name: copyName });
+            await post({ op: 'copy', sourceId: ed.editing.id, name: copyName });
           }}
           className="t-body mt-3 flex flex-wrap items-end gap-2 rounded border border-ink px-3 py-2.5"
         >
-          <p className="min-w-0 flex-[1_1_320px]">This is Bottega’s default, which you can read but not change. Make your own copy to edit it; new projects then start from your copy.</p>
+          <p className="min-w-0 flex-[1_1_320px]">
+            {ed.editing.isDefault ? 'This is Bottega’s default, which you can read but not change.' : `“${ed.editing.name}” can be read here but not changed.`} Make your own copy to
+            edit it; new projects then start from your copy.
+          </p>
           <input value={copyName} onChange={(e) => setCopyName(e.target.value)} aria-label="Name of your copy" className={FIELD} />
           <button type="submit" disabled={busy || !copyName.trim()} className={BUTTON_PRIMARY}>
             Make my copy
@@ -175,7 +215,7 @@ export function TemplateEditor({ initial }: { initial: Editor }) {
               </li>
             ))}
           </ul>
-          {!readOnly && <AddLine placeholder="A new stage" busy={busy} onAdd={(label) => post({ op: 'add-stage', templateId: ed.chosen.id, label })} />}
+          {!readOnly && <AddLine placeholder="A new stage" busy={busy} onAdd={(label) => post({ op: 'add-stage', templateId: ed.editing.id, label })} />}
         </div>
         <div className="min-w-0 lg:col-span-8">{stage && <StageEditor key={stage.id} s={stage} ed={ed} readOnly={readOnly} busy={busy} post={post} />}</div>
       </div>
@@ -274,6 +314,18 @@ function StageEditor({ s, ed, readOnly, busy, post }: { s: EditorStage; ed: Edit
         ))}
       </ul>
       {!readOnly && <AddLine placeholder="This stage is finished when…" busy={busy} onAdd={(body) => post({ op: 'add-criterion', stageId: s.id, body })} />}
+      <div className="space-y-1.5 border-t border-line pt-3">
+        <p className="t-label">Learnings · {s.learnings.filter((l) => l.reviewed).length}</p>
+        <p className="text-[11px] text-muted">Reminders with no checkbox, shown on every project using this template while it is at {s.label}.</p>
+        {s.learnings.length > 0 && (
+          <ul className="space-y-1.5">
+            {s.learnings.map((l) => (
+              <LearningLine key={l.id} l={l} readOnly={readOnly} busy={busy} post={post} />
+            ))}
+          </ul>
+        )}
+        {!readOnly && <AddLine placeholder={`Something to remember at ${s.label}`} busy={busy} onAdd={(body) => post({ op: 'add-learning', stageId: s.id, body })} />}
+      </div>
       {s.missingFromDefault.length > 0 && (
         <p className="text-[11px] text-muted">Removed from the default: {s.missingFromDefault.map((m) => `“${m.body}”`).join(', ')}.</p>
       )}
@@ -316,5 +368,43 @@ function AddLine({ placeholder, busy, onAdd }: { placeholder: string; busy: bool
         Add
       </button>
     </form>
+  );
+}
+
+function LearningLine({ l, readOnly, busy, post }: { l: EditorLearning; readOnly: boolean; busy: boolean; post: Post }) {
+  return (
+    <li className={`t-body flex flex-col gap-1 rounded border px-2.5 py-2 ${l.reviewed ? 'border-line' : 'border-dashed border-ink'}`}>
+      {!l.reviewed && <span className="font-mono text-[10px] text-muted">Proposed by Claude</span>}
+      {readOnly ? (
+        <span className="whitespace-pre-line">{l.body}</span>
+      ) : (
+        <textarea
+          key={l.body}
+          defaultValue={l.body}
+          rows={2}
+          onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== l.body && void post({ op: 'learning', learningId: l.id, body: e.target.value })}
+          className={`${FIELD} w-full`}
+          aria-label="Learning"
+        />
+      )}
+      <span className="flex flex-wrap items-center gap-2 text-[11px] text-muted">
+        <span>
+          {l.createdByName}
+          {l.source ? ` · from ${l.source}` : ''}
+        </span>
+        {!readOnly && (
+          <span className="ml-auto flex gap-2">
+            {!l.reviewed && (
+              <button onClick={() => post({ op: 'learning', learningId: l.id, accept: true })} disabled={busy} className={BUTTON_PRIMARY}>
+                Keep
+              </button>
+            )}
+            <button onClick={() => post({ op: 'remove-learning', learningId: l.id })} disabled={busy} className={BUTTON_DANGER}>
+              {l.reviewed ? 'Remove' : 'Reject'}
+            </button>
+          </span>
+        )}
+      </span>
+    </li>
   );
 }

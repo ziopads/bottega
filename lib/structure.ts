@@ -1,4 +1,5 @@
 import type { Scoped } from '@/lib/db';
+import { accountNames, nameOf } from '@/lib/names';
 import type { StructureEditor, StructureElement, StructureSummary } from '@/lib/structureTypes';
 
 // Track structures in Preferences (REQUIREMENTS W-25 to W-29; db/025): one's
@@ -21,30 +22,42 @@ async function run<T>(fn: () => Promise<T>): Promise<T> {
     if (/not one you can copy|must be one of your own|needs an active account|only a top-level|parts sit|sits under/.test(msg)) {
       throw new StructureError(msg.charAt(0).toUpperCase() + msg.slice(1) + '.');
     }
-    if (/row-level security|permission denied/.test(msg)) throw new StructureError('Only your own structures can be changed. Make a copy first.');
+    if (/row-level security|permission denied/.test(msg)) throw new StructureError('Only structures you can edit can be changed. Make a copy first.');
     if (/violates check constraint/.test(msg)) throw new StructureError('That is too long, empty, or repeats a prefix.');
     throw err;
   }
 }
 
-export async function getStructureEditor(db: Scoped): Promise<StructureEditor> {
+/** The editor for the chosen structure, or for editId when it is one the person can read (db/028). */
+export async function getStructureEditor(db: Scoped, editId: number | null = null): Promise<StructureEditor> {
   const [prefRows, tplRows] = await db.tx([
     { text: 'select structure_template_id from account_preferences where user_id = app_user()', params: [] },
     {
-      text: `select id, name, owner_id is null as is_default from structure_templates
-              where owner_id is null or owner_id = app_user() order by owner_id is not null, lower(name)`,
+      text: `select id, name, owner_id, owner_id is null as is_default, coalesce(owner_id = app_user(), false) as mine,
+                    structure_can_edit(id) as can_edit
+               from structure_templates
+              order by owner_id is not null, coalesce(owner_id = app_user(), false) desc, lower(name)`,
       params: [],
     },
   ]);
-  const templates: StructureSummary[] = tplRows.map((r) => ({ id: num(r.id), name: String(r.name), isDefault: r.is_default === true }));
+  const owners = await accountNames(db, tplRows.map((r) => (r.owner_id === null ? null : String(r.owner_id))));
+  const templates: StructureSummary[] = tplRows.map((r) => ({
+    id: num(r.id),
+    name: String(r.name),
+    isDefault: r.is_default === true,
+    mine: r.mine === true,
+    canEdit: r.can_edit === true,
+    ownerName: r.owner_id === null || r.mine === true ? null : nameOf(owners, String(r.owner_id)),
+  }));
   const def = templates.find((t) => t.isDefault)!;
   const chosenId = prefRows[0]?.structure_template_id ? num(prefRows[0].structure_template_id) : def.id;
   const chosen = templates.find((t) => t.id === chosenId) ?? def;
+  const editing = templates.find((t) => t.id === editId) ?? chosen;
   const [rows, defRows] = await db.tx([
     {
       text: `select id, parent_id, uid, position, name, description, color, is_zone, prefixes, group_names
                from structure_elements where template_id = $1 order by position, id`,
-      params: [chosen.id],
+      params: [editing.id],
     },
     { text: 'select uid, name, description, color, is_zone, prefixes, group_names from structure_elements where template_id = $1', params: [def.id] },
   ]);
@@ -73,10 +86,10 @@ export async function getStructureEditor(db: Scoped): Promise<StructureEditor> {
       parts: rows
         .filter((p) => num(p.parent_id) === num(r.id))
         .map((p) => ({ id: num(p.id), uid: String(p.uid), position: num(p.position), name: String(p.name), description: String(p.description ?? '') })),
-      difference: chosen.isDefault ? 'same' : !d ? 'added' : same ? 'same' : 'changed',
+      difference: editing.isDefault ? 'same' : !d ? 'added' : same ? 'same' : 'changed',
     };
   });
-  return { chosen, templates, elements };
+  return { chosen, editing, templates, elements };
 }
 
 const setPref = (db: Scoped, id: number | null) =>

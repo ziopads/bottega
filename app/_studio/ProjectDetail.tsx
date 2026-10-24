@@ -341,6 +341,7 @@ export default function ProjectDetail({
           setReferences={setReferences}
           notes={notes}
           setNotes={setNotes}
+          cards={workflow.cards}
           currentId={current?.id ?? null}
           chosenByHand={chosenByHand}
           viewerId={viewerId}
@@ -372,6 +373,7 @@ export default function ProjectDetail({
           projectId={project.id}
           workflow={workflow}
           setWorkflow={setWorkflow}
+          setNotes={setNotes}
           viewerId={viewerId}
           canContribute={canContribute}
           canEdit={canEdit}

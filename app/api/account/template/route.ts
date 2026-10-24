@@ -4,6 +4,7 @@ import { apiAccount } from '@/lib/access';
 import {
   addStage,
   addTemplateCriterion,
+  addTemplateLearning,
   chooseTemplate,
   copyTemplate,
   deleteTemplate,
@@ -12,14 +13,16 @@ import {
   moveTemplateStage,
   removeStage,
   removeTemplateCriterion,
+  removeTemplateLearning,
   renameTemplate,
   resetStage,
   setBoardSettings,
   TemplateError,
   updateStage,
   updateTemplateCriterion,
+  updateTemplateLearning,
 } from '@/lib/templates';
-import { HINT_MAX, STAGE_LABEL_MAX, STANDARD_MAX, TEMPLATE_NAME_MAX } from '@/lib/templateTypes';
+import { HINT_MAX, LEARNING_MAX, STAGE_LABEL_MAX, STANDARD_MAX, TEMPLATE_NAME_MAX } from '@/lib/templateTypes';
 import { parseCriterion, text } from '@/lib/workflowInput';
 import { bad, readBody } from '@/lib/workflowRoutes';
 
@@ -29,11 +32,12 @@ export const dynamic = 'force-dynamic';
 // (REQUIREMENTS W-13 to W-15, W-22; db/024). Every change answers with the
 // whole editor. Row-level security keeps writes to one's own templates.
 
-// GET /api/account/template
-export async function GET() {
+// GET /api/account/template?edit=:templateId
+export async function GET(req: Request) {
   const account = await apiAccount();
   if (account instanceof NextResponse) return account;
-  return NextResponse.json({ editor: await getTemplateEditor(account.db) });
+  const edit = Number(new URL(req.url).searchParams.get('edit'));
+  return NextResponse.json({ editor: await getTemplateEditor(account.db, Number.isInteger(edit) && edit > 0 ? edit : null) });
 }
 
 const idOf = (raw: unknown): number | null => (Number.isInteger(raw) && (raw as number) > 0 ? (raw as number) : null);
@@ -48,6 +52,8 @@ const intIn = (raw: unknown, lo: number, hi: number): number | null =>
 //   remove-stage { stageId } · reset-stage { stageId }
 //   add-criterion { stageId, body } · criterion { criterionId, body?, hint?, checkKey? }
 //   move-criterion { criterionId, dir } · remove-criterion { criterionId }
+//   add-learning { stageId, body } · learning { learningId, body?, accept? } · remove-learning { learningId }
+// Every body may carry editId: the template the editor shows (db/028), else the chosen one.
 export async function POST(req: Request) {
   const account = await apiAccount();
   if (account instanceof NextResponse) return account;
@@ -163,6 +169,28 @@ export async function POST(req: Request) {
         await removeTemplateCriterion(db, id);
         break;
       }
+      case 'add-learning': {
+        const id = idOf(b.stageId);
+        const body = text(b.body, 'The learning', LEARNING_MAX);
+        if (!id) return bad('Name a stage');
+        if ('error' in body) return bad(body.error);
+        await addTemplateLearning(db, id, body.value);
+        break;
+      }
+      case 'learning': {
+        const id = idOf(b.learningId);
+        if (!id) return bad('Name a learning');
+        const body = b.body === undefined ? undefined : text(b.body, 'The learning', LEARNING_MAX);
+        if (body && 'error' in body) return bad(body.error);
+        await updateTemplateLearning(db, id, { body: body?.value, reviewed: b.accept === true ? true : undefined });
+        break;
+      }
+      case 'remove-learning': {
+        const id = idOf(b.learningId);
+        if (!id) return bad('Name a learning');
+        await removeTemplateLearning(db, id);
+        break;
+      }
       default:
         return bad('Unknown operation');
     }
@@ -171,5 +199,7 @@ export async function POST(req: Request) {
     if (/violates foreign key constraint .*check_key/.test((err as { message?: string })?.message ?? '')) return bad('Choose a check from the list');
     throw err;
   }
-  return NextResponse.json({ editor: await getTemplateEditor(db) });
+  // A deleted or copied template: the editor falls back to the chosen one.
+  const editId = b.op === 'delete' || b.op === 'copy' || b.op === 'choose' ? null : idOf(b.editId);
+  return NextResponse.json({ editor: await getTemplateEditor(db, editId) });
 }

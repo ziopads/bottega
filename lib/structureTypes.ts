@@ -20,10 +20,23 @@ export type StructureElement = {
   difference: 'same' | 'changed' | 'added';
 };
 
-export type StructureSummary = { id: number; name: string; isDefault: boolean };
+export type StructureSummary = {
+  id: number;
+  name: string;
+  isDefault: boolean;
+  /** One's own: renamed and deleted only by its owner. */
+  mine: boolean;
+  /** One's own, or one used by an artist shared with one to edit (db/028). */
+  canEdit: boolean;
+  ownerName: string | null;
+};
 
 export type StructureEditor = {
+  /** The structure new projects take when their artist names none. */
   chosen: StructureSummary;
+  /** The structure shown for editing: the chosen one unless another is picked. */
+  editing: StructureSummary;
+  /** The default, one's own, and those shared through artists. */
   templates: StructureSummary[];
   elements: StructureElement[];
 };

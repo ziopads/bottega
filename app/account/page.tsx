@@ -9,6 +9,7 @@ import {
 } from '@/lib/account';
 import { ACCOUNT_TAB_LABEL, ACCOUNT_TABS, type AccountTab } from '@/lib/accountTabs';
 import { requireAccount } from '@/lib/access';
+import { listArtistSettings } from '@/lib/artists';
 import { listConnections } from '@/lib/connections';
 import { getAllowance } from '@/lib/documents';
 import { listUnconvertedImages } from '@/lib/gear';
@@ -52,13 +53,14 @@ export default async function AccountPage({ searchParams }: Props) {
 
   let body: React.ReactNode;
   if (tab === 'profile') {
-    const [profile, artists] = await Promise.all([getProfile(db), listMyArtists(db)]);
+    const [profile, artists, artistSettings] = await Promise.all([getProfile(db), listMyArtists(db), listArtistSettings(db)]);
     body = (
       <ProfileTab
         initialName={profile?.displayName ?? ''}
         email={profile?.email ?? user.email}
         since={profile?.createdAt ?? null}
         initialArtists={artists}
+        artistSettings={artistSettings}
       />
     );
   } else if (tab === 'usage') {

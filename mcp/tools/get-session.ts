@@ -98,6 +98,11 @@ export async function getSessionTool(db: Scoped, args: { id: number; notes?: num
                 changes_on_offer: w.templateChanges.length || undefined,
               }
             : null,
+          // The template's learnings (db/028): reminders on stages, the same on every project using the template.
+          learnings: w.learnings
+            .filter((l) => l.reviewed)
+            .map((l) => ({ stage: stageLabel(l.stage), learning: l.body, from: l.source || undefined, by: l.createdByName })),
+          you_can_add_learnings: w.learningsEditable,
           open_cards: live.filter((c) => c.stage === w.stage && c.status !== 'done').map(card),
           done_this_stage: live.filter((c) => c.stage === w.stage && c.status === 'done').length,
           parked_for_later_stages: live.filter((c) => stagePosition(w, c.stage) > pos).map(card),
@@ -107,6 +112,7 @@ export async function getSessionTool(db: Scoped, args: { id: number; notes?: num
           awaiting_review: {
             cards: w.cards.filter((c) => c.status === 'proposed').map(card),
             exit_criteria: w.criteria.filter((c) => !c.reviewed).map((c) => ({ id: c.id, stage: stageLabel(c.stage), criterion: c.body })),
+            learnings: w.learnings.filter((l) => !l.reviewed).map((l) => ({ id: l.id, stage: stageLabel(l.stage), learning: l.body })),
           },
           recent_moves: w.moves.slice(0, 5).map((m) => ({
             from: m.fromStage ? stageLabel(m.fromStage) : null,

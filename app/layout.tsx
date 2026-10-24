@@ -23,6 +23,7 @@ export const dynamic = 'force-dynamic';
 
 const NAV = [
   { href: '/', label: 'Board' },
+  { href: '/todos', label: 'To-dos' },
   { href: '/projects', label: 'Projects' },
   { href: '/collections', label: 'Collections' },
   { href: '/gear', label: 'Gear' },

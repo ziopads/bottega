@@ -1,5 +1,6 @@
 import type { Scoped, Statement } from '@/lib/db';
-import type { CheckOption, EditorCriterion, EditorStage, TemplateEditor, TemplateSummary } from '@/lib/templateTypes';
+import { accountNames, nameOf } from '@/lib/names';
+import type { CheckOption, EditorCriterion, EditorLearning, EditorStage, TemplateEditor, TemplateSummary } from '@/lib/templateTypes';
 
 // Workflow templates in Preferences (REQUIREMENTS W-13 to W-15, W-22;
 // db/024). One's own templates are edited directly; the platform default is
@@ -20,40 +21,59 @@ async function run<T>(fn: () => Promise<T>): Promise<T> {
     const msg = e?.message ?? '';
     if (e?.code === '23505') throw new TemplateError('You already have a template with that name.');
     if (/not one you can copy|must be a music template|needs an active account/.test(msg)) throw new TemplateError(msg.charAt(0).toUpperCase() + msg.slice(1) + '.');
-    if (/row-level security|permission denied/.test(msg)) throw new TemplateError('Only your own templates can be changed. Make a copy first.');
+    if (/row-level security|permission denied/.test(msg)) throw new TemplateError('Only templates you can edit can be changed. Make a copy first.');
     if (/violates check constraint/.test(msg)) throw new TemplateError('That is too long or empty.');
     throw err;
   }
 }
 
-export async function getTemplateEditor(db: Scoped): Promise<TemplateEditor> {
+/** The editor for the chosen template, or for editId when it is one the person can read. */
+export async function getTemplateEditor(db: Scoped, editId: number | null = null): Promise<TemplateEditor> {
   const [prefRows, templateRows, checkRows] = await db.tx([
     { text: 'select music_template_id, rotation_limit, cold_days from account_preferences where user_id = app_user()', params: [] },
     {
-      text: `select id, name, owner_id is null as is_default from workflow_templates
-              where kind = 'music' and (owner_id is null or owner_id = app_user()) order by owner_id is not null, lower(name)`,
+      // Row-level security (db/028) shows the default, one's own, and those used by artists shared with one.
+      text: `select id, name, owner_id, owner_id is null as is_default, coalesce(owner_id = app_user(), false) as mine,
+                    template_can_edit(id) as can_edit
+               from workflow_templates where kind = 'music'
+              order by owner_id is not null, coalesce(owner_id = app_user(), false) desc, lower(name)`,
       params: [],
     },
     { text: 'select key, label, description from workflow_checks order by label', params: [] },
   ]);
-  const templates: TemplateSummary[] = templateRows.map((r) => ({ id: num(r.id), name: String(r.name), isDefault: r.is_default === true }));
+  const owners = await accountNames(db, templateRows.map((r) => (r.owner_id === null ? null : String(r.owner_id))));
+  const templates: TemplateSummary[] = templateRows.map((r) => ({
+    id: num(r.id),
+    name: String(r.name),
+    isDefault: r.is_default === true,
+    mine: r.mine === true,
+    canEdit: r.can_edit === true,
+    ownerName: r.owner_id === null || r.mine === true ? null : nameOf(owners, String(r.owner_id)),
+  }));
   const def = templates.find((t) => t.isDefault)!;
   const chosenId = prefRows[0]?.music_template_id ? num(prefRows[0].music_template_id) : def.id;
   const chosen = templates.find((t) => t.id === chosenId) ?? def;
+  const editing = templates.find((t) => t.id === editId) ?? chosen;
 
-  const [stageRows, criteriaRows, defaultRows] = await db.tx([
-    { text: 'select id, key, position, label, standard from template_stages where template_id = $1 order by position', params: [chosen.id] },
+  const [stageRows, criteriaRows, defaultRows, learningRows] = await db.tx([
+    { text: 'select id, key, position, label, standard from template_stages where template_id = $1 order by position', params: [editing.id] },
     {
       text: `select c.id, c.stage_id, c.uid, c.position, c.body, c.hint, c.check_key from template_criteria c
                join template_stages s on s.id = c.stage_id where s.template_id = $1 order by c.position, c.id`,
-      params: [chosen.id],
+      params: [editing.id],
     },
     {
       text: `select s.key, c.uid, c.body, c.hint, c.check_key from template_stages s
                left join template_criteria c on c.stage_id = s.id where s.template_id = $1`,
       params: [def.id],
     },
+    {
+      text: `select l.id, l.stage_id, l.body, l.reviewed, l.source, l.created_by from template_learnings l
+               join template_stages s on s.id = l.stage_id where s.template_id = $1 order by l.position, l.id`,
+      params: [editing.id],
+    },
   ]);
+  const learners = await accountNames(db, learningRows.map((r) => String(r.created_by)));
   const defaultByUid = new Map(defaultRows.filter((r) => r.uid !== null).map((r) => [String(r.uid), r]));
   const defaultKeys = new Set(defaultRows.map((r) => String(r.key)));
   const uids = new Set(criteriaRows.map((r) => String(r.uid)));
@@ -63,7 +83,7 @@ export async function getTemplateEditor(db: Scoped): Promise<TemplateEditor> {
       .filter((c) => num(c.stage_id) === num(s.id))
       .map((c) => {
         const d = defaultByUid.get(String(c.uid));
-        const difference = chosen.isDefault
+        const difference = editing.isDefault
           ? 'same'
           : !d
             ? 'added'
@@ -80,7 +100,7 @@ export async function getTemplateEditor(db: Scoped): Promise<TemplateEditor> {
           difference,
         };
       });
-    const missing = chosen.isDefault
+    const missing = editing.isDefault
       ? []
       : defaultRows.filter((d: Row) => d.uid !== null && String(d.key) === String(s.key) && !uids.has(String(d.uid))).map((d) => ({ body: String(d.body) }));
     return {
@@ -92,11 +112,23 @@ export async function getTemplateEditor(db: Scoped): Promise<TemplateEditor> {
       criteria,
       missingFromDefault: missing,
       inDefault: defaultKeys.has(String(s.key)),
+      learnings: learningRows
+        .filter((l) => num(l.stage_id) === num(s.id))
+        .map(
+          (l): EditorLearning => ({
+            id: num(l.id),
+            body: String(l.body),
+            reviewed: l.reviewed === true,
+            source: String(l.source ?? ''),
+            createdByName: nameOf(learners, String(l.created_by)),
+          }),
+        ),
     };
   });
   const checks: CheckOption[] = checkRows.map((r) => ({ key: String(r.key), label: String(r.label), description: String(r.description) }));
   return {
     chosen,
+    editing,
     templates,
     stages,
     checks,
@@ -293,4 +325,26 @@ export async function moveTemplateCriterion(db: Scoped, id: number, dir: -1 | 1)
 
 export async function removeTemplateCriterion(db: Scoped, id: number): Promise<void> {
   await run(() => db.q('delete from template_criteria where id = $1', [id]));
+}
+
+// ── Learnings (W-33, db/028) ───────────────────────────────────────────────
+// Through template_learnings' policies: only templates the person can edit.
+
+export async function addTemplateLearning(db: Scoped, stageId: number, body: string): Promise<void> {
+  await run(() =>
+    db.q(
+      `insert into template_learnings (stage_id, position, body)
+       values ($1, (select coalesce(max(position), 0) + 1 from template_learnings where stage_id = $1), $2)`,
+      [stageId, body],
+    ),
+  );
+}
+
+export async function updateTemplateLearning(db: Scoped, id: number, patch: { body?: string; reviewed?: true }): Promise<void> {
+  if (patch.body !== undefined) await run(() => db.q('update template_learnings set body = $2 where id = $1', [id, patch.body]));
+  if (patch.reviewed) await run(() => db.q('update template_learnings set reviewed = true where id = $1', [id]));
+}
+
+export async function removeTemplateLearning(db: Scoped, id: number): Promise<void> {
+  await run(() => db.q('delete from template_learnings where id = $1', [id]));
 }

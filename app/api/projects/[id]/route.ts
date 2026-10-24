@@ -100,7 +100,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const result = await updateProject(db, id, patch, account.email);
   if (!result.ok) {
     if (result.reason === 'not-found') return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-    if (result.reason === 'no-artist') return NextResponse.json({ error: 'Choose one of your own artists.' }, { status: 400 });
+    if (result.reason === 'no-artist') return NextResponse.json({ error: 'Choose one of your own artists, or one shared with you to edit.' }, { status: 400 });
     if (result.reason === 'bad-mix') return NextResponse.json({ error: 'That mix is not part of this project.' }, { status: 400 });
     if (result.reason === 'no-genre') return NextResponse.json({ error: 'That genre is not on the list. Add it first.' }, { status: 400 });
     return NextResponse.json(
