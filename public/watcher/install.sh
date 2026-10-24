@@ -1,6 +1,6 @@
 #!/bin/bash
 # Installs Bottega's Mac watcher (REQUIREMENTS A-10 to A-12, docs/watcher.md).
-# Account › Security in Bottega gives the command, with a one-time setup code:
+# Account > Security in Bottega gives the command, with a one-time setup code:
 #
 #   curl -fsSL https://<bottega>/watcher/install.sh | bash -s -- --server https://<bottega> --code K7QX-M2PL
 #
@@ -32,7 +32,7 @@ main() {
   case "$server" in
     https://*) ;;
     http://localhost:* | http://127.0.0.1:*) ;;
-    *) fail "Give --server, the Bottega address starting with https:// (the command under Account › Security has it)." ;;
+    *) fail "Give --server, the Bottega address starting with https:// (the command under Account > Security has it)." ;;
   esac
 
   local dir="$HOME/Library/Application Support/Bottega Watcher"
@@ -40,7 +40,7 @@ main() {
   chmod 700 "$dir"
 
   if [ -z "$code" ] && [ ! -f "$dir/config.json" ]; then
-    fail "Give --code: under Account › Security in Bottega, add this Mac (or use Install again) and copy the command it shows."
+    fail "Give --code: under Account > Security in Bottega, add this Mac (or use Install again) and copy the command it shows."
   fi
 
   local arch
@@ -62,7 +62,7 @@ main() {
     say "Node.js $have is already installed."
   else
     local base="https://nodejs.org/dist/latest-v22.x"
-    say "Downloading Node.js 22 for $arch from nodejs.org…"
+    say "Downloading Node.js 22 for $arch from nodejs.org..."
     curl -fsSL "$base/SHASUMS256.txt" -o "$tmp/SHASUMS256.txt" || fail "Could not reach nodejs.org."
     local name
     name="$(grep -oE "node-v22\.[0-9]+\.[0-9]+-darwin-$arch\.tar\.gz" "$tmp/SHASUMS256.txt" | head -n 1 || true)"
@@ -76,7 +76,7 @@ main() {
   fi
 
   # The watcher, from this Bottega.
-  say "Downloading the watcher from $server…"
+  say "Downloading the watcher from ${server}..."
   curl -fsSL "$server/watcher/bottega-watcher.cjs" -o "$tmp/bottega-watcher.cjs" || fail "Could not download the watcher from $server."
   head -n 1 "$tmp/bottega-watcher.cjs" | grep -q '^#!/usr/bin/env node' || fail "$server did not send the watcher."
   mv "$tmp/bottega-watcher.cjs" "$dir/bottega-watcher.cjs"
