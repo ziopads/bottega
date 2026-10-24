@@ -22,7 +22,6 @@ import type {
 } from '@/lib/workflowTypes';
 import type { AlsSet } from '@/lib/als/types';
 import { runChecks } from '@/lib/workflowChecks';
-import { parseSessionLine } from '@/lib/workflowInput';
 
 // A project's workflow (REQUIREMENTS W-1 to W-10, db/011): reads for the
 // Workflow tab and the connector, and the writes behind the tab's controls.
@@ -45,7 +44,7 @@ function pgMessage(err: unknown): string {
 
 // The messages db/011 raises on purpose, passed on as they are.
 const READABLE =
-  /no structure template|needs (edit|contribute|a reason|what was done)|not met|one at a time|already in|not a stage|not been started|not a settled|has no stages|no stages yet|belongs to the same project|stays with its|cannot sit under|template no longer exists|not one you can (use|move|copy)|no such stage|needs edit access to the (project's template|artist)|not in this project/;
+  /no structure template|needs (edit|contribute|a reason|what was done)|not met|one at a time|already in|not a stage|not been started|not a settled|has no stages|no stages yet|belongs to the same project|stays with its|cannot sit under|template no longer exists|can be next|choosing the next|not one you can (use|move|copy)|no such stage|needs edit access to the (project's template|artist)|not in this project/;
 
 async function run<T>(fn: () => Promise<T>): Promise<T> {
   try {
@@ -62,7 +61,7 @@ async function run<T>(fn: () => Promise<T>): Promise<T> {
 // ── Reading ──────────────────────────────────────────────────────────────────
 
 const CARD_SELECT = `
-  select c.id, c.element_id, c.stage, c.kind, c.what, c.done_when, c.status, c.origin, c.source_note_id,
+  select c.id, c.element_id, c.stage, c.kind, c.what, c.done_when, c.status, c.origin, c.source_note_id, c.is_next,
          c.audio_id, a.version as audio_version, a.variant as audio_variant, c.position_s, c.settled, c.settled_reason, c.settled_at,
          c.reopen_count, c.created_by, c.created_at, c.updated_at
     from cards c left join audio a on a.id = c.audio_id`;
@@ -82,6 +81,7 @@ function toCard(r: Row, who: Map<string, string>): WorkflowCard {
     audioVersion: numOrNull(r.audio_version),
     audioLabel: r.audio_version === null || r.audio_version === undefined ? null : mixLabel(String(r.audio_variant ?? ''), num(r.audio_version)),
     positionS: numOrNull(r.position_s),
+    isNext: r.is_next === true,
     settled: r.settled === true,
     settledReason: String(r.settled_reason ?? ''),
     settledAt: isoOrNull(r.settled_at),
@@ -114,8 +114,7 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
   const [stageRows, current, templateRows, moveRows, criteriaRows, elementRows, cardRows, logRows] = await db.tx([
     { text: 'select key, label, position, standard from project_stage_list($1) order by position', params: [projectId] },
     {
-      text: `select stage, entered_at, next_move, blocker, blocker_set_at, finished_at from project_workflow
-              where project_id = $1`,
+      text: `select stage, entered_at, finished_at from project_workflow where project_id = $1`,
       params: [projectId],
     },
     { text: 'select template_id, name, version, seen_version from workflow_template_status($1)', params: [projectId] },
@@ -176,8 +175,6 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
     loggedByName: nameOf(who, String(r.logged_by)),
     loggedAt: iso(r.logged_at),
   }));
-  const blockerSetAt = current[0] ? isoOrNull(current[0].blocker_set_at) : null;
-  const sessionsSinceBlocker = blockerSetAt ? workLog.filter((e) => e.loggedAt > blockerSetAt).length : 0;
   const setReading = await readSet(db, projectId, criteria);
   const moves: StageMove[] = moveRows.map((r) => ({
     id: num(r.id),
@@ -204,16 +201,12 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
     stages,
     stage: current[0] ? String(current[0].stage) : null,
     enteredAt: current[0] ? iso(current[0].entered_at) : null,
-    nextMove: current[0] ? String(current[0].next_move ?? '') : '',
-    blocker: current[0] ? String(current[0].blocker ?? '') : '',
-    blockerSetAt,
     finishedAt: current[0] ? isoOrNull(current[0].finished_at) : null,
     template,
     templateChanges,
     structure,
     structureChanges,
     workLog,
-    sessionsSinceBlocker,
     setReading,
     moves,
     criteria,
@@ -445,52 +438,11 @@ export async function applyTemplateChanges(db: Scoped, projectId: number, uids: 
   await run(() => db.q('select template_apply($1, $2::uuid[])', [projectId, uids]));
 }
 
-// ── The next move and ending a session (W-19, W-20, db/024) ──────────────────
+// ── The next to-do (W-38, db/029) ───────────────────────────────────────────
 
-/** Sets the next move, the blocker, or both; undefined leaves one alone. */
-export async function setNext(db: Scoped, projectId: number, next: string | undefined, blocker: string | undefined): Promise<void> {
-  await run(() => db.q('select workflow_set_next($1, $2, $3)', [projectId, next ?? null, blocker ?? null]));
-}
-
-/**
- * Ends a session: logs what was done, sets the next move, and turns each loose
- * line into a card in the current stage, or the stage a #tag names, on the
- * element a #tag names. One transaction.
- */
-export async function endSession(
-  db: Scoped,
-  projectId: number,
-  input: { did: string; next: string; lines: string[] },
-  w: Workflow,
-): Promise<void> {
-  if (!w.stage) throw new WorkflowError('The workflow has not been started.');
-  const current = w.stage;
-  const pos = (key: string | null) => w.stages.find((s) => s.key === key)?.position ?? 0;
-  const statements: Statement[] = [{ text: 'select work_log_add($1, $2, $3)', params: [projectId, input.did, input.next] }];
-  for (const line of input.lines) {
-    const c = parseSessionLine(line, w.elements, w.stages);
-    if (!c) continue;
-    statements.push({
-      text: `insert into cards (project_id, element_id, stage, what, done_when, origin, status)
-             values ($1, $2, $3, $4, $5, 'human', 'accepted')`,
-      // A tag naming an earlier stage is ignored: open work goes in the current one or later.
-      params: [projectId, c.elementId, pos(c.stage) > pos(current) ? c.stage : current, c.what, c.doneWhen],
-    });
-  }
-  await run(() => db.tx(statements));
-}
-
-/**
- * The next move is done: log it, and make the first open card of the current
- * stage the next move (in progress before accepted, then oldest first).
- */
-export async function pullNext(db: Scoped, projectId: number, w: Workflow): Promise<void> {
-  if (!w.nextMove.trim()) throw new WorkflowError('There is no next move to mark done.');
-  const open = w.cards
-    .filter((c) => c.stage === w.stage && !c.settled && (c.status === 'in progress' || c.status === 'accepted'))
-    .sort((a, b) => Number(b.status === 'in progress') - Number(a.status === 'in progress') || a.createdAt.localeCompare(b.createdAt));
-  const next = open.find((c) => c.what.trim() !== w.nextMove.trim())?.what ?? '';
-  await run(() => db.q('select work_log_add($1, $2, $3)', [projectId, `Done: ${w.nextMove}`, next]));
+/** Marks a to-do as the project's next, or clears the mark (null). Done passes it on by itself. */
+export async function setNextCard(db: Scoped, projectId: number, cardId: number | null): Promise<void> {
+  await run(() => db.q('select card_set_next($1, $2)', [projectId, cardId]));
 }
 
 // ── Exit criteria ────────────────────────────────────────────────────────────

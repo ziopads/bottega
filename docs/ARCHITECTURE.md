@@ -1,7 +1,7 @@
 # Bottega — architecture
 
-**Version:** 0.21
-**Date:** 2026-10-24
+**Version:** 0.22
+**Date:** 2026-10-25
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
 story IDs below (S-3, W-6 and so on) refer to it.
@@ -9,6 +9,24 @@ story IDs below (S-3, W-6 and so on) refer to it.
 ---
 
 ## Changelog
+
+- **0.22** (2026-10-25) — The next to-do and sessions from saves
+  (REQUIREMENTS W-38 to W-41): migration 029 adds `cards.is_next` (one per
+  project, a partial unique index), `card_set_next()`, and triggers that pass
+  the mark to `card_next_candidate()` when the next card closes or leaves;
+  next moves and blockers became cards. `lib/sessions.ts`
+  (`listWorkSessions`, sittings by a two-hour gap, the newest diffed with
+  `lib/als/analyse.ts`), `lib/sessionTypes.ts` (`changeParts`, shared with
+  the State tab). The workflow route's `next`, `end-session` and `pull-next`
+  ops become `next-card`; `setNext`, `endSession` and `pullNext` are gone;
+  `Workflow` loses `nextMove`, `blocker` and `sessionsSinceBlocker`.
+  `app/_studio/WhereItStands.tsx` above every project tab;
+  `/projects/:id/work` (`WorkPanel.tsx`, polling
+  `/api/projects/:id/sessions` and the workflow every 30 s; the site header
+  hidden there). `app/_ui/MainNav.tsx` marks the current section like
+  `TabBar`. Connector 0.11.0: `next` and `latest_sessions` from saves in
+  get_session, `in_progress_for_sessions` on cards, `next` in
+  list_projects.
 
 - **0.21** (2026-10-24) — Artists, learnings and to-dos (REQUIREMENTS W-30
   to W-37): migration 028 adds shares.artist_id with `artist_rank()`;

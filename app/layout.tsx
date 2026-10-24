@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Geist_Mono, Instrument_Sans } from 'next/font/google';
 import './globals.css';
+import MainNav from '@/app/_ui/MainNav';
 
 import { signOut } from '@/app/auth/sign-in/actions';
 import SitePlayer from '@/app/_ui/audio/SitePlayer';
@@ -44,21 +45,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" className={`${instrument.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
         <header className="border-b border-line">
-          <div className="mx-auto flex max-w-7xl items-baseline gap-6 px-5 py-2.5">
-            <Link href="/" className="text-[20px] font-semibold tracking-tight">
+          <div className="mx-auto flex max-w-7xl items-end gap-6 px-5 pt-2.5">
+            <Link href="/" className="pb-2.5 text-[20px] font-semibold tracking-tight">
               Bottega
             </Link>
+            {user ? <MainNav items={nav} /> : null}
             {user ? (
-              <nav className="flex gap-4 t-body">
-                {nav.map((item) => (
-                  <Link key={item.href} href={item.href} className="text-muted hover:text-rust">
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-            ) : null}
-            {user ? (
-              <form action={signOut} className="ml-auto flex items-center gap-4 t-body">
+              <form action={signOut} className="ml-auto flex items-center gap-4 pb-2.5 t-body">
                 <VolumeControl />
                 <Link href="/account" className="text-muted hover:text-rust">
                   {user.name || user.email}

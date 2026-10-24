@@ -1,6 +1,7 @@
 // get_session: everything needed to say where a project stands and what to
 // do next (REQUIREMENTS W-10, the "where was I?" scenario): its details, the
-// next move, blocker and latest ended sessions (W-19, W-20), its own stages
+// next to-do and the latest work sessions read from saved sets (W-38, W-40),
+// its own stages
 // with how far each has come, the current stage's exit criteria with hints and
 // likely-done marks (W-18), template changes on offer (W-17), open cards by
 // element, cards parked for later stages, settled decisions, Claude's pending
@@ -10,6 +11,7 @@
 import type { Scoped } from '@/lib/db';
 import { getProject, listNotes, listReferences, listTracks } from '@/lib/studio';
 import { formatDuration } from '@/lib/studioTypes';
+import { listWorkSessions } from '@/lib/sessions';
 import { getWorkflow } from '@/lib/workflow';
 import { stagePosition, type WorkflowCard } from '@/lib/workflowTypes';
 import { ToolError } from '@/mcp/context';
@@ -19,12 +21,15 @@ const moment = (s: number | null) => (s === null ? null : formatDuration(s) || '
 export async function getSessionTool(db: Scoped, args: { id: number; notes?: number }) {
   const project = await getProject(db, args.id);
   if (!project) throw new ToolError(`No project ${args.id} that you can see. list_projects gives the ids.`);
-  const [w, tracks, references, notes] = await Promise.all([
+  const [w, tracks, references, notes, sessions] = await Promise.all([
     getWorkflow(db, args.id),
     listTracks(db, args.id),
     listReferences(db, args.id),
     listNotes(db, args.id),
+    listWorkSessions(db, args.id, 5, 1),
   ]);
+  // Sessions since a to-do was last changed: one in progress for two or more is stuck.
+  const sessionsSince = (iso: string) => sessions.filter((x) => x.start > iso).length;
 
   const byId = new Map(w.elements.map((e) => [e.id, e]));
   const elementPath = (id: number | null) => {
@@ -47,6 +52,8 @@ export async function getSessionTool(db: Scoped, args: { id: number; notes?: num
     about: c.audioLabel !== null ? { mix: c.audioLabel, at: moment(c.positionS) } : null,
     from_note: c.sourceNoteId,
     reopened: c.reopenCount || undefined,
+    next: c.isNext || undefined,
+    in_progress_for_sessions: c.status === 'in progress' ? sessionsSince(c.updatedAt) || undefined : undefined,
   });
 
   const current = tracks.find((t) => t.id === project.currentMixId) ?? tracks[0] ?? null;
@@ -69,9 +76,19 @@ export async function getSessionTool(db: Scoped, args: { id: number; notes?: num
     },
     workflow: w.stage
       ? {
-          next_move: w.nextMove || null,
-          blocker: w.blocker ? { text: w.blocker, sessions_since: w.sessionsSinceBlocker } : null,
-          latest_sessions: w.workLog.slice(0, 5).map((e) => ({ on: e.loggedAt.slice(0, 10), by: e.loggedByName, did: e.did || null, next: e.nextMove || null })),
+          next: (() => {
+            const n = w.cards.find((c) => c.isNext);
+            return n ? card(n) : null;
+          })(),
+          latest_sessions: sessions.map((x) => ({
+            on: x.start.slice(0, 10),
+            from: x.start.slice(11, 16),
+            to: x.end.slice(11, 16),
+            saves: x.saves,
+            variant: x.variant || 'main',
+            last_set: x.lastFile,
+            changed: x.changes ?? undefined,
+          })),
           stages: w.stages.map((s) => {
             const cs = accepted.filter((c) => c.stage === s.key);
             return { stage: s.label, standard: s.standard || null, criteria_met: `${cs.filter((c) => c.metAt).length} of ${cs.length}` };

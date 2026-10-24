@@ -1,10 +1,11 @@
 'use client';
 
+import { changeParts } from '@/lib/sessionTypes';
 import { useRef, useState } from 'react';
 
 import { api } from '@/app/_studio/controls';
 import { DetailGrid, Section } from '@/app/_ui/layout';
-import { beatsToTime, playable, type SetChange } from '@/lib/als/analyse';
+import { beatsToTime, playable } from '@/lib/als/analyse';
 import { parseSet } from '@/lib/als/parse';
 import { filesFromDrop, filesFromInput, gunzipText, listing, savedSets, sha256, type PickedFile } from '@/lib/als/readFolder';
 import type { SaveEntry, SessionState } from '@/lib/als/store';
@@ -41,22 +42,6 @@ function bars(beats: number): string {
 
 const bare = (fileName: string) => fileName.replace(/\.als$/i, '');
 const variantLabel = (v: string) => v || 'Main';
-
-/** What changed, as short phrases. */
-function changeParts(c: SetChange): string[] {
-  const parts: string[] = [];
-  if (c.tracksAdded.length) parts.push(`+${c.tracksAdded.length} ${c.tracksAdded.length === 1 ? 'track' : 'tracks'} (${c.tracksAdded.join(', ')})`);
-  if (c.tracksRemoved.length) parts.push(`−${c.tracksRemoved.length} (${c.tracksRemoved.join(', ')})`);
-  for (const r of c.tracksRenamed) parts.push(`${r.from} → ${r.to}`);
-  if (c.pluginsAdded.length) parts.push(`added ${c.pluginsAdded.join(', ')}`);
-  if (c.pluginsRemoved.length) parts.push(`removed ${c.pluginsRemoved.join(', ')}`);
-  if (c.clips) parts.push(`${c.clips > 0 ? '+' : ''}${c.clips} clips`);
-  if (Math.abs(c.lengthBeats) >= 4) parts.push(`length ${c.lengthBeats > 0 ? '+' : '−'}${Math.round(Math.abs(c.lengthBeats) / 4)} bars`);
-  if (c.tempo) parts.push(`tempo ${c.tempo.from ?? '?'} → ${c.tempo.to ?? '?'}`);
-  for (const z of c.zones) parts.push(`${z.zone ?? 'no zone'} ${Math.round(z.from / 4)} → ${Math.round(z.to / 4)} bars`);
-  if (c.samplesExternal) parts.push(`${c.samplesExternal > 0 ? '+' : ''}${c.samplesExternal} samples outside the folder`);
-  return parts;
-}
 
 function summary(s: SaveEntry): string {
   if (s.first) return 'The first set read.';

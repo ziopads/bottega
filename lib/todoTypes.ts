@@ -21,6 +21,8 @@ export type Todo = {
   what: string;
   doneWhen: string;
   status: TodoStatus;
+  /** The project's next to-do (db/029). */
+  isNext: boolean;
   /** "v4 at 2:10", or null when not pinned to a mix. */
   moment: string | null;
   /** Whether the person may change its status or move it. */

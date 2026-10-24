@@ -1,7 +1,7 @@
 # Bottega — requirements
 
-**Version:** 0.30
-**Date:** 2026-10-24
+**Version:** 0.31
+**Date:** 2026-10-25
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
 built is in `ARCHITECTURE.md`.
@@ -9,6 +9,13 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.31** (2026-10-25) — From Gordon's use of his own version: the next move
+  becomes a to-do marked next (W-38), the blocker becomes an ordinary to-do,
+  and ending a session goes; sessions are read from saved sets (W-40). A
+  "where it stands" header on every tab of a project (W-39) and a working
+  panel to keep beside Live (W-41). The site's navigation marks the section
+  one is in as the tabs do (O-8). Migration 029. W-19 and W-20 are replaced.
 
 - **0.30** (2026-10-24) — Templates per artist and shared artists (W-30 to
   W-32), learnings on a template's stages (W-33), moving an item between a
@@ -669,6 +676,33 @@ there may be lost in the move.
   page filtered to it.
 - **W-37** To-dos pinned to a moment show on the mix's waveform beside the
   notes, as small squares (faded once done), with the to-do on hover.
+- **W-38** The next to-do (built 25 October 2026, migration 029): one to-do
+  per project can be marked next, the action to start with when the set is
+  opened again. Marking another moves the mark. When the next one is done,
+  rejected, settled, deleted or made a note, the next open to-do of the
+  current stage takes the mark (one in progress first, then the oldest). It
+  shows in the project's header, on the board, on the To-dos page and in the
+  working panel. There is no separate blocker: what stops work is a to-do
+  like any other. Next moves and blockers set before 029 became to-dos.
+- **W-39** Where it stands: the top of every tab of a project shows its stage
+  and criteria met, the next to-do (done, start, or a new one), the stage's
+  other open to-dos (top three, each can be made next), how long since it was
+  worked on (marked after 21 days), the last session, the current mix to
+  play, and a button for the working panel. Before the workflow starts it
+  says so and links to starting it.
+- **W-40** Sessions from saved sets: saves with no gap longer than two hours
+  are one session; what it did is what changed from the save before it to
+  its last save in the same variant (tracks, plugins, clips, length, tempo,
+  coverage by zone). Ending a session by hand is gone; sessions ended by hand
+  before 25 October stay listed on the Workflow tab.
+- **W-41** The working panel: a narrow page, opened in its own window from a
+  project's header, to keep beside Live. One box logs a line as a to-do (a
+  #tag names the element or parks it for a later stage; after "--", how it
+  will be known to be done), or as a note ("note:"), a learning ("learn:"),
+  or the next to-do ("next:"). Below: the next to-do, the stage's open to-dos
+  (done, make next), its criteria with likely-done marks and hints, its
+  learnings, and the latest saves with what the session has changed so far.
+  It reads the project again every 30 seconds.
 
 ## 8. Corpus (K)
 
@@ -948,6 +982,8 @@ travel to the database.
   private documents, library submissions awaiting review) with file counts,
   and the pages processed this month against the monthly allowance. Each
   kind opens to its largest files, linked to where they live.
+- **O-8** The site's navigation marks the section one is in the way a page's
+  tabs mark the one shown (25 October 2026).
 
 ## 13. Later
 

@@ -30,7 +30,8 @@ export async function getBoard(db: Scoped, userId: string): Promise<Board> {
   const [projects, placeRows, prefRows] = await Promise.all([
     listProjects(db),
     db.q(
-      `select b.project_id, b.place, pw.stage, pw.next_move, pw.blocker, pw.finished_at
+      `select b.project_id, b.place, pw.stage, pw.finished_at,
+              (select c.what from cards c where c.project_id = b.project_id and c.is_next) as next_todo
          from board_places b left join project_workflow pw on pw.project_id = b.project_id
         where b.user_id = app_user()`,
     ),
@@ -98,8 +99,7 @@ export async function getBoard(db: Scoped, userId: string): Promise<Board> {
       finishedAt: isoOrNull(r.finished_at),
       stage: r.stage === null || r.stage === undefined ? null : String(r.stage),
       stages: stagesOf.get(id) ?? [],
-      nextMove: String(r.next_move ?? ''),
-      blocker: String(r.blocker ?? ''),
+      next: r.next_todo === null || r.next_todo === undefined ? null : String(r.next_todo),
       openCards: open.get(id) ?? 0,
       touchedAt: touched.get(id) ?? isoOrNull(p.createdAt),
     };

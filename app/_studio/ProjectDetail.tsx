@@ -3,6 +3,8 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import BoardPlaceSelect from '@/app/_board/BoardPlaceSelect';
 import type { BoardPlace } from '@/lib/boardTypes';
+import type { WorkSession } from '@/lib/sessionTypes';
+import WhereItStands from './WhereItStands';
 
 import { onNoteRequest, type NoteRequest } from '@/app/_ui/audio/deck';
 
@@ -66,6 +68,7 @@ export default function ProjectDetail({
   viewerId,
   initialShares,
   boardPlace,
+  workSessions,
   uploadsEnabled,
   initialWorkflow,
   initialSessionState,
@@ -87,6 +90,8 @@ export default function ProjectDetail({
   initialShares: StudioShare[];
   /** Where the project sits on the viewer's own board (W-21). */
   boardPlace: BoardPlace | null;
+  /** The latest sessions read from saved sets, for the header (W-39, W-40). */
+  workSessions: WorkSession[];
   uploadsEnabled: boolean;
   initialWorkflow: Workflow;
   initialSessionState: SessionState;
@@ -294,6 +299,20 @@ export default function ProjectDetail({
             onRemoved={() => reloadWith('')}
           />
         </div>
+      </div>
+
+      <div className="mt-3">
+        <WhereItStands
+          projectId={project.id}
+          code={`${project.artist.code} ${project.canonicalId}`}
+          title={project.workingName}
+          workflow={workflow}
+          setWorkflow={setWorkflow}
+          sessions={workSessions}
+          current={current}
+          canContribute={canContribute}
+          onTab={(t) => selectTab(t as SessionTab)}
+        />
       </div>
 
       <div className="mb-6 mt-3 border-b border-line">

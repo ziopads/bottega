@@ -342,7 +342,10 @@ export default function TodosView({ initial, project }: { initial: Todo[]; proje
                     {t.status === 'in progress' && <span className="ml-1.5 font-mono text-[10px] text-muted">in progress</span>}
                   </td>
                   <td className="px-2.5 py-2">
-                    <span className={t.status === 'done' ? 'text-muted line-through' : 'font-medium'}>{t.what}</span>
+                    <span className={t.status === 'done' ? 'text-muted line-through' : 'font-medium'}>
+                      {t.isNext && <span className="mr-1.5 rounded bg-ink px-1 py-px font-mono text-[10px] uppercase tracking-wide text-parchment">Next</span>}
+                      {t.what}
+                    </span>
                     <span className="block text-[12px] text-muted">Done when: {t.doneWhen}</span>
                   </td>
                   <td className="whitespace-nowrap px-2.5 py-2">
@@ -400,7 +403,10 @@ function TodoCard({
         <span className="min-w-0">{tag}</span>
         <span className="shrink-0">{t.kind ?? ''}</span>
       </p>
-      <p className={t.status === 'done' ? 'font-medium text-muted line-through' : 'font-medium'}>{t.what}</p>
+      <p className={t.status === 'done' ? 'font-medium text-muted line-through' : 'font-medium'}>
+        {t.isNext && <span className="mr-1.5 rounded bg-ink px-1 py-px font-mono text-[10px] uppercase tracking-wide text-parchment">Next</span>}
+        {t.what}
+      </p>
       <p className="text-[12px] text-muted">Done when: {t.doneWhen}</p>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-mono text-[10px] text-muted">{t.moment ? `Pinned to ${t.moment}` : ''}</span>

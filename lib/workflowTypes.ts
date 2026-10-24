@@ -83,6 +83,8 @@ export type WorkflowCard = {
   /** audioId's label for display: "v3", or "Radio edit v1". */
   audioLabel: string | null;
   positionS: number | null;
+  /** The project's next to-do (db/029): at most one. */
+  isNext: boolean;
   settled: boolean;
   settledReason: string;
   settledAt: string | null;
@@ -169,10 +171,6 @@ export type Workflow = {
   /** null until the workflow is started. */
   stage: string | null;
   enteredAt: string | null;
-  /** The re-entry note: one action to start with next time. */
-  nextMove: string;
-  blocker: string;
-  blockerSetAt: string | null;
   /** Set while the project is in its last stage with every criterion there met. */
   finishedAt: string | null;
   template: WorkflowTemplateStatus | null;
@@ -181,10 +179,8 @@ export type Workflow = {
   /** The track structure the project took, and what it offers since (W-28). */
   structure: { name: string; version: number; seenVersion: number } | null;
   structureChanges: StructureChange[];
-  /** The latest ended sessions, newest first. */
+  /** Sessions ended by hand before 25 October, newest first; sessions are read from saved sets since (lib/sessions.ts). */
   workLog: WorkLogEntry[];
-  /** Sessions ended since the blocker was set. */
-  sessionsSinceBlocker: number;
   /** Likely-done marks for criteria with a check; null when none has one. */
   setReading: SetReading | null;
   moves: StageMove[];

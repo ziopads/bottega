@@ -26,8 +26,8 @@ import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
 //
 //   stage bar       one segment per stage, filled by the share of its criteria
 //                   met, the current one outlined, labels and a caption
-//   pick up here    the next move, the blocker, Done · pull the next card up,
-//                   End session (log, next move, loose lines as cards)
+//   (the next to-do, the last session and the stage's open to-dos sit in the
+//   project's header since 25 October: WhereItStands.tsx)
 //   template        what the project's template offers since it was taken
 //   review band     Claude's proposals, waiting for a person
 //   left column     the stages, each with its share met and parked cards
@@ -188,7 +188,7 @@ function StartedWorkflow({
   const selParked = parked.filter((c) => c.stage === sel.key);
 
   const canChange = (c: WorkflowCard) => canEdit || (canContribute && c.createdById === viewerId);
-  const cardProps = { elementName, stageLabel, canChange, canEdit, isOwner, busy, call, learningsEditable: w.learningsEditable };
+  const cardProps = { elementName, stageLabel, canChange, canEdit, isOwner, busy, call, learningsEditable: w.learningsEditable, projectUrl: url };
 
   // ── Claude's proposals ──────────────────────────────────────────────────────
   const review =
@@ -472,9 +472,9 @@ function StartedWorkflow({
           )}
         </details>
         <details>
-          <summary className="cursor-pointer text-muted">Session log · {w.workLog.length}</summary>
+          <summary className="cursor-pointer text-muted">Sessions ended by hand · {w.workLog.length}</summary>
           {w.workLog.length === 0 ? (
-            <p className="mt-1 text-muted">Sessions you end with “End session” appear here.</p>
+            <p className="mt-1 text-muted">None. Sessions are read from the saved sets: the header shows the last one.</p>
           ) : (
             <ul className="mt-1 space-y-2">
               {w.workLog.map((e) => (
@@ -502,15 +502,6 @@ function StartedWorkflow({
   return (
     <>
       <StageBar w={w} tally={tally} />
-      <PickUp
-        key={`${w.nextMove}|${w.blocker}`}
-        w={w}
-        url={url}
-        tops={tops.map((t) => t.name)}
-        canContribute={canContribute}
-        busy={busy}
-        call={call}
-      />
       <TemplateReview key={w.template?.version ?? 0} w={w} url={url} canEdit={canEdit} busy={busy} call={call} />
       <StructureReview key={`s${w.structure?.version ?? 0}`} w={w} url={url} canEdit={canEdit} busy={busy} call={call} />
       {review}
@@ -562,141 +553,6 @@ function StageBar({ w, tally }: { w: Workflow; tally: (key: string) => { met: nu
 }
 
 /** The re-entry note and ending a session (W-19, W-20). */
-function PickUp({
-  w,
-  url,
-  tops,
-  canContribute,
-  busy,
-  call,
-}: {
-  w: Workflow;
-  url: string;
-  tops: string[];
-  canContribute: boolean;
-  busy: boolean;
-  call: Call;
-}) {
-  const [next, setNext] = useState(w.nextMove);
-  const [blocker, setBlocker] = useState(w.blocker);
-  const [ending, setEnding] = useState(false);
-  const [did, setDid] = useState('');
-  const [after, setAfter] = useState('');
-  const [lines, setLines] = useState('');
-  const last = w.workLog[0];
-  const sessions = w.blocker ? w.sessionsSinceBlocker : 0;
-
-  return (
-    <section aria-label="Pick up here" className="t-body mb-6 rounded border border-ink p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="t-label">Pick up here</p>
-        <p className="t-num text-[11px] text-muted">{last ? `Last session ${formatWhen(last.loggedAt)} · ${last.loggedByName}` : 'No session ended yet'}</p>
-      </div>
-      <div className="mt-2 grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <div className="space-y-3 lg:col-span-9">
-          <label className="block">
-            <span className="text-[11px] text-muted">Next move: one action you could start within five minutes of opening the set</span>
-            {canContribute ? (
-              <textarea
-                value={next}
-                onChange={(e) => setNext(e.target.value)}
-                onBlur={() => next.trim() !== w.nextMove && void call(url, 'POST', { op: 'next', next })}
-                rows={2}
-                placeholder="Resample the reese into a one-bar loop and chop a call phrase"
-                className={`${FIELD} mt-1 block w-full text-[17px] font-medium`}
-              />
-            ) : (
-              <span className="mt-1 block text-[17px] font-medium">{w.nextMove || 'None set.'}</span>
-            )}
-          </label>
-          <label className="block">
-            <span className="text-[11px] text-muted">
-              Blocker{sessions > 0 ? ` · ${sessions} ${sessions === 1 ? 'session' : 'sessions'} now` : ''}
-            </span>
-            {canContribute ? (
-              <input
-                value={blocker}
-                onChange={(e) => setBlocker(e.target.value)}
-                onBlur={() => blocker.trim() !== w.blocker && void call(url, 'POST', { op: 'next', blocker })}
-                placeholder="What keeps stopping you?"
-                className={`${FIELD} mt-1 block w-full`}
-              />
-            ) : (
-              <span className="mt-1 block">{w.blocker || 'None.'}</span>
-            )}
-          </label>
-          {sessions >= 2 && (
-            <p className="text-[12px] text-muted">
-              This blocker has lasted {sessions} sessions. Try another way in: bounce the part to audio, pull a reference, send it to a
-              collaborator, or leave it for a later stage.
-            </p>
-          )}
-        </div>
-        {canContribute && (
-          <div className="flex flex-col items-start gap-2 lg:col-span-3">
-            {w.nextMove && (
-              <button onClick={() => call(url, 'POST', { op: 'pull-next' })} disabled={busy} className={BUTTON}>
-                Done · pull the next card up
-              </button>
-            )}
-            <button
-              onClick={() => {
-                setAfter(w.nextMove);
-                setEnding(true);
-              }}
-              disabled={busy || ending}
-              className={BUTTON_PRIMARY}
-            >
-              End session…
-            </button>
-            <p className="text-[11px] text-muted">Ending a session logs what you did, sets the next move and turns loose lines into cards.</p>
-          </div>
-        )}
-      </div>
-      {ending && (
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (await call(url, 'POST', { op: 'end-session', did, next: after, lines: lines.split('\n') })) setEnding(false);
-          }}
-          className="mt-4 space-y-3 rounded border border-line bg-card p-3"
-        >
-          <label className="block">
-            <span className="text-[11px] text-muted">What did you get done?</span>
-            <textarea value={did} onChange={(e) => setDid(e.target.value)} rows={2} className={`${FIELD} mt-1 block w-full`} autoFocus />
-          </label>
-          <label className="block">
-            <span className="text-[11px] text-muted">Next move for next time</span>
-            <textarea value={after} onChange={(e) => setAfter(e.target.value)} rows={2} className={`${FIELD} mt-1 block w-full`} />
-          </label>
-          <label className="block">
-            <span className="text-[11px] text-muted">
-              Loose thoughts, one per line; each becomes a card. A #tag names the part (#bass, #hats) or parks it for a later stage
-              (#mixdown); after “--”, how you will know it is done.
-            </span>
-            <textarea
-              value={lines}
-              onChange={(e) => setLines(e.target.value)}
-              rows={4}
-              placeholder={'Snare too loud against the hats in drop 1 #tactus #mixdown\nReverb throw on the last snare before drop 2 #bus -- the throw lands on the downbeat'}
-              className={`${FIELD} mt-1 block w-full font-mono text-[12px]`}
-            />
-          </label>
-          {tops.length > 0 && <p className="text-[11px] text-muted">Parts: {tops.join(', ')}, and the parts under them.</p>}
-          <div className="flex gap-2">
-            <button type="button" onClick={() => setEnding(false)} className={BUTTON}>
-              Cancel
-            </button>
-            <button type="submit" disabled={busy || (!did.trim() && !after.trim())} className={BUTTON_PRIMARY}>
-              Save session
-            </button>
-          </div>
-        </form>
-      )}
-    </section>
-  );
-}
-
 /** What the track structure offers since the project took it (W-28). */
 function StructureReview({ w, url, canEdit, busy, call }: { w: Workflow; url: string; canEdit: boolean; busy: boolean; call: Call }) {
   const [open, setOpen] = useState(false);
@@ -1089,6 +945,7 @@ function CardRow({
   busy,
   call,
   learningsEditable,
+  projectUrl,
 }: {
   c: WorkflowCard;
   elements: WorkflowElement[];
@@ -1101,6 +958,8 @@ function CardRow({
   busy: boolean;
   call: Call;
   learningsEditable: boolean;
+  /** The project's workflow route, for marking a to-do next. */
+  projectUrl: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [settling, setSettling] = useState(false);
@@ -1133,7 +992,10 @@ function CardRow({
   return (
     <li className="t-body py-2">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className={`min-w-0 flex-1 ${c.status === 'done' ? 'text-muted line-through' : ''}`}>{c.what}</span>
+        <span className={`min-w-0 flex-1 ${c.status === 'done' ? 'text-muted line-through' : ''}`}>
+          {c.isNext && <span className="mr-1.5 rounded bg-ink px-1 py-px font-mono text-[10px] uppercase tracking-wide text-parchment">Next</span>}
+          {c.what}
+        </span>
         {changeable ? (
           <select
             value={c.status}
@@ -1171,6 +1033,11 @@ function CardRow({
           {changeable && (
             <button onClick={() => setEditing(true)} className={BUTTON}>
               Edit
+            </button>
+          )}
+          {changeable && !c.isNext && (c.status === 'accepted' || c.status === 'in progress') && (
+            <button onClick={() => call(projectUrl, 'POST', { op: 'next-card', cardId: c.id })} disabled={busy} className={BUTTON} title="Start with this one next time">
+              Make next
             </button>
           )}
           {changeable && c.status !== 'proposed' && c.status !== 'rejected' && (

@@ -12,6 +12,8 @@
 // template, criteria hints and likely-done marks, the next move, blocker and
 // work log, and the person's board (db/024). 0.10.0 (24 October): learnings
 // on a template's stages in get_session, and draft_learning (db/028).
+// 0.11.0 (25 October): the next to-do and sessions from saved sets replace the
+// next move, the blocker and ended sessions (db/029).
 
 import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
@@ -41,7 +43,7 @@ Three habits matter most:
 - Respect settled decisions. When a question touches one, show the decision and its reason first; reopening it is their explicit choice, with a reason.
 - Tie advice to evidence in the project: notes pinned to moments in a mix (cite the version and the time, such as v3 at 1:35), the open cards, the references.
 
-Each project has a next move (one action the person can start within five minutes of opening the set) and may have a blocker; get_session gives both, the latest sessions they ended, and how many sessions a blocker has lasted. When they ask where they were, start from the next move. When a blocker has lasted two sessions or more, suggest another way in (bounce the part to audio, pull a reference, send it to a collaborator, leave it for a later stage). Criteria that name a check carry likely_done: what Bottega read from the newest saved set (tempo and key, locators, track names, gaps, the master chain and so on). It is a suggestion from the set, never a decision: say what the set shows and let the person tick it in the app.
+Everything to be done or figured out is a to-do (a card), tagged to a stage; there is no separate blocker. One to-do per project may be marked next: the action to start with when the set is opened again; get_session gives it, and when it is done the next open to-do of the stage takes the mark. Sessions are read from the saved sets: get_session's latest_sessions gives when they were, how many saves, and what changed (tracks, plugins, length, coverage by zone) in the newest. When the person asks where they were, start from the next to-do and what changed last time. A to-do in progress across two sessions or more (in_progress_for_sessions) is stuck: suggest another way in (bounce the part to audio, pull a reference, send it to a collaborator, leave it for a later stage). Criteria that name a check carry likely_done: what Bottega read from the newest saved set (tempo and key, locators, track names, gaps, the master chain and so on). It is a suggestion from the set, never a decision: say what the set shows and let the person tick it in the app.
 
 Each person keeps their own board: projects in their backlog, in rotation (the few they are working on now, up to a limit they set) and finished. list_projects gives each project's place on the person's board. Keep advice to the projects in rotation unless they ask about another; when they want to start something new while rotation is full, say so and let them choose what goes back to the backlog.
 
@@ -95,7 +97,7 @@ export const handler = createMcpHandler(
       {
         title: 'Get project',
         description:
-          "One project's state: its details; the next move, the blocker and the latest ended sessions; its own " +
+          "One project's state: its details; the next to-do and the latest work sessions read from saved sets; its own " +
           'stages with how many criteria of each are met; the current stage, since when, and its exit criteria with ' +
           'their hints, which are met, and what the newest saved set suggests (likely_done); whether its template ' +
           'has changes to offer; open cards in the current stage by element; cards parked for later stages; settled ' +
@@ -396,7 +398,7 @@ export const handler = createMcpHandler(
   },
   {
     instructions: INSTRUCTIONS,
-    serverInfo: { name: 'bottega', version: '0.10.0' },
+    serverInfo: { name: 'bottega', version: '0.11.0' },
     // No subscriptions: this server never sends notifications, and on Vercel
     // each subscriptions/listen stream stayed open until the function timed
     // out, billing memory for the whole wait. Refused with the protocol's

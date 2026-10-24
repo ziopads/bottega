@@ -20,8 +20,8 @@ export type BoardProject = {
   /** null until the project's workflow starts. */
   stage: string | null;
   stages: BoardStage[];
-  nextMove: string;
-  blocker: string;
+  /** The project's next to-do (db/029), or null. */
+  next: string | null;
   /** Open cards in the current stage. */
   openCards: number;
   /** The last thing done on it: a session, a card, a criterion, a move, a mix, a saved set. */

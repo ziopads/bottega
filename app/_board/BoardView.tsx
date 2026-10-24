@@ -216,9 +216,8 @@ export default function BoardView({ initial }: { initial: Board }) {
               </div>
               <Meter p={p} size="large" />
               <div className="border-t border-line pt-2">
-                <p className="t-label">Pick up here</p>
-                <p className="text-[14px]">{p.nextMove || <span className="text-muted">No next move set.</span>}</p>
-                {p.blocker && <p className="text-[12px] text-muted">Blocker: {p.blocker}</p>}
+                <p className="t-label">Next</p>
+                <p className="text-[14px]">{p.next || <span className="text-muted">No to-do marked next.</span>}</p>
               </div>
               <Foot p={p} coldDays={board.coldDays} withCards />
             </article>
