@@ -30,14 +30,26 @@
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
+/* Body text is the default, so text and form controls given no role (a
+   placeholder, a bare input) are never the browser's 16px. */
 body {
   background: var(--parchment);
   color: var(--ink);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
-/* The type scale (ARCHITECTURE §13): four sizes and one emphasis. Pages use
-   these and nothing else for text size; medium weight is the only emphasis.
-   Numbers that line up (codes, times, dates, BPM) add t-num. */
+/* The type scale (ARCHITECTURE §13): five roles and one emphasis. Pages use
+   these and nothing else for text size (no text-[Npx]); medium weight is the
+   only emphasis.
+     t-title  a page's or project's name
+     t-lead   the one line a section leads with (the next to-do)
+     t-body   everything else, and the default
+     t-small  secondary lines: who, when, hints, counts, captions, buttons
+     t-label  section labels, in capitals
+   Numbers that line up (codes, times, dates, BPM) add t-num. The only sizes
+   outside the scale are the wordmark and marks drawn inside graphics (the
+   waveform's initials, the board's stage meter). */
 @utility t-title {
   font-size: 18px;
   line-height: 1.25;
@@ -51,6 +63,10 @@ body {
 @utility t-body {
   font-size: 13px;
   line-height: 1.45;
+}
+@utility t-small {
+  font-size: 11px;
+  line-height: 1.4;
 }
 @utility t-label {
   font-size: 11px;

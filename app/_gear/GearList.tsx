@@ -72,10 +72,10 @@ export default function GearList({
   });
   const counts = Object.fromEntries(GEAR_STATUSES.map((s) => [s, own.filter((u) => u.status === s).length]));
 
-  const sel = 'rounded border border-line bg-card px-1.5 py-0.5 text-[13px] outline-none focus:border-rust';
+  const sel = 'rounded border border-line bg-card px-1.5 py-0.5 t-body outline-none focus:border-rust';
 
   return (
-    <div className="text-[13px]">
+    <div className="t-body">
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line pb-3">
         <span className="flex gap-3">
           {GEAR_STATUSES.map((s) => (
@@ -115,7 +115,7 @@ export default function GearList({
           </select>
           {capDef && <CapabilityInput def={capDef} value={capValue} onChange={setCapValue} />}
           {capDef && (capDef.valueType === 'integer' || capDef.valueType === 'number') && (
-            <span className="text-[11px] text-muted">or more</span>
+            <span className="t-small text-muted">or more</span>
           )}
         </span>
         <button onClick={() => setAdding((a) => !a)} className={`ml-auto ${BUTTON_PRIMARY}`}>
@@ -191,7 +191,7 @@ function UnitTable({
               {u.nickname && <span className="text-muted"> · {u.nickname}</span>}
             </span>
             <span className="hidden w-32 shrink-0 truncate text-muted md:block">{groupLabel(groupOf(u))}</span>
-            <span className="hidden min-w-0 flex-1 truncate text-[12px] text-muted lg:block">
+            <span className="hidden min-w-0 flex-1 truncate t-small text-muted lg:block">
               {[
                 u.model?.category,
                 ...SUMMARY_KEYS.filter((k) => u.capabilities[k]).map(
@@ -201,8 +201,8 @@ function UnitTable({
                 .filter(Boolean)
                 .join(' · ')}
             </span>
-            {u.model?.status === 'suggested' && <span className="text-[11px] text-muted">model awaiting approval</span>}
-            {showOwner && <span className="text-[12px] text-muted">{u.ownerName}</span>}
+            {u.model?.status === 'suggested' && <span className="t-small text-muted">model awaiting approval</span>}
+            {showOwner && <span className="t-small text-muted">{u.ownerName}</span>}
           </Link>
           {onMove && MOVE[u.status] && (
             <button
@@ -349,7 +349,7 @@ function AddGear({ onAdded }: { onAdded: (u: GearUnit) => void }) {
                   <span>
                     {m.manufacturer} {m.model}
                   </span>
-                  <span className="ml-auto text-[11px] text-muted">
+                  <span className="ml-auto t-small text-muted">
                     {m.status === 'suggested' ? 'your suggestion' : m.category}
                   </span>
                 </button>

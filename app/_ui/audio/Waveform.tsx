@@ -156,12 +156,12 @@ export default function Waveform({
                 {open && (
                   <div
                     role="tooltip"
-                    className={`pointer-events-none absolute top-[-3px] flex max-w-[22rem] items-baseline gap-2 whitespace-nowrap rounded border border-line bg-parchment px-2 py-0.5 text-[12px] shadow-sm ${
+                    className={`pointer-events-none absolute top-[-3px] flex max-w-[22rem] items-baseline gap-2 whitespace-nowrap rounded border border-line bg-parchment px-2 py-0.5 t-small shadow-sm ${
                       left > 65 ? 'right-3' : 'left-3'
                     }`}
                   >
                     {todo ? <span className="font-medium text-rust">{m.done ? 'Done' : 'To-do'}</span> : m.author && <span className="font-medium">{m.author}</span>}
-                    <span className="font-mono text-[10px] text-muted">{clock(m.at)}</span>
+                    <span className="font-mono t-small text-muted">{clock(m.at)}</span>
                     <span className="min-w-0 truncate">{m.body ?? m.label}</span>
                   </div>
                 )}

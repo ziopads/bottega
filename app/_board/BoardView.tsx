@@ -147,9 +147,9 @@ export default function BoardView({ initial }: { initial: Board }) {
           <div className="flex items-center justify-between gap-2">
             <p className="t-label">Backlog · {backlog.length}</p>
             {backlog.length > 1 && (
-              <label className="flex items-center gap-1.5 text-[11px] text-muted">
+              <label className="flex items-center gap-1.5 t-small text-muted">
                 Sort
-                <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className={`${FIELD} text-[11px]`}>
+                <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className={`${FIELD} t-small`}>
                   {SORTS.map((s) => (
                     <option key={s.key} value={s.key}>
                       {s.label}
@@ -161,7 +161,7 @@ export default function BoardView({ initial }: { initial: Board }) {
           </div>
           {sorted.length === 0 && <p className="t-body text-muted">Nothing waiting. Projects you send back from rotation wait here.</p>}
           {sorted.length + rotation.length > 0 && (
-            <p className="text-[11px] text-muted">Drag a project between the backlog and rotation, or onto either from the search above.</p>
+            <p className="t-small text-muted">Drag a project between the backlog and rotation, or onto either from the search above.</p>
           )}
           {sorted.map((p) => (
             <article key={p.id} {...dragProps(p.id)} className={`t-body space-y-1.5 rounded border bg-card p-2.5 ${isCold(p, board.coldDays) ? 'border-dashed border-ink/40' : 'border-line'}`}>
@@ -193,18 +193,18 @@ export default function BoardView({ initial }: { initial: Board }) {
             <p className="t-label">
               In rotation · {rotation.length} of {board.rotationLimit}
             </p>
-            <p className="text-[11px] text-muted">
+            <p className="t-small text-muted">
               The limit is in <Link href="/account?tab=preferences" className="underline decoration-ink/30 underline-offset-2 hover:decoration-ink">Preferences</Link> · ↓ sends a project back
             </p>
           </div>
           {rotation.map((p) => (
             <article key={p.id} {...dragProps(p.id)} className={`t-body space-y-2.5 rounded border p-3.5 ${isCold(p, board.coldDays) ? 'border-dashed border-ink/40' : 'border-ink/20'}`}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <Link href={`/projects/${p.id}?tab=workflow`} className="text-[16px] font-medium hover:text-rust">
+                <Link href={`/projects/${p.id}?tab=workflow`} className="t-lead font-medium hover:text-rust">
                   {p.title}
                 </Link>
                 <span className="flex items-center gap-2">
-                  <span className="t-num font-mono text-[11px] text-muted">
+                  <span className="t-num font-mono t-small text-muted">
                     {p.code}
                     {p.bpm ? ` · ${p.bpm} BPM` : ''}
                     {p.ownerName ? ` · ${p.ownerName}` : ''}
@@ -217,7 +217,7 @@ export default function BoardView({ initial }: { initial: Board }) {
               <Meter p={p} size="large" />
               <div className="border-t border-line pt-2">
                 <p className="t-label">Next</p>
-                <p className="text-[14px]">{p.next || <span className="text-muted">No to-do marked next.</span>}</p>
+                <p className="t-lead">{p.next || <span className="text-muted">No to-do marked next.</span>}</p>
               </div>
               <Foot p={p} coldDays={board.coldDays} withCards />
             </article>
@@ -242,7 +242,7 @@ export default function BoardView({ initial }: { initial: Board }) {
               <Link href={`/projects/${p.id}?tab=workflow`} className="font-medium hover:text-rust">
                 {p.title}
               </Link>
-              <p className="t-num font-mono text-[10px] text-muted">finished {formatDay(p.finishedAt)}</p>
+              <p className="t-num font-mono t-small text-muted">finished {formatDay(p.finishedAt)}</p>
             </article>
           ))}
         </section>
@@ -273,7 +273,7 @@ function stageWord(p: BoardProject): string {
 
 /** One segment per stage, as on the Workflow tab. */
 function Meter({ p, size }: { p: BoardProject; size: 'small' | 'large' }) {
-  if (!p.stages.length) return <p className="text-[11px] text-muted">Workflow not started.</p>;
+  if (!p.stages.length) return <p className="t-small text-muted">Workflow not started.</p>;
   const cur = p.stages.findIndex((s) => s.key === p.stage);
   const columns = { gridTemplateColumns: `repeat(${p.stages.length}, minmax(0, 1fr))` };
   const label = cur < 0 ? '' : `At ${p.stages[cur].label}, ${p.stages[cur].met} of ${p.stages[cur].total} criteria met`;
@@ -308,7 +308,7 @@ function Foot({ p, coldDays, withCards = false }: { p: BoardProject; coldDays: n
   const where = cur < 0 ? 'Not started' : `Stage ${cur + 1} · ${p.stages[cur].label} · ${p.stages[cur].met}/${p.stages[cur].total}`;
   const age = d === null ? '' : d >= coldDays ? `cold · ${d}d` : d === 0 ? 'today' : d === 1 ? 'yesterday' : `${d}d ago`;
   return (
-    <p className="t-num flex flex-wrap justify-between gap-2 font-mono text-[10px] text-muted">
+    <p className="t-num flex flex-wrap justify-between gap-2 font-mono t-small text-muted">
       <span>
         {where}
         {withCards && p.openCards > 0 && (
@@ -420,8 +420,8 @@ function AddToBoard({
               className="flex cursor-grab flex-wrap items-baseline gap-x-3 gap-y-1 py-1.5"
             >
               <span className="min-w-0 flex-1">
-                <span className="font-medium">{c.title}</span> <span className="font-mono text-[11px] text-muted">{c.code}</span>
-                {c.ownerName && <span className="text-[11px] text-muted"> · {c.ownerName}</span>}
+                <span className="font-medium">{c.title}</span> <span className="font-mono t-small text-muted">{c.code}</span>
+                {c.ownerName && <span className="t-small text-muted"> · {c.ownerName}</span>}
               </span>
               <span className="flex gap-1.5">
                 <button type="button" onClick={() => onPlace(c.id, 'backlog')} disabled={busy} className={BUTTON}>
@@ -436,7 +436,7 @@ function AddToBoard({
         </ul>
       )}
       {!q && candidates.length > matches.length && (
-        <p className="mt-1 text-[11px] text-muted">The newest {matches.length} of {candidates.length} projects not on your board; search for the rest.</p>
+        <p className="mt-1 t-small text-muted">The newest {matches.length} of {candidates.length} projects not on your board; search for the rest.</p>
       )}
       {q && matches.length === 0 && !making && <p className="mt-2 text-muted">No project matches “{query.trim()}”.</p>}
       {q && !making && (
@@ -453,15 +453,15 @@ function AddToBoard({
       )}
       {making && (
         <form onSubmit={make} className="mt-2 flex flex-wrap items-end gap-2 rounded border border-ink p-2.5">
-          <label className="flex flex-col gap-0.5 text-[11px] text-muted">
+          <label className="flex flex-col gap-0.5 t-small text-muted">
             Canonical ID
             <input value={canonicalId} onChange={(e) => setCanonicalId(e.target.value)} className={`${FIELD} font-mono`} />
           </label>
-          <label className="flex flex-col gap-0.5 text-[11px] text-muted">
+          <label className="flex flex-col gap-0.5 t-small text-muted">
             Working name
             <input value={query} onChange={(e) => setQuery(e.target.value)} className={FIELD} />
           </label>
-          <label className="flex flex-col gap-0.5 text-[11px] text-muted">
+          <label className="flex flex-col gap-0.5 t-small text-muted">
             Goes to
             <select value={place} onChange={(e) => setPlace(e.target.value === 'rotation' ? 'rotation' : 'backlog')} className={FIELD}>
               <option value="backlog">Backlog</option>
@@ -474,7 +474,7 @@ function AddToBoard({
           <button type="button" onClick={() => setMaking(false)} className={BUTTON}>
             Cancel
           </button>
-          <p className="w-full text-[11px] text-muted">
+          <p className="w-full t-small text-muted">
             The canonical ID is the start of the project&rsquo;s Ableton folder name (the date), so the watcher finds it. It is credited to your default artist.
           </p>
         </form>

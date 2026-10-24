@@ -34,7 +34,7 @@ export default function SignUpPage() {
       <label className="block space-y-1">
         <span className="t-body">Name</span>
         <input type="text" name="name" autoComplete="name" maxLength={80} required />
-        <span className="block text-[11px] text-muted">What others see on what you share and write.</span>
+        <span className="block t-small text-muted">What others see on what you share and write.</span>
       </label>
 
       <label className="block space-y-1">

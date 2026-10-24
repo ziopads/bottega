@@ -155,7 +155,7 @@ export default function DocumentDetail({
               <div className="h-1.5 w-full max-w-md overflow-hidden rounded bg-line">
                 <div className="h-full bg-rust transition-all" style={{ width: `${Math.round(progress * 100)}%` }} />
               </div>
-              <p className="mt-1 text-[11px] text-muted">
+              <p className="mt-1 t-small text-muted">
                 {extracting ? `Text read from ${doc.pagesExtracted} of ${total} pages` : `${doc.pagesDone} of ${total} pages searchable`}
               </p>
             </div>
@@ -171,7 +171,7 @@ export default function DocumentDetail({
                   {doc.state === 'pending' ? 'Process' : 'Resume'}
                 </button>
               )}
-              {running && <span className="text-[11px] text-muted">Keep this page open while it runs.</span>}
+              {running && <span className="t-small text-muted">Keep this page open while it runs.</span>}
             </div>
           )}
           {doc.state === 'needs_ocr' && (
@@ -263,7 +263,7 @@ export default function DocumentDetail({
               </li>
             ))}
           </ul>
-          <p className="mt-1 text-[11px] text-muted">
+          <p className="mt-1 t-small text-muted">
           {doc.library
             ? 'On a group’s reading list, Claude searches it when working on that group. You keep these groups as custodian.'
             : 'On a group’s reading list, every member can read it for as long as they are members, and Claude searches it when working on that group.'}
@@ -393,7 +393,7 @@ function MoveHome({ doc, onMove }: { doc: StudioDocument; onMove: (toLibrary: bo
         </button>
       ) : (
         <div className="t-body space-y-2">
-          <p className="text-[11px] text-muted">
+          <p className="t-small text-muted">
             {toLibrary
               ? `Every account will read it, approved; ${who} stays its contributor. Its shares with people and study groups are removed.`
               : `It becomes ${who}’s private document. Picks by other accounts and links to catalogue models are removed.`}{' '}
@@ -496,7 +496,7 @@ function PagesAndContents({
                 Set
               </button>
             </div>
-            <p className="text-[11px] text-muted">
+            <p className="t-small text-muted">
               Check one page in the reader: if PDF page 824 shows 812 at its foot, the range starting at PDF page 13 is printed from 1.
             </p>
           </form>

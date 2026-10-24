@@ -85,7 +85,7 @@ export default function UsageTab({
                   aria-expanded={isOpen}
                   className="flex w-full items-baseline gap-2 py-1.5 text-left hover:text-ink disabled:cursor-default"
                 >
-                  <span className={`w-3 text-[10px] text-muted transition-transform ${isOpen ? 'rotate-90' : ''}`} aria-hidden>
+                  <span className={`w-3 t-small text-muted transition-transform ${isOpen ? 'rotate-90' : ''}`} aria-hidden>
                     {u.files > 0 ? '▶' : ''}
                   </span>
                   <span className="flex-1">{USAGE_LABEL[u.kind]}</span>
@@ -104,7 +104,7 @@ export default function UsageTab({
                             <span className="min-w-0 flex-1 truncate" title={f.name}>
                               {f.name}
                             </span>
-                            <Link href={f.href} className="min-w-0 max-w-[45%] truncate text-[11px] text-muted hover:text-ink" title={f.where}>
+                            <Link href={f.href} className="min-w-0 max-w-[45%] truncate t-small text-muted hover:text-ink" title={f.where}>
                               {f.where}
                             </Link>
                             <span className="t-num w-24 shrink-0 text-right">{f.bytes ? formatBytes(f.bytes) : '—'}</span>
@@ -124,7 +124,7 @@ export default function UsageTab({
             );
           })}
         </ul>
-        <p className="mt-2 text-[11px] text-muted">
+        <p className="mt-2 t-small text-muted">
           Largest first. Files count against the owner of the project or unit they belong to, whoever uploaded them.
         </p>
       </Section>
@@ -144,9 +144,9 @@ export default function UsageTab({
         </div>
         <Meter used={allowance.pagesUsed} limit={allowance.pagesPerMonth} />
         {allowance.maxDocumentPages !== null && (
-          <p className="mt-2 text-[11px] text-muted">Documents can be up to {allowance.maxDocumentPages.toLocaleString()} pages.</p>
+          <p className="mt-2 t-small text-muted">Documents can be up to {allowance.maxDocumentPages.toLocaleString()} pages.</p>
         )}
-        <p className="mt-2 text-[11px] text-muted">Pages read from documents so they can be searched. The count starts again at the beginning of each month (UTC).</p>
+        <p className="mt-2 t-small text-muted">Pages read from documents so they can be searched. The count starts again at the beginning of each month (UTC).</p>
       </div>
     </Section>
   );

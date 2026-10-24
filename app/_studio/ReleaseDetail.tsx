@@ -121,7 +121,7 @@ export default function ReleaseDetail({
       ) : (
         <h1 className="t-title">{release.title || 'Untitled collection'}</h1>
       )}
-      {!isOwner && <p className="mt-1 text-[11px] text-muted">Shared by {release.ownerName}</p>}
+      {!isOwner && <p className="mt-1 t-small text-muted">Shared by {release.ownerName}</p>}
 
       <div className="mt-3 flex flex-wrap items-center gap-3 t-body">
         <select
@@ -196,7 +196,7 @@ export default function ReleaseDetail({
                 <button
                   onClick={() => playOrPause(p)}
                   aria-label={isCurrent && deck.playing ? 'Pause' : 'Play'}
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] ${
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border t-small ${
                     isCurrent ? 'border-ink bg-ink text-parchment' : 'border-line hover:border-ink'
                   }`}
                 >
@@ -205,12 +205,12 @@ export default function ReleaseDetail({
               ) : (
                 <span className="h-7 w-7 shrink-0" title="No reference track yet" />
               )}
-              <span className="w-10 shrink-0 text-[11px] font-medium text-muted">{p.artist.code}</span>
+              <span className="w-10 shrink-0 t-small font-medium text-muted">{p.artist.code}</span>
               <Link href={`/projects/${p.id}`} className="w-28 shrink-0 font-mono hover:underline">
                 {p.canonicalId}
               </Link>
               <span className="min-w-0 flex-1 truncate">{p.workingName || <span className="text-muted">untitled</span>}</span>
-              <span className="text-[11px] tabular-nums text-muted">
+              <span className="t-small tabular-nums text-muted">
                 {p.latest ? `${p.latest.label} · ${formatDuration(p.latest.durationS)}` : 'no audio'}
               </span>
               {canEdit && (
@@ -262,10 +262,10 @@ export default function ReleaseDetail({
                   }}
                   className="flex w-full items-baseline gap-2 px-3 py-2 text-left hover:bg-ink/5"
                 >
-                  <span className="text-[11px] text-muted">{p.artist.code}</span>
+                  <span className="t-small text-muted">{p.artist.code}</span>
                   <span className="font-mono">{p.canonicalId}</span>
                   <span className="truncate">{p.workingName}</span>
-                  <span className="ml-auto text-[11px] text-muted">+ add</span>
+                  <span className="ml-auto t-small text-muted">+ add</span>
                 </button>
               </li>
             ))}
@@ -277,7 +277,7 @@ export default function ReleaseDetail({
       {isOwner && <Sharing sharesUrl={`/api/projects/${release.id}/shares`} initialShares={initialShares} />}
 
       {isOwner && (
-      <div className="mt-10 text-[11px]">
+      <div className="mt-10 t-small">
         {armed ? (
           <span className="flex gap-3">
             <button onClick={remove} className={BUTTON_PRIMARY}>

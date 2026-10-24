@@ -218,7 +218,7 @@ function Shelves({
               className={on ? 'text-ink underline decoration-2 underline-offset-[6px]' : 'text-muted hover:text-ink'}
             >
               {s.label}
-              {s.count > 0 && <span className="t-num ml-1.5 text-[11px] text-muted">{s.count}</span>}
+              {s.count > 0 && <span className="t-num ml-1.5 t-small text-muted">{s.count}</span>}
             </button>
           );
         })}
@@ -249,7 +249,7 @@ function Shelves({
                       className={`flex w-full items-baseline gap-2 px-2 py-1 text-left ${on ? 'bg-ink/5 text-ink' : 'text-muted hover:text-ink'}`}
                     >
                       <span className="min-w-0 flex-1 truncate">{makerLabel(m)}</span>
-                      <span className="t-num text-[11px] text-muted">{distinct(onShelfEntries.filter((e) => e.maker === m))}</span>
+                      <span className="t-num t-small text-muted">{distinct(onShelfEntries.filter((e) => e.maker === m))}</span>
                     </button>
                   </li>
                 );
@@ -267,7 +267,7 @@ function Shelves({
               ))}
             </div>
             {shelf === 'unfiled' && (
-              <p className="mt-6 text-[11px] text-muted">
+              <p className="mt-6 t-small text-muted">
                 These manuals have no catalogue model yet, so they have no type. Choosing a gear model on a manual&rsquo;s page files it.
               </p>
             )}
@@ -287,7 +287,7 @@ function AllowanceLine({ a }: { a: Allowance }) {
       ? `${a.pagesUsed.toLocaleString()} pages processed this month`
       : `${a.pagesUsed.toLocaleString()} of ${a.pagesPerMonth.toLocaleString()} pages processed this month`,
   ];
-  return <p className="-mt-3 mb-6 text-[11px] text-muted">{parts.join(' · ')}</p>;
+  return <p className="-mt-3 mb-6 t-small text-muted">{parts.join(' · ')}</p>;
 }
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
@@ -312,7 +312,7 @@ function DocList({ docs, about = false, empty }: { docs: StudioDocument[]; about
           {about && (d.manufacturer || d.model) && <span className="text-muted">{[d.manufacturer, d.model].filter(Boolean).join(' ')}</span>}
           {d.kind !== 'manual' && <span className="text-muted">{DOCUMENT_KIND_LABEL[d.kind]}</span>}
           {d.library && d.reviewStatus !== 'approved' && <span className="text-rust">{REVIEW_LABEL[d.reviewStatus]}</span>}
-          <span className="ml-auto text-[11px] text-muted">
+          <span className="ml-auto t-small text-muted">
             {d.state === 'ready' ? `${d.pageCount ?? 0} pages` : STATE_LABEL[d.state]}
             {d.picked ? ' · picked' : ''}
             {!d.library && d.ownerName && d.level !== 'owner' ? ` · ${d.ownerName}` : ''}

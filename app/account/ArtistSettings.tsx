@@ -37,7 +37,7 @@ export default function ArtistSettings({ initial }: { initial: ArtistSettingsDat
   const shared = data.artists.filter((a) => !a.mine);
   return (
     <div className="t-body space-y-3">
-      <p className="text-[12px] text-muted">
+      <p className="t-small text-muted">
         A project starts with its artist&rsquo;s workflow template and track structure; &ldquo;Account default&rdquo; uses the ones chosen under
         Preferences. Templates are made and edited under Preferences.
       </p>
@@ -78,7 +78,7 @@ function TemplateSelect({
   // A template chosen by someone else that this person cannot read shows by its id only.
   const missing = value !== null && !options.some((o) => o.id === value);
   return (
-    <label className="flex flex-col gap-0.5 text-[11px] text-muted">
+    <label className="flex flex-col gap-0.5 t-small text-muted">
       {label}
       <select value={value ?? ''} disabled={disabled} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)} className={FIELD}>
         <option value="">Account default</option>
@@ -113,7 +113,7 @@ function ArtistRow({
     <li className="space-y-2 py-3">
       <p className="flex flex-wrap items-baseline gap-x-3">
         <span className="font-medium">{a.name}</span>
-        <span className="font-mono text-[11px] text-muted">
+        <span className="font-mono t-small text-muted">
           {a.code}
           {a.mine ? '' : ` · ${a.ownerName}’s · ${a.level}`}
         </span>
@@ -135,12 +135,12 @@ function ArtistRow({
         />
       </div>
       {editors.length > 0 && (a.workflowTemplateId !== null || a.structureTemplateId !== null) && (
-        <p className="text-[11px] text-muted">{editors.join(', ')} can edit these templates through {a.code}.</p>
+        <p className="t-small text-muted">{editors.join(', ')} can edit these templates through {a.code}.</p>
       )}
       {!a.mine && a.level === 'edit' && (
-        <p className="text-[11px] text-muted">You can credit your own projects to {a.code} and edit the templates it uses.</p>
+        <p className="t-small text-muted">You can credit your own projects to {a.code} and edit the templates it uses.</p>
       )}
-      {!a.mine && a.level === 'view' && <p className="text-[11px] text-muted">Shared with you to view: you cannot credit projects to it.</p>}
+      {!a.mine && a.level === 'view' && <p className="t-small text-muted">Shared with you to view: you cannot credit projects to it.</p>}
 
       {a.mine && (
         <div className="space-y-1.5">
@@ -194,7 +194,7 @@ function ArtistRow({
               Share
             </button>
           </form>
-          <p className="text-[11px] text-muted">
+          <p className="t-small text-muted">
             Edit lets them credit their own projects to {a.code} and edit the templates it uses. Each project stays in its owner&rsquo;s account.
           </p>
         </div>

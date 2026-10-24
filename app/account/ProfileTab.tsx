@@ -82,7 +82,7 @@ export default function ProfileTab({
           </button>
           {nameState === 'saved' && <span className="text-muted">Saved.</span>}
         </form>
-        <p className="mt-2 text-[11px] text-muted">
+        <p className="mt-2 t-small text-muted">
           What collaborators see beside your notes, uploads and shares. Your email is never shown to them.
         </p>
       </Section>
@@ -106,7 +106,7 @@ export default function ProfileTab({
           { label: 'Member since', value: since ? <When iso={since} day /> : '—' },
         ]}
       />
-      <p className="mt-2 text-[11px] text-muted">The email you sign in with. Changing it is not available yet.</p>
+      <p className="mt-2 t-small text-muted">The email you sign in with. Changing it is not available yet.</p>
     </Section>
   );
 
@@ -204,7 +204,7 @@ function ArtistList({
             <li key={a.id} className="flex items-baseline gap-3 py-1.5">
               <span className="t-num w-24 shrink-0">{a.code}</span>
               <span className="min-w-0 flex-1 truncate">{a.name}</span>
-              <span className="text-[11px] text-muted">
+              <span className="t-small text-muted">
                 {a.uses} {a.uses === 1 ? 'credit' : 'credits'}
               </span>
               <button onClick={() => start(a)} className={BUTTON}>
@@ -225,7 +225,7 @@ function ArtistList({
           + Add an artist
         </button>
       )}
-      <p className="mt-2 text-[11px] text-muted">
+      <p className="mt-2 t-small text-muted">
         The code starts each project&rsquo;s canonical ID. Codes and names are unique across Bottega. Renaming a code does
         not rename existing canonical IDs.
       </p>

@@ -13,7 +13,7 @@ export default function VolumeControl({ className = '' }: { className?: string }
       <button
         type="button"
         onClick={() => setVolume({ muted: !muted })}
-        className="w-4 text-[12px] leading-none text-muted hover:text-ink"
+        className="w-4 t-small leading-none text-muted hover:text-ink"
         aria-label={muted ? 'Unmute' : 'Mute'}
         title={muted ? 'Unmute' : 'Mute'}
       >

@@ -126,7 +126,7 @@ export default function PhotoEditor({
               <input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} className="mt-1" />
               <span>
                 Public
-                <span className="block text-[11px] text-muted">
+                <span className="block t-small text-muted">
                   Shown to people you share this unit with. Leave it off for serial numbers, receipts or condition photos you keep to yourself.
                 </span>
               </span>

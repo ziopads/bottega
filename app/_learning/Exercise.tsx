@@ -50,21 +50,21 @@ export default function Exercise({
           ) : (
             <p>{e.task}</p>
           )}
-          <div className="flex items-baseline gap-1 text-[11px] text-muted">
+          <div className="flex items-baseline gap-1 t-small text-muted">
             <span className="shrink-0">Done when:</span>
             {custodian ? (
               <InlineEdit
                 value={e.doneWhen}
                 placeholder="How it will be known to be done"
                 label="Done when"
-                textClass="text-[11px]"
+                textClass="t-small"
                 onSave={(v) => call(url, 'PATCH', { doneWhen: v })}
               />
             ) : (
               <span>{e.doneWhen}</span>
             )}
           </div>
-          {lessonTitle && <p className="text-[11px] text-muted">From the lesson “{lessonTitle}”</p>}
+          {lessonTitle && <p className="t-small text-muted">From the lesson “{lessonTitle}”</p>}
 
           {canProgress && (
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -93,10 +93,10 @@ export default function Exercise({
               />
             </div>
           )}
-          {!canProgress && mine?.note && <p className="mt-1 text-[11px] text-muted">Your note: {mine.note}</p>}
+          {!canProgress && mine?.note && <p className="mt-1 t-small text-muted">Your note: {mine.note}</p>}
 
           {others.length > 0 && (
-            <ul className="mt-1 space-y-0.5 text-[11px] text-muted">
+            <ul className="mt-1 space-y-0.5 t-small text-muted">
               {others.map((p) => (
                 <li key={p.accountId}>
                   {p.name}: {PROGRESS_LABEL[p.status].toLowerCase()}
@@ -107,7 +107,7 @@ export default function Exercise({
           )}
         </div>
         {custodian && (
-          <span className="flex shrink-0 gap-2 text-[11px]">
+          <span className="flex shrink-0 gap-2 t-small">
             <button onClick={() => call(url, 'PATCH', { move: 'up' })} disabled={busy} className={BUTTON} aria-label="Move up">
               ↑
             </button>

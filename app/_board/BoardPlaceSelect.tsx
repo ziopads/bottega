@@ -38,7 +38,7 @@ export default function BoardPlaceSelect({ projectId, initial, compact = false }
         onChange={(e) => change(e.target.value === 'backlog' || e.target.value === 'rotation' ? e.target.value : null)}
         aria-label="Place on my board"
         title="Your board"
-        className={`rounded border bg-card px-1 py-0 text-[11px] outline-none focus:border-rust ${
+        className={`rounded border bg-card px-1 py-0 t-small outline-none focus:border-rust ${
           place ? 'border-ink/40 text-ink' : 'border-line text-muted'
         } ${compact ? '' : 't-body'}`}
       >
@@ -46,7 +46,7 @@ export default function BoardPlaceSelect({ projectId, initial, compact = false }
         <option value="backlog">{compact ? 'Backlog' : 'Board · backlog'}</option>
         <option value="rotation">{compact ? 'Rotation' : 'Board · in rotation'}</option>
       </select>
-      {error && <span className="text-[11px] text-rust">{error}</span>}
+      {error && <span className="t-small text-rust">{error}</span>}
     </span>
   );
 }

@@ -293,8 +293,8 @@ function TodoMove({
       }}
       className="mt-1.5 flex flex-wrap items-end gap-2 rounded border border-line p-2"
     >
-      <p className="w-full text-[12px] font-medium">Make it a to-do for {stageLabel}</p>
-      <label className="flex flex-col gap-0.5 text-[11px] text-muted">
+      <p className="w-full t-small font-medium">Make it a to-do for {stageLabel}</p>
+      <label className="flex flex-col gap-0.5 t-small text-muted">
         Element
         <select value={elementId ?? ''} onChange={(e) => setElementId(e.target.value ? Number(e.target.value) : null)} className={FIELD}>
           <option value="">Unassigned</option>
@@ -313,11 +313,11 @@ function TodoMove({
           ))}
         </select>
       </label>
-      <label className="flex min-w-[220px] flex-1 flex-col gap-0.5 text-[11px] text-muted">
+      <label className="flex min-w-[220px] flex-1 flex-col gap-0.5 t-small text-muted">
         Done when
         <input value={doneWhen} onChange={(e) => setDoneWhen(e.target.value)} placeholder="Not written yet" className={FIELD} />
       </label>
-      <label className="flex flex-col gap-0.5 text-[11px] text-muted">
+      <label className="flex flex-col gap-0.5 t-small text-muted">
         Kind
         <select value={kind ?? ''} onChange={(e) => setKind((e.target.value || null) as CardKind | null)} className={FIELD}>
           <option value="">—</option>
@@ -334,7 +334,7 @@ function TodoMove({
       <button type="button" onClick={onCancel} className={BUTTON}>
         Cancel
       </button>
-      <p className="w-full text-[11px] text-muted">Element and done-when can wait; the mix and the moment stay with it.</p>
+      <p className="w-full t-small text-muted">Element and done-when can wait; the mix and the moment stay with it.</p>
     </form>
   );
 }

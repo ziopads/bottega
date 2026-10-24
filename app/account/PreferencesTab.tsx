@@ -72,7 +72,7 @@ export default function PreferencesTab({
               {state === 'saved' && <span className="text-muted">Saved.</span>}
             </label>
           )}
-          <p className="mt-2 text-[11px] text-muted">The artist a new project starts with. It can be changed on each project.</p>
+          <p className="mt-2 t-small text-muted">The artist a new project starts with. It can be changed on each project.</p>
         </Section>
       </div>
       <div id="board" className="scroll-mt-4">

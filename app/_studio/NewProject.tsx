@@ -103,7 +103,7 @@ export default function NewProject({
         </label>
       </div>
 
-      <p className="mt-2 text-[11px] text-muted">
+      <p className="mt-2 t-small text-muted">
         The canonical ID must match the project&rsquo;s Ableton folder name. It cannot be changed after the project is
         created.
       </p>

@@ -1,6 +1,6 @@
 # Bottega — architecture
 
-**Version:** 0.22
+**Version:** 0.23
 **Date:** 2026-10-25
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
@@ -9,6 +9,12 @@ story IDs below (S-3, W-6 and so on) refer to it.
 ---
 
 ## Changelog
+
+- **0.23** (2026-10-25) — Type discipline: a fifth role, `t-small`, for
+  secondary lines; 13px body default; every `text-[Npx]` in pages replaced
+  by a role (§13). Where it stands moves from above every tab to the head
+  of the Overview tab's main column (`WhereItStands` renders a `Section`);
+  the Workflow tab's On deck opens on the next to-do.
 
 - **0.22** (2026-10-25) — The next to-do and sessions from saves
   (REQUIREMENTS W-38 to W-41): migration 029 adds `cards.is_next` (one per
@@ -1097,12 +1103,17 @@ so pages differ in content and never in how they are built.
   breakpoint the aside follows the main column. Overview pages (the gear
   map) use all twelve. `DetailGrid` does this; pages do not lay out columns
   of their own.
-- **Type.** Four sizes, as utilities in `globals.css`: `t-title` (18px, below the 20px app name in the header; the
-  page title only), `t-lead` (15px, the main thing in a block, such as a
-  mix's version), `t-body` (13px, everything else) and `t-label` (11px,
-  uppercase, grey: labels and metadata). Medium weight is the only
+- **Type.** Five roles, as utilities in `globals.css`, and nothing else
+  sets a text size: `t-title` (18px, the page title only, below the 20px app
+  name), `t-lead` (15px, the one line a section leads with, such as the next
+  to-do), `t-body` (13px, everything else; also the body default, so a
+  placeholder or a bare control is never the browser's 16px), `t-small`
+  (11px, secondary lines: who, when, hints, counts, captions) and `t-label`
+  (11px, uppercase, grey: section labels). Medium weight is the only
   emphasis. Numbers that line up (codes, times, dates, BPM) add `t-num` for
-  even-width digits; no monospace face.
+  even-width digits; no monospace face. No `text-[Npx]` or Tailwind named
+  sizes in pages; the only exceptions are the wordmark and marks drawn
+  inside graphics (the waveform's initials, the board's stage meter).
 - **Headers and controls.** Every page opens with `PageHeader` (the way
   back, the title, one line of facts joined by middle dots, the page's
   actions on the right). Buttons, links and fields take their classes from

@@ -190,9 +190,9 @@ export default function StateTab({
                       <span className={`min-w-0 flex-1 truncate ${on ? 'font-medium' : ''}`} title={s.fileName}>
                         {bare(s.fileName)}
                       </span>
-                      <span className="t-num shrink-0 text-[11px] text-muted">{new Date(s.savedAt).toLocaleDateString()}</span>
+                      <span className="t-num shrink-0 t-small text-muted">{new Date(s.savedAt).toLocaleDateString()}</span>
                     </span>
-                    <span className="block truncate text-[11px] text-muted" title={summary(s)}>
+                    <span className="block truncate t-small text-muted" title={summary(s)}>
                       {summary(s)}
                     </span>
                   </button>
@@ -207,7 +207,7 @@ export default function StateTab({
         <Section label="This set">
           <dl className="t-body space-y-1">
             <div className="break-words font-medium">{bare(sel.fileName)}</div>
-            <div className="text-[11px] text-muted">
+            <div className="t-small text-muted">
               Saved {whenDay(sel.savedAt)} · {latest.live.replace('Ableton ', '')}
             </div>
             <div className="t-num pt-1">
@@ -242,7 +242,7 @@ export default function StateTab({
                   follow the name rules
                 </button>
               ) : (
-                <span className="text-[11px]">by its file name</span>
+                <span className="t-small">by its file name</span>
               )}
             </div>
           )}
@@ -306,7 +306,7 @@ export default function StateTab({
         ) : (
           <p className="t-body text-muted">Someone with edit access reads the folder.</p>
         )}
-        <p className="mt-2 text-[11px] text-muted">
+        <p className="mt-2 t-small text-muted">
           Every saved set in the folder is read here in your browser and sorted into a variant by its file name. The rest of the folder is listed by
           name and size; no audio is uploaded. Dropping it again adds only new sets.
         </p>
@@ -319,7 +319,7 @@ export default function StateTab({
                 {lines.some((l) => l.state === 'error') ? `, ${lines.filter((l) => l.state === 'error').length} failed` : ''}.
               </p>
             )}
-            <ul className="max-h-48 space-y-0.5 overflow-y-auto text-[11px]">
+            <ul className="max-h-48 space-y-0.5 overflow-y-auto t-small">
               {lines.map((l) => (
                 <li key={l.name} className="flex gap-2">
                   <span className="min-w-0 flex-1 truncate" title={l.name}>
@@ -400,13 +400,13 @@ function Zones({ state, set }: { state: SessionState; set: AlsSet }) {
               <span className="absolute inset-y-0 left-0" style={{ width: `${Math.round(z.share * 100)}%`, background: color(z.zone) }} />
             </span>
             <span className="t-num w-10 shrink-0 text-right">{z.tracks ? `${Math.round(z.share * 100)}%` : '—'}</span>
-            <span className="t-num w-40 shrink-0 text-[11px] text-muted">
+            <span className="t-num w-40 shrink-0 t-small text-muted">
               {z.tracks ? `${z.tracks} ${z.tracks === 1 ? 'track' : 'tracks'} · ${z.clips} clips · ${z.devices} devices` : 'no tracks'}
             </span>
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-[11px] text-muted">
+      <p className="mt-2 t-small text-muted">
         Share of the arrangement ({bars(set.lengthBeats)}) where at least one switched-on track of the zone plays. Presence, not finish: your own
         read of each zone comes next.
       </p>
@@ -449,7 +449,7 @@ function ArrangementMap({ set, zones }: { set: AlsSet; zones: SessionState['zone
   return (
     <Section label="Arrangement">
       <div className="t-body">
-        <div className="relative ml-32 h-4 text-[10px] text-muted">
+        <div className="relative ml-32 h-4 t-small text-muted">
           {ticks.map((b) => (
             <span key={b} className="t-num absolute -translate-x-1/2" style={{ left: pct(b) }}>
               {b / 4 + 1}
@@ -465,7 +465,7 @@ function ArrangementMap({ set, zones }: { set: AlsSet; zones: SessionState['zone
           <ul className="space-y-px">
             {tracks.map((t) => (
               <li key={t.id} className="flex items-center gap-2">
-                <span className={`shrink-0 truncate text-[11px] ${t.on ? '' : 'text-muted line-through'}`} style={{ width: '7.5rem' }} title={t.name}>
+                <span className={`shrink-0 truncate t-small ${t.on ? '' : 'text-muted line-through'}`} style={{ width: '7.5rem' }} title={t.name}>
                   {t.name}
                 </span>
                 <span className="relative h-3 flex-1 bg-line/50">
@@ -482,11 +482,11 @@ function ArrangementMap({ set, zones }: { set: AlsSet; zones: SessionState['zone
           </ul>
         </div>
         {set.locators.length > 0 && (
-          <p className="mt-2 ml-32 text-[11px] text-muted">
+          <p className="mt-2 ml-32 t-small text-muted">
             Locators: {set.locators.map((l) => `${l.name || 'unnamed'} (bar ${Math.round(l.beat / 4) + 1})`).join(' · ')}
           </p>
         )}
-        <p className="mt-2 text-[11px] text-muted">
+        <p className="mt-2 t-small text-muted">
           Bars across the top. Tracks switched off are faded. {set.tempo ? `The last clip ends at ${beatsToTime(len, set.tempo)}.` : ''}
         </p>
       </div>
@@ -508,13 +508,13 @@ function MaintenanceSection({ m, folderRead }: { m: NonNullable<SessionState['ma
               {m.plugins.map((p) => (
                 <tr key={`${p.name}|${p.format}`}>
                   <td className="py-1 pr-2">
-                    {p.name} <span className="text-[11px] text-muted">{p.format?.toUpperCase()}</span>
+                    {p.name} <span className="t-small text-muted">{p.format?.toUpperCase()}</span>
                   </td>
                   <td className="t-num w-24 py-1 pr-2 text-right">
                     ×{p.instances}
-                    {p.off ? <span className="text-[11px] text-muted"> ({p.off} off)</span> : null}
+                    {p.off ? <span className="t-small text-muted"> ({p.off} off)</span> : null}
                   </td>
-                  <td className="max-w-0 truncate py-1 text-[11px] text-muted" title={p.tracks.join(', ')}>
+                  <td className="max-w-0 truncate py-1 t-small text-muted" title={p.tracks.join(', ')}>
                     {p.tracks.join(', ')}
                   </td>
                 </tr>
@@ -522,14 +522,14 @@ function MaintenanceSection({ m, folderRead }: { m: NonNullable<SessionState['ma
             </tbody>
           </table>
           {shared.length > 0 && (
-            <p className="mt-1 text-[11px] text-muted">
+            <p className="mt-1 t-small text-muted">
               {shared.map((p) => `${p.name} ×${p.instances}`).join(', ')}: several instances of one effect can often share a return track, which
               saves processing and glues the parts together.
             </p>
           )}
           <details className="mt-2">
             <summary className="cursor-pointer text-muted">Live devices · {m.devices.reduce((n, d) => n + d.instances, 0)}</summary>
-            <ul className="mt-1 columns-2 text-[11px]">
+            <ul className="mt-1 columns-2 t-small">
               {m.devices.map((d) => (
                 <li key={d.name}>
                   {d.name} ×{d.instances}
@@ -588,14 +588,14 @@ function Finding({ title, ok, items, note }: { title: string; ok: string; items:
         <p className="text-muted">{ok}</p>
       ) : (
         <>
-          <ul className="max-h-40 space-y-0.5 overflow-y-auto text-[11px]">
+          <ul className="max-h-40 space-y-0.5 overflow-y-auto t-small">
             {items.map((x, i) => (
               <li key={i} className="truncate" title={x}>
                 {x}
               </li>
             ))}
           </ul>
-          {note && <p className="mt-1 text-[11px] text-muted">{note}</p>}
+          {note && <p className="mt-1 t-small text-muted">{note}</p>}
         </>
       )}
     </div>

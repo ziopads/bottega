@@ -103,7 +103,7 @@ export default function SharingTab({ initialOutgoing, incoming }: { initialOutgo
                               </button>
                             </>
                           )}
-                          <span className="w-full text-[11px] text-muted sm:w-auto">
+                          <span className="w-full t-small text-muted sm:w-auto">
                             since <When iso={s.grantedAt} day />
                           </span>
                         </li>
@@ -131,7 +131,7 @@ export default function SharingTab({ initialOutgoing, incoming }: { initialOutgo
                 <Link href={s.href} className="hover:underline">
                   {s.itemLabel}
                 </Link>
-                <div className="text-[11px] text-muted">
+                <div className="t-small text-muted">
                   {s.personName} · {LEVEL_WORD[s.level]}
                 </div>
               </li>

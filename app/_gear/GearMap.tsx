@@ -75,7 +75,7 @@ export default function GearMap({ units, viewerId }: { units: GearUnit[]; viewer
   const wished = own.length - owned;
 
   return (
-    <div className="text-[13px]">
+    <div className="t-body">
       <div className="mb-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-line pb-3 text-muted">
         <span>
           {owned} owned · {wished} on the wishlist · {shown.length} groups
@@ -97,15 +97,15 @@ export default function GearMap({ units, viewerId }: { units: GearUnit[]; viewer
             return (
               <section key={g.key} className="min-w-0">
                 <header className="border border-line px-2 py-1.5 leading-tight" title={g.note}>
-                  <h2 className="text-[13px] font-medium">{g.label}</h2>
-                  <p className="text-[11px] text-muted">
+                  <h2 className="t-body font-medium">{g.label}</h2>
+                  <p className="t-small text-muted">
                     {b.owned.length} owned{b.wish.length ? ` · ${b.wish.length} wished` : ''}
                   </p>
                 </header>
                 <div className="ml-3 border-l border-ink/30 pt-1">
                   {sections(owned).map(([label, list]) => (
                     <div key={label || 'all'}>
-                      {label && <p className="mt-1 pl-3 text-[11px] text-muted">{label}</p>}
+                      {label && <p className="mt-1 pl-3 t-small text-muted">{label}</p>}
                       <ul>
                         {list.map((u) => (
                           <Branch key={u.id} u={u} />
@@ -116,7 +116,7 @@ export default function GearMap({ units, viewerId }: { units: GearUnit[]; viewer
                 </div>
                 {wish.length > 0 && (
                   <div className="ml-3 border-l border-dashed border-line pt-1">
-                    <p className="pl-3 text-[11px] uppercase tracking-wide text-muted">wishlist</p>
+                    <p className="pl-3 t-small uppercase tracking-wide text-muted">wishlist</p>
                     <ul>
                       {wish.map((u) => (
                         <Branch key={u.id} u={u} wish />
@@ -132,7 +132,7 @@ export default function GearMap({ units, viewerId }: { units: GearUnit[]; viewer
 
       {shared.length > 0 && (
         <section className="mt-10 border-t border-line pt-3">
-          <h2 className="mb-1 text-[11px] uppercase tracking-wide text-muted">Shared with me</h2>
+          <h2 className="mb-1 t-small uppercase tracking-wide text-muted">Shared with me</h2>
           <ul className="columns-2 gap-x-6 sm:columns-3 lg:columns-4">
             {[...shared].sort(byName).map((u) => (
               <li key={u.id} className="truncate leading-5">

@@ -159,7 +159,7 @@ export default function PdfPane({ documentId }: { documentId: number }) {
             type="button"
             onClick={() => go(page - 1)}
             disabled={!doc || page <= 1}
-            className="px-1 text-base leading-none hover:text-ink disabled:opacity-30"
+            className="px-1 t-lead leading-none hover:text-ink disabled:opacity-30"
             aria-label="Previous page"
           >
             ‹
@@ -185,18 +185,18 @@ export default function PdfPane({ documentId }: { documentId: number }) {
             type="button"
             onClick={() => go(page + 1)}
             disabled={!doc || page >= total}
-            className="px-1 text-base leading-none hover:text-ink disabled:opacity-30"
+            className="px-1 t-lead leading-none hover:text-ink disabled:opacity-30"
             aria-label="Next page"
           >
             ›
           </button>
         </span>
-        {status && <span className="text-[11px]">{status}</span>}
+        {status && <span className="t-small">{status}</span>}
         <span className="ml-auto flex items-center gap-1">
           <button type="button" onClick={() => setZoom(ZOOMS[z - 1])} disabled={z <= 0} className={BUTTON} aria-label="Zoom out">
             −
           </button>
-          <span className="t-num w-12 text-center text-[11px]">{zoom === 1 ? 'Fit' : `${Math.round(zoom * 100)}%`}</span>
+          <span className="t-num w-12 text-center t-small">{zoom === 1 ? 'Fit' : `${Math.round(zoom * 100)}%`}</span>
           <button type="button" onClick={() => setZoom(ZOOMS[z + 1])} disabled={z >= ZOOMS.length - 1} className={BUTTON} aria-label="Zoom in">
             +
           </button>
@@ -210,7 +210,7 @@ export default function PdfPane({ documentId }: { documentId: number }) {
         <div ref={holder} className={`mx-auto w-max ${error ? 'hidden' : ''}`} />
       </div>
       {url && (
-        <p className="mt-1 text-[11px] text-muted">
+        <p className="mt-1 t-small text-muted">
           <a href={`${url}#page=${page}`} target="_blank" rel="noreferrer" className="hover:text-ink">
             Open in a new tab
           </a>{' '}

@@ -74,7 +74,7 @@ export default function Sharing({
   return (
     <section className={bare ? 't-body' : 'mt-10'}>
       {!bare && <h2 className="t-label mb-3 border-b border-line pb-1">Shared with</h2>}
-      {note && <p className="mb-3 text-[11px] text-muted">{note}</p>}
+      {note && <p className="mb-3 t-small text-muted">{note}</p>}
       {shares.length === 0 ? (
         <p className="t-body text-muted">Only you can see this.</p>
       ) : (

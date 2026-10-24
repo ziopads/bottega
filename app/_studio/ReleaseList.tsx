@@ -95,10 +95,10 @@ export default function ReleaseList({
             <li key={r.id}>
               <Link href={`/collections/${r.id}`} className="flex items-baseline gap-3 px-4 py-3 hover:bg-ink/5">
                 <span className="t-lead">{r.title}</span>
-                <span className="text-[11px] text-muted">
+                <span className="t-small text-muted">
                   {[RELEASE_KIND_LABEL[r.kind], r.artist?.code, r.year].filter(Boolean).join(' · ')}
                 </span>
-                <span className="ml-auto text-[11px] text-muted">
+                <span className="ml-auto t-small text-muted">
                   {r.ownerId !== viewerId && `shared by ${r.ownerName} · `}
                   {r.trackCount} {r.trackCount === 1 ? 'track' : 'tracks'}
                 </span>

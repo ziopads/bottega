@@ -76,12 +76,12 @@ export default function Player({
       <button
         type="button"
         onClick={() => toggle(item, queue)}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink text-[10px] text-parchment hover:bg-ink/80"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink t-small text-parchment hover:bg-ink/80"
         aria-label={playing ? 'Pause' : 'Play'}
       >
         {playing ? '❚❚' : '▶'}
       </button>
-      <span className="t-num w-10 shrink-0 text-right text-[11px] text-muted">{formatDuration(time) || '0:00'}</span>
+      <span className="t-num w-10 shrink-0 text-right t-small text-muted">{formatDuration(time) || '0:00'}</span>
       <div className="min-w-0 flex-1">
         <Waveform
           peaks={peaks}
@@ -93,7 +93,7 @@ export default function Player({
           onMarker={onMarker}
         />
       </div>
-      <span className="t-num w-10 shrink-0 text-[11px] text-muted">{formatDuration(duration || null) || '—'}</span>
+      <span className="t-num w-10 shrink-0 t-small text-muted">{formatDuration(duration || null) || '—'}</span>
     </div>
   );
 }

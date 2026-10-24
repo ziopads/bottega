@@ -44,14 +44,14 @@ function ResourceRow({ r, g, viewerId, call, busy }: { r: StudyResource; g: Stud
         <Link href={resourceHref(g.id, r.id)} className="t-lead hover:text-rust">
           {r.title}
         </Link>
-        <p className="text-[11px] text-muted">
+        <p className="t-small text-muted">
           {[r.channel, `added by ${r.addedByName}`, notes ? `${notes} ${notes === 1 ? 'note' : 'notes'}` : null, r.origin === 'assistant' ? 'added by Claude' : null]
             .filter(Boolean)
             .join(' · ')}
         </p>
         {r.why && <p className="t-body mt-0.5">{r.why}</p>}
         {!r.published && mine && (
-          <span className="mt-1 flex gap-3 text-[11px]">
+          <span className="mt-1 flex gap-3 t-small">
             <button onClick={() => call(`/api/study/resources/${r.id}`, 'POST', { op: 'publish' })} disabled={busy} className={BUTTON_PRIMARY}>
               Publish
             </button>
@@ -253,7 +253,7 @@ export default function ResourceView({
           {notes.map((n) => (
             <li key={n.id} className="flex gap-2">
               {n.positionS !== null && r.kind === 'video' && (
-                <button onClick={() => player.current?.seek(n.positionS!)} className="t-num mt-2 shrink-0 self-start text-[12px] text-rust hover:underline">
+                <button onClick={() => player.current?.seek(n.positionS!)} className="t-num mt-2 shrink-0 self-start t-small text-rust hover:underline">
                   {formatTime(n.positionS)}
                 </button>
               )}

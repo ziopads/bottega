@@ -161,7 +161,7 @@ export default function TodosView({ initial, project }: { initial: Todo[]; proje
       </div>
 
       <section aria-label="Filters" className="t-body mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md bg-ink/[0.03] px-3 py-2">
-        <label className="flex items-center gap-1.5 text-[12px] text-muted">
+        <label className="flex items-center gap-1.5 t-small text-muted">
           Projects
           <select
             value={String(projects)}
@@ -181,7 +181,7 @@ export default function TodosView({ initial, project }: { initial: Todo[]; proje
             ))}
           </select>
         </label>
-        <label className="flex items-center gap-1.5 text-[12px] text-muted">
+        <label className="flex items-center gap-1.5 t-small text-muted">
           Stage
           <select value={stage} onChange={(e) => setStage(e.target.value as StageFilter)} className={FIELD}>
             <option value="current">Each project&rsquo;s current stage</option>
@@ -189,7 +189,7 @@ export default function TodosView({ initial, project }: { initial: Todo[]; proje
             <option value="any">Any stage</option>
           </select>
         </label>
-        <label className="flex items-center gap-1.5 text-[12px] text-muted">
+        <label className="flex items-center gap-1.5 t-small text-muted">
           Element
           <select value={zone} onChange={(e) => setZone(e.target.value)} className={FIELD}>
             <option value="">All</option>
@@ -200,7 +200,7 @@ export default function TodosView({ initial, project }: { initial: Todo[]; proje
             ))}
           </select>
         </label>
-        <label className="flex items-center gap-1.5 text-[12px] text-muted">
+        <label className="flex items-center gap-1.5 t-small text-muted">
           Kind
           <select value={kind} onChange={(e) => setKind(e.target.value)} className={FIELD}>
             <option value="">All</option>
@@ -212,11 +212,11 @@ export default function TodosView({ initial, project }: { initial: Todo[]; proje
           </select>
         </label>
         <span className="flex-1" />
-        <label className="flex items-center gap-1.5 text-[12px]">
+        <label className="flex items-center gap-1.5 t-small">
           <input type="checkbox" checked={prefs.showDone} onChange={(e) => update({ showDone: e.target.checked })} className="accent-ink" />
           Show done
         </label>
-        <label className="flex items-center gap-1.5 text-[12px] text-muted">
+        <label className="flex items-center gap-1.5 t-small text-muted">
           from
           <select value={prefs.window} onChange={(e) => update({ window: Number(e.target.value) as Window })} disabled={!prefs.showDone} className={FIELD}>
             <option value={14}>the last 14 days</option>
@@ -225,7 +225,7 @@ export default function TodosView({ initial, project }: { initial: Todo[]; proje
           </select>
         </label>
         {prefs.view === 'board' && (
-          <label className="flex items-center gap-1.5 text-[12px]">
+          <label className="flex items-center gap-1.5 t-small">
             <input type="checkbox" checked={prefs.byProject} onChange={(e) => update({ byProject: e.target.checked })} className="accent-ink" />
             One row per project
           </label>
@@ -265,10 +265,10 @@ export default function TodosView({ initial, project }: { initial: Todo[]; proje
             <div key={lane.key} className="space-y-1.5">
               {lane.project && (
                 <p className="flex flex-wrap items-baseline gap-2 border-t border-line pt-2.5">
-                  <Link href={`/projects/${lane.project.id}?tab=workflow`} className="text-[14px] font-medium hover:text-rust">
+                  <Link href={`/projects/${lane.project.id}?tab=workflow`} className="t-lead font-medium hover:text-rust">
                     {lane.project.title}
                   </Link>
-                  <span className="t-num font-mono text-[10px] text-muted">
+                  <span className="t-num font-mono t-small text-muted">
                     {lane.items[0]?.projectStageLabel ?? 'not started'}
                     {lane.project.place ? ` · ${lane.project.place === 'rotation' ? 'in rotation' : 'backlog'}` : ''}
                   </span>
@@ -305,7 +305,7 @@ export default function TodosView({ initial, project }: { initial: Todo[]; proje
               </div>
             </div>
           ))}
-          <p className="text-[11px] text-muted">
+          <p className="t-small text-muted">
             Drag a card between columns to change its status, or use its button. A card for a later stage shows with &ldquo;Current and parked for later&rdquo;.
           </p>
         </div>
@@ -339,14 +339,14 @@ export default function TodosView({ initial, project }: { initial: Todo[]; proje
                       aria-label={`Done: ${t.what}`}
                       className="accent-ink"
                     />
-                    {t.status === 'in progress' && <span className="ml-1.5 font-mono text-[10px] text-muted">in progress</span>}
+                    {t.status === 'in progress' && <span className="ml-1.5 font-mono t-small text-muted">in progress</span>}
                   </td>
                   <td className="px-2.5 py-2">
                     <span className={t.status === 'done' ? 'text-muted line-through' : 'font-medium'}>
-                      {t.isNext && <span className="mr-1.5 rounded bg-ink px-1 py-px font-mono text-[10px] uppercase tracking-wide text-parchment">Next</span>}
+                      {t.isNext && <span className="mr-1.5 rounded bg-ink px-1 py-px font-mono t-small uppercase tracking-wide text-parchment">Next</span>}
                       {t.what}
                     </span>
-                    <span className="block text-[12px] text-muted">Done when: {t.doneWhen}</span>
+                    <span className="block t-small text-muted">Done when: {t.doneWhen}</span>
                   </td>
                   <td className="whitespace-nowrap px-2.5 py-2">
                     <Link href={`/projects/${t.projectId}?tab=workflow`} className="hover:text-rust">
@@ -358,7 +358,7 @@ export default function TodosView({ initial, project }: { initial: Todo[]; proje
                     {t.when === 'later' && <span className="text-muted"> · parked</span>}
                   </td>
                   <td className="whitespace-nowrap px-2.5 py-2">{t.element ?? <span className="text-muted">unassigned</span>}</td>
-                  <td className="whitespace-nowrap px-2.5 py-2 font-mono text-[11px] text-muted">{t.moment ?? ''}</td>
+                  <td className="whitespace-nowrap px-2.5 py-2 font-mono t-small text-muted">{t.moment ?? ''}</td>
                   <td className="whitespace-nowrap px-2.5 py-2">
                     {t.canChange && (
                       <button type="button" onClick={() => toNote(t)} disabled={busy} className={BUTTON} aria-label={`Make “${t.what}” a note`}>
@@ -399,17 +399,17 @@ function TodoCard({
       onDragEnd={() => onDrag(null)}
       className={`t-body space-y-1 rounded border bg-card px-3 py-2.5 ${t.status === 'in progress' ? 'border-ink' : 'border-line'} ${t.canChange ? 'cursor-grab' : ''}`}
     >
-      <p className="flex justify-between gap-2 font-mono text-[10px] text-muted">
+      <p className="flex justify-between gap-2 font-mono t-small text-muted">
         <span className="min-w-0">{tag}</span>
         <span className="shrink-0">{t.kind ?? ''}</span>
       </p>
       <p className={t.status === 'done' ? 'font-medium text-muted line-through' : 'font-medium'}>
-        {t.isNext && <span className="mr-1.5 rounded bg-ink px-1 py-px font-mono text-[10px] uppercase tracking-wide text-parchment">Next</span>}
+        {t.isNext && <span className="mr-1.5 rounded bg-ink px-1 py-px font-mono t-small uppercase tracking-wide text-parchment">Next</span>}
         {t.what}
       </p>
-      <p className="text-[12px] text-muted">Done when: {t.doneWhen}</p>
+      <p className="t-small text-muted">Done when: {t.doneWhen}</p>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-mono text-[10px] text-muted">{t.moment ? `Pinned to ${t.moment}` : ''}</span>
+        <span className="font-mono t-small text-muted">{t.moment ? `Pinned to ${t.moment}` : ''}</span>
         {t.canChange && (
           <span className="flex gap-1.5">
             <button type="button" onClick={onNext} disabled={busy} className={BUTTON}>

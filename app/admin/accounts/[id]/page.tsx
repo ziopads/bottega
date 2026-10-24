@@ -41,11 +41,11 @@ export default async function AccountViewPage({ params }: { params: Promise<{ id
         <ul className="divide-y divide-line border-y border-line t-body">
           {theirs.map((p) => (
             <li key={p.id} className="flex gap-4 py-2">
-              <span className="w-40 shrink-0 font-mono text-[11px] text-muted">
+              <span className="w-40 shrink-0 font-mono t-small text-muted">
                 {p.artist.code} {p.canonicalId}
               </span>
               <span className="min-w-0 flex-1">{p.workingName || 'untitled'}</span>
-              <span className="text-[11px] text-muted">
+              <span className="t-small text-muted">
                 {p.latest ? `${p.latest.count} mixes · ${formatDuration(p.latest.durationS)}` : 'no audio'}
               </span>
             </li>
@@ -58,7 +58,7 @@ export default async function AccountViewPage({ params }: { params: Promise<{ id
         <ul className="divide-y divide-line border-y border-line t-body">
           {theirReleases.map((r) => (
             <li key={r.id} className="py-2">
-              {r.title} <span className="text-[11px] text-muted">· {r.trackCount} tracks</span>
+              {r.title} <span className="t-small text-muted">· {r.trackCount} tracks</span>
             </li>
           ))}
         </ul>

@@ -110,7 +110,7 @@ export default function LearningHome({ groups, invitations }: { groups: StudyGro
           <button disabled={busy || !name.trim()} className={BUTTON}>
             Start it
           </button>
-          <p className="text-[11px] text-muted">You become its custodian: you write the syllabus, review Claude’s proposals and invite members.</p>
+          <p className="t-small text-muted">You become its custodian: you write the syllabus, review Claude’s proposals and invite members.</p>
         </form>
       </Section>
       {error && <p className="t-body text-rust">{error}</p>}

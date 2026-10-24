@@ -108,7 +108,7 @@ export function NoteItem({
 
   return (
     <li className="t-body py-2">
-      <div className="flex flex-wrap items-baseline gap-x-2 text-[11px] text-muted">
+      <div className="flex flex-wrap items-baseline gap-x-2 t-small text-muted">
         {n.positionS !== null && n.trackId !== null && (
           <button
             type="button"

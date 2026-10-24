@@ -302,7 +302,7 @@ export default function StudioProjects({
     return () => window.removeEventListener('keydown', onKey);
   }, [queue]);
 
-  const th = 'px-2 py-2 text-left text-[11px] font-normal uppercase tracking-wide text-muted';
+  const th = 'px-2 py-2 text-left t-small font-normal uppercase tracking-wide text-muted';
   const SortHead = ({ k, children, className = '' }: { k: SortKey; children: React.ReactNode; className?: string }) => (
     <th className={`${th} ${className}`} aria-sort={sort.key === k ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
       <button onClick={() => clickSort(k)} className={`hover:text-ink ${sort.key === k ? 'text-ink' : ''}`}>
@@ -378,7 +378,7 @@ export default function StudioProjects({
           <span className="text-muted">With audio</span>
         </label>
         {filtering && (
-          <span className="flex items-baseline gap-2 text-[11px] text-muted">
+          <span className="flex items-baseline gap-2 t-small text-muted">
             showing {shown.length} of {projects.length}
             <button
               onClick={() => {
@@ -471,7 +471,7 @@ export default function StudioProjects({
       )}
 
 
-      <p className="mt-3 text-[11px] text-muted">
+      <p className="mt-3 t-small text-muted">
         Click a column heading to sort, again to reverse. Shift-click checkboxes to select a range.
         {shown.some((p) => p.latest) && ' Keys: Space play/pause · N next · P previous · 1–5 rate the playing project · 0 clears.'}
       </p>
@@ -653,7 +653,7 @@ function BulkBar({
         )}
       </label>
 
-      {done && <span className="text-[11px] text-muted">{done}</span>}
+      {done && <span className="t-small text-muted">{done}</span>}
       <button onClick={onClear} className={`ml-auto ${BUTTON}`}>
         Clear selection
       </button>
@@ -709,7 +709,7 @@ function ProjectRow({
             onClick={onPlay}
             aria-label={playing ? 'Pause' : `Play ${p.latest.label}`}
             title={`${playing ? 'Pause' : 'Play'} ${p.latest.label}`}
-            className={`flex h-7 w-7 items-center justify-center rounded-full border text-[11px] ${
+            className={`flex h-7 w-7 items-center justify-center rounded-full border t-small ${
               isCurrent ? 'border-ink bg-ink text-parchment' : 'border-line hover:border-ink'
             }`}
           >
@@ -720,7 +720,7 @@ function ProjectRow({
       <td className={td}>
         <Stars rating={p.rating} onRate={onRate} />
       </td>
-      <td className={`${td} text-[11px] font-medium tracking-[0.04em] text-muted`} title={p.artist.name}>
+      <td className={`${td} t-small font-medium tracking-[0.04em] text-muted`} title={p.artist.name}>
         {p.artist.code}
       </td>
       <td className={`${td} whitespace-nowrap`}>
@@ -754,15 +754,15 @@ function ProjectRow({
           onSave={(v) => onPatch({ bpm: v })}
         />
       </td>
-      <td className={`${td} text-[11px] tabular-nums text-muted`}>{p.latest ? p.latest.label : ''}</td>
-      <td className={`${td} text-right text-[11px] tabular-nums text-muted`}>
+      <td className={`${td} t-small tabular-nums text-muted`}>{p.latest ? p.latest.label : ''}</td>
+      <td className={`${td} text-right t-small tabular-nums text-muted`}>
         {p.latest ? formatDuration(p.latest.durationS) : ''}
       </td>
-      <td className={`${td} max-w-[10rem] truncate text-[11px] text-muted`} title={releaseTitles.join(', ')}>
+      <td className={`${td} max-w-[10rem] truncate t-small text-muted`} title={releaseTitles.join(', ')}>
         {releaseTitles.join(', ')}
       </td>
-      <td className={`${td} whitespace-nowrap text-[11px] text-muted`}>{date(p.createdAt)}</td>
-      <td className={`${td} whitespace-nowrap text-[11px] text-muted`}>{p.latest ? date(p.latest.uploadedAt) : ''}</td>
+      <td className={`${td} whitespace-nowrap t-small text-muted`}>{date(p.createdAt)}</td>
+      <td className={`${td} whitespace-nowrap t-small text-muted`}>{p.latest ? date(p.latest.uploadedAt) : ''}</td>
       <td className={`${td} whitespace-nowrap`}>
         <BoardPlaceSelect projectId={p.id} initial={boardPlace} compact />
       </td>

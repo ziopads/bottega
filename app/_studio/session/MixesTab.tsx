@@ -342,10 +342,10 @@ function MixRow({
           {t.originalFilename}
         </span>
         {current && <span className="t-label text-ink">current{chosenByHand ? ' · by hand' : ''}</span>}
-        <span className="t-num text-[11px] text-muted">
+        <span className="t-num t-small text-muted">
           {[t.uploadedByName, formatDate(t.uploadedAt), formatBytes(t.bytes)].filter(Boolean).join(' · ')}
         </span>
-        <span className="ml-auto flex gap-3 text-[11px] text-muted" onClick={(e) => e.stopPropagation()}>
+        <span className="ml-auto flex gap-3 t-small text-muted" onClick={(e) => e.stopPropagation()}>
           {noteCount > 0 && (
             <button onClick={onSelect} className={BUTTON}>
               {noteCount} {noteCount === 1 ? 'note' : 'notes'}
@@ -493,10 +493,10 @@ function References({
                   r.credit || r.originalFilename
                 )}
               </span>
-              <span className="t-num text-[11px] text-muted">
+              <span className="t-num t-small text-muted">
                 {[formatDuration(r.durationS), formatBytes(r.bytes)].filter(Boolean).join(' · ')}
               </span>
-              <span className="flex gap-3 text-[11px] text-muted">
+              <span className="flex gap-3 t-small text-muted">
                 <a href={audioUrl(r, true)} className="hover:text-ink">
                   Download
                 </a>

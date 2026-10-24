@@ -45,18 +45,18 @@ export function BoardSettings({ initial }: { initial: Editor }) {
       {error && <p className="t-body mb-2 text-rust">{error}</p>}
       <div className="t-body flex flex-wrap items-end gap-6">
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] text-muted">Projects in rotation at most</span>
+          <span className="t-small text-muted">Projects in rotation at most</span>
           <input type="number" min={1} max={20} value={limit} onChange={(e) => setLimit(e.target.value)} onBlur={save} className={`${FIELD} w-20`} />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] text-muted">A project goes cold after</span>
+          <span className="t-small text-muted">A project goes cold after</span>
           <span className="flex items-center gap-1.5">
             <input type="number" min={1} max={365} value={cold} onChange={(e) => setCold(e.target.value)} onBlur={save} className={`${FIELD} w-20`} /> days
           </span>
         </label>
         {state === 'saved' && <span className="text-muted">Saved.</span>}
       </div>
-      <p className="mt-2 text-[11px] text-muted">The board keeps your rotation to this many projects; one untouched for this long shows as cold.</p>
+      <p className="mt-2 t-small text-muted">The board keeps your rotation to this many projects; one untouched for this long shows as cold.</p>
     </Section>
   );
 }
@@ -105,7 +105,7 @@ export function TemplateEditor({ initial }: { initial: Editor }) {
       {error && <p className="t-body mb-2 text-rust">{error}</p>}
       <div className="t-body flex flex-wrap items-end justify-between gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] text-muted">New music projects start from</span>
+          <span className="t-small text-muted">New music projects start from</span>
           <select
             value={ed.chosen.id}
             onChange={async (e) => {
@@ -114,7 +114,7 @@ export function TemplateEditor({ initial }: { initial: Editor }) {
               if (await post({ op: 'choose', templateId: t?.isDefault ? null : id })) setStageId(null);
             }}
             disabled={busy}
-            className={`${FIELD} text-[15px] font-medium`}
+            className={`${FIELD} t-lead font-medium`}
           >
             {choosable.map((t) => (
               <option key={t.id} value={t.id}>
@@ -126,7 +126,7 @@ export function TemplateEditor({ initial }: { initial: Editor }) {
         </label>
         {ed.templates.length > 1 && (
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] text-muted">Editing</span>
+            <span className="t-small text-muted">Editing</span>
             <select value={ed.editing.id} onChange={(e) => edit(Number(e.target.value))} disabled={busy} className={FIELD}>
               {ed.templates.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -140,7 +140,7 @@ export function TemplateEditor({ initial }: { initial: Editor }) {
         {ed.editing.mine && (
           <span className="flex flex-wrap items-end gap-2">
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] text-muted">Name</span>
+              <span className="t-small text-muted">Name</span>
               <input
                 key={ed.editing.name}
                 defaultValue={ed.editing.name}
@@ -161,7 +161,7 @@ export function TemplateEditor({ initial }: { initial: Editor }) {
           </span>
         )}
       </div>
-      <p className="mt-2 text-[11px] text-muted">
+      <p className="mt-2 t-small text-muted">
         Projects already started keep their own copy; their Workflow tab offers your changes to bring in.
         {own.length === 0 ? '' : ` Your templates: ${own.map((t) => t.name).join(', ')}.`}
         {shared.length === 0 ? '' : ` Shared with you through artists: ${shared.map((t) => t.name).join(', ')}; an artist’s own templates are chosen under Profile.`}
@@ -198,16 +198,16 @@ export function TemplateEditor({ initial }: { initial: Editor }) {
             {ed.stages.map((s, i) => (
               <li key={s.id} className={`t-body flex items-center gap-1.5 rounded border px-2 py-1.5 ${s.id === stage?.id ? 'border-ink' : 'border-line'}`}>
                 <button onClick={() => setStageId(s.id)} className="flex min-w-0 flex-1 items-baseline gap-2 text-left" aria-pressed={s.id === stage?.id}>
-                  <span className="t-num w-4 font-mono text-[10px] text-muted">{s.position}</span>
+                  <span className="t-num w-4 font-mono t-small text-muted">{s.position}</span>
                   <span className="min-w-0 flex-1 truncate font-medium">{s.label}</span>
-                  <span className="t-num font-mono text-[10px] text-muted">{s.criteria.length}</span>
+                  <span className="t-num font-mono t-small text-muted">{s.criteria.length}</span>
                 </button>
                 {!readOnly && (
                   <>
-                    <button onClick={() => post({ op: 'move-stage', stageId: s.id, dir: -1 })} disabled={busy || i === 0} className="px-1 text-[11px] text-muted hover:text-ink disabled:opacity-30" aria-label={`Move ${s.label} earlier`}>
+                    <button onClick={() => post({ op: 'move-stage', stageId: s.id, dir: -1 })} disabled={busy || i === 0} className="px-1 t-small text-muted hover:text-ink disabled:opacity-30" aria-label={`Move ${s.label} earlier`}>
                       ↑
                     </button>
-                    <button onClick={() => post({ op: 'move-stage', stageId: s.id, dir: 1 })} disabled={busy || i === ed.stages.length - 1} className="px-1 text-[11px] text-muted hover:text-ink disabled:opacity-30" aria-label={`Move ${s.label} later`}>
+                    <button onClick={() => post({ op: 'move-stage', stageId: s.id, dir: 1 })} disabled={busy || i === ed.stages.length - 1} className="px-1 t-small text-muted hover:text-ink disabled:opacity-30" aria-label={`Move ${s.label} later`}>
                       ↓
                     </button>
                   </>
@@ -228,7 +228,7 @@ function StageEditor({ s, ed, readOnly, busy, post }: { s: EditorStage; ed: Edit
     <div className="t-body space-y-3">
       <div className="flex flex-wrap gap-3">
         <label className="flex flex-[1_1_160px] flex-col gap-1">
-          <span className="text-[11px] text-muted">Stage name</span>
+          <span className="t-small text-muted">Stage name</span>
           <input
             key={s.label}
             defaultValue={s.label}
@@ -238,7 +238,7 @@ function StageEditor({ s, ed, readOnly, busy, post }: { s: EditorStage; ed: Edit
           />
         </label>
         <label className="flex flex-[3_1_300px] flex-col gap-1">
-          <span className="text-[11px] text-muted">The standard, in a line</span>
+          <span className="t-small text-muted">The standard, in a line</span>
           <input
             key={s.standard}
             defaultValue={s.standard}
@@ -249,13 +249,13 @@ function StageEditor({ s, ed, readOnly, busy, post }: { s: EditorStage; ed: Edit
           />
         </label>
       </div>
-      <p className="text-[11px] text-muted">Criteria · each one condition you can check. A hint says how to check it or what to aim for; indent a line by two spaces to nest it.</p>
+      <p className="t-small text-muted">Criteria · each one condition you can check. A hint says how to check it or what to aim for; indent a line by two spaces to nest it.</p>
       {s.criteria.length === 0 && <p className="text-muted">No criteria yet.</p>}
       <ul className="space-y-2">
         {s.criteria.map((c, i) => (
           <li key={c.id} className="flex gap-2.5 rounded border border-line p-2.5">
             {!readOnly && (
-              <span className="flex flex-col text-[11px]">
+              <span className="flex flex-col t-small">
                 <button onClick={() => post({ op: 'move-criterion', criterionId: c.id, dir: -1 })} disabled={busy || i === 0} className="px-1 text-muted hover:text-ink disabled:opacity-30" aria-label="Move up">
                   ↑
                 </button>
@@ -281,16 +281,16 @@ function StageEditor({ s, ed, readOnly, busy, post }: { s: EditorStage; ed: Edit
                 rows={Math.max(1, Math.min(8, c.hint.split('\n').length))}
                 placeholder="Hint (optional)"
                 onBlur={(e) => e.target.value.replace(/\s+$/, '') !== c.hint && void post({ op: 'criterion', criterionId: c.id, hint: e.target.value })}
-                className={`${FIELD} block w-full whitespace-pre-wrap font-mono text-[12px]`}
+                className={`${FIELD} block w-full whitespace-pre-wrap font-mono t-small`}
               />
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 t-small text-muted">
                 <label className="flex items-center gap-1.5">
                   Suggest from the set
                   <select
                     value={c.checkKey ?? ''}
                     disabled={readOnly || busy}
                     onChange={(e) => post({ op: 'criterion', criterionId: c.id, checkKey: e.target.value || null })}
-                    className={`${FIELD} text-[11px]`}
+                    className={`${FIELD} t-small`}
                     title={ed.checks.find((k) => k.key === c.checkKey)?.description}
                   >
                     <option value="">No check</option>
@@ -316,7 +316,7 @@ function StageEditor({ s, ed, readOnly, busy, post }: { s: EditorStage; ed: Edit
       {!readOnly && <AddLine placeholder="This stage is finished when…" busy={busy} onAdd={(body) => post({ op: 'add-criterion', stageId: s.id, body })} />}
       <div className="space-y-1.5 border-t border-line pt-3">
         <p className="t-label">Learnings · {s.learnings.filter((l) => l.reviewed).length}</p>
-        <p className="text-[11px] text-muted">Reminders with no checkbox, shown on every project using this template while it is at {s.label}.</p>
+        <p className="t-small text-muted">Reminders with no checkbox, shown on every project using this template while it is at {s.label}.</p>
         {s.learnings.length > 0 && (
           <ul className="space-y-1.5">
             {s.learnings.map((l) => (
@@ -327,7 +327,7 @@ function StageEditor({ s, ed, readOnly, busy, post }: { s: EditorStage; ed: Edit
         {!readOnly && <AddLine placeholder={`Something to remember at ${s.label}`} busy={busy} onAdd={(body) => post({ op: 'add-learning', stageId: s.id, body })} />}
       </div>
       {s.missingFromDefault.length > 0 && (
-        <p className="text-[11px] text-muted">Removed from the default: {s.missingFromDefault.map((m) => `“${m.body}”`).join(', ')}.</p>
+        <p className="t-small text-muted">Removed from the default: {s.missingFromDefault.map((m) => `“${m.body}”`).join(', ')}.</p>
       )}
       {!readOnly && (
         <div className="flex flex-wrap gap-2 border-t border-line pt-3">
@@ -374,7 +374,7 @@ function AddLine({ placeholder, busy, onAdd }: { placeholder: string; busy: bool
 function LearningLine({ l, readOnly, busy, post }: { l: EditorLearning; readOnly: boolean; busy: boolean; post: Post }) {
   return (
     <li className={`t-body flex flex-col gap-1 rounded border px-2.5 py-2 ${l.reviewed ? 'border-line' : 'border-dashed border-ink'}`}>
-      {!l.reviewed && <span className="font-mono text-[10px] text-muted">Proposed by Claude</span>}
+      {!l.reviewed && <span className="font-mono t-small text-muted">Proposed by Claude</span>}
       {readOnly ? (
         <span className="whitespace-pre-line">{l.body}</span>
       ) : (
@@ -387,7 +387,7 @@ function LearningLine({ l, readOnly, busy, post }: { l: EditorLearning; readOnly
           aria-label="Learning"
         />
       )}
-      <span className="flex flex-wrap items-center gap-2 text-[11px] text-muted">
+      <span className="flex flex-wrap items-center gap-2 t-small text-muted">
         <span>
           {l.createdByName}
           {l.source ? ` · from ${l.source}` : ''}

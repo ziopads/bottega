@@ -43,10 +43,10 @@ export default function ConvertImages({ images }: { images: { id: number; filena
         <button onClick={run} disabled={running} className={BUTTON_PRIMARY}>
           {running ? `Converting… ${done} of ${images.length}` : 'Convert them'}
         </button>
-        <span className="text-[11px] text-muted">Keep this page open while it runs.</span>
+        <span className="t-small text-muted">Keep this page open while it runs.</span>
       </div>
       {failed.length > 0 && (
-        <ul className="mt-2 text-[11px] text-rust">
+        <ul className="mt-2 t-small text-rust">
           {failed.map((f) => (
             <li key={f}>{f}</li>
           ))}

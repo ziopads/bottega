@@ -26,8 +26,8 @@ import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
 //
 //   stage bar       one segment per stage, filled by the share of its criteria
 //                   met, the current one outlined, labels and a caption
-//   (the next to-do, the last session and the stage's open to-dos sit in the
-//   project's header since 25 October: WhereItStands.tsx)
+//   (the next to-do heads On deck; the summary of where the project stands is
+//   on the Overview tab: WhereItStands.tsx)
 //   template        what the project's template offers since it was taken
 //   review band     Claude's proposals, waiting for a person
 //   left column     the stages, each with its share met and parked cards
@@ -198,10 +198,10 @@ function StartedWorkflow({
         <ul className="divide-y divide-line">
           {proposedCriteria.map((c) => (
             <li key={`c${c.id}`} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-1.5">
-              <span className="text-[11px] text-muted">Exit criterion · {stageLabel(c.stage)}</span>
+              <span className="t-small text-muted">Exit criterion · {stageLabel(c.stage)}</span>
               <span className="min-w-0 flex-1">{c.body}</span>
               {canEdit && (
-                <span className="flex gap-3 text-[11px]">
+                <span className="flex gap-3 t-small">
                   <button onClick={() => call(`/api/criteria/${c.id}`, 'PATCH', { accept: true })} disabled={busy} className={BUTTON_PRIMARY}>
                     Accept
                   </button>
@@ -215,13 +215,13 @@ function StartedWorkflow({
           {proposedCards.map((c) => (
             <li key={`k${c.id}`} className="py-1.5">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="text-[11px] text-muted">
+                <span className="t-small text-muted">
                   Card · {stageLabel(c.stage)} · {describeElement(elementName(c.elementId))}
                   {c.kind ? ` · ${c.kind}` : ''}
                 </span>
                 <span className="min-w-0 flex-1">{c.what}</span>
                 {canChange(c) && (
-                  <span className="flex gap-3 text-[11px]">
+                  <span className="flex gap-3 t-small">
                     <button onClick={() => call(`/api/cards/${c.id}`, 'PATCH', { status: 'accepted' })} disabled={busy} className={BUTTON_PRIMARY}>
                       Accept
                     </button>
@@ -231,7 +231,7 @@ function StartedWorkflow({
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-muted">Done when: {c.doneWhen}</p>
+              <p className="t-small text-muted">Done when: {c.doneWhen}</p>
             </li>
           ))}
         </ul>
@@ -263,28 +263,28 @@ function StartedWorkflow({
                     {past ? '✓ ' : isCurrent ? '● ' : ''}
                     {s.label}
                   </span>
-                  <span className="t-num text-[10px] text-muted">{t.total ? `${t.met}/${t.total}` : ''}</span>
+                  <span className="t-num t-small text-muted">{t.total ? `${t.met}/${t.total}` : ''}</span>
                 </span>
                 <span className="mt-1 block h-[3px] overflow-hidden rounded bg-line">
                   <span className="block h-full bg-ink" style={{ width: `${Math.round(share * 100)}%` }} />
                 </span>
-                {parkedHere > 0 && <span className="mt-0.5 block text-[11px] text-muted">{parkedHere} parked</span>}
+                {parkedHere > 0 && <span className="mt-0.5 block t-small text-muted">{parkedHere} parked</span>}
               </button>
             </li>
           );
         })}
       </ul>
-      {w.template && <p className="mt-3 text-[11px] text-muted">From the template “{w.template.name}”.</p>}
+      {w.template && <p className="mt-3 t-small text-muted">From the template “{w.template.name}”.</p>}
       <details className="mt-4">
         <summary className="t-label cursor-pointer">Moves · {w.moves.length}</summary>
         <ul className="t-body mt-2 space-y-1.5">
           {w.moves.map((m) => (
             <li key={m.id}>
               <span>{m.fromStage ? `${stageLabel(m.fromStage)} → ${stageLabel(m.toStage)}` : `Started at ${stageLabel(m.toStage)}`}</span>
-              <span className="block text-[11px] text-muted">
+              <span className="block t-small text-muted">
                 {m.movedByName} · {formatWhen(m.movedAt)}
               </span>
-              {m.reason && <span className="block text-[11px] italic text-muted">“{m.reason}”</span>}
+              {m.reason && <span className="block t-small italic text-muted">“{m.reason}”</span>}
             </li>
           ))}
         </ul>
@@ -298,10 +298,10 @@ function StartedWorkflow({
       <p className="t-label">
         Stage {sel.position} · {sel.label} · {selTally.met} of {selTally.total}
       </p>
-      {sel.standard && <p className="mt-0.5 text-[15px] font-medium">{sel.standard}</p>}
-      {sel.key === current && w.enteredAt && <p className="mt-0.5 text-[11px] text-muted">Since {formatWhen(w.enteredAt)}</p>}
+      {sel.standard && <p className="mt-0.5 t-lead font-medium">{sel.standard}</p>}
+      {sel.key === current && w.enteredAt && <p className="mt-0.5 t-small text-muted">Since {formatWhen(w.enteredAt)}</p>}
       {sel.position > pos && (
-        <p className="mt-0.5 text-[11px] text-muted">A later stage. Its criteria can be ticked ahead; moving into it waits on {stageLabel(current)}.</p>
+        <p className="mt-0.5 t-small text-muted">A later stage. Its criteria can be ticked ahead; moving into it waits on {stageLabel(current)}.</p>
       )}
       {selCriteria.length === 0 ? (
         <p className="t-body mt-2 text-muted">None yet. {canEdit ? 'Write what finishes this stage.' : ''}</p>
@@ -322,7 +322,7 @@ function StartedWorkflow({
         </ul>
       )}
       {selCriteria.some((c) => c.checkKey && !c.metAt) && w.setReading && (
-        <p className="mt-1 text-[11px] text-muted">
+        <p className="mt-1 t-small text-muted">
           {w.setReading.fileName
             ? `Marks read from the set “${w.setReading.fileName}”${w.setReading.savedAt ? `, saved ${formatDay(w.setReading.savedAt)}` : ''}. They only suggest; you tick.`
             : 'Drop the project folder on the State tab and the set will mark criteria it can read as likely done. They only suggest; you tick.'}
@@ -350,7 +350,7 @@ function StartedWorkflow({
           >
             Advance to {next.label} →
           </button>
-          {unmet > 0 && <span className="text-[11px] text-muted">{unmet} still to meet</span>}
+          {unmet > 0 && <span className="t-small text-muted">{unmet} still to meet</span>}
         </div>
       )}
       {sel.key === current && !next && w.finishedAt && <p className="t-body mt-4 font-medium">Finished {formatWhen(w.finishedAt)}.</p>}
@@ -373,7 +373,9 @@ function StartedWorkflow({
     }
     return m;
   };
-  const openByTop = byTop(openHere);
+  // The next to-do sits above the groups, so the column opens on it (W-39).
+  const nextCard = openHere.find((c) => c.isNext) ?? null;
+  const openByTop = byTop(openHere.filter((c) => !c.isNext));
   const later = w.stages.filter((s) => s.position > pos && parked.some((c) => c.stage === s.key));
 
   const cardsColumn = (
@@ -413,6 +415,14 @@ function StartedWorkflow({
         <p className="t-body mt-3 text-muted">No open cards in this stage.</p>
       ) : (
         <div className="mt-3 space-y-4">
+          {nextCard && (
+            <div>
+              <h3 className="t-label mb-1">Next</h3>
+              <ul className="divide-y divide-line border-y border-line">
+                <CardRow c={nextCard} {...cardProps} elements={w.elements} stages={w.stages} />
+              </ul>
+            </div>
+          )}
           {groups
             .filter((g) => openByTop.has(g))
             .map((g) => (
@@ -479,7 +489,7 @@ function StartedWorkflow({
             <ul className="mt-1 space-y-2">
               {w.workLog.map((e) => (
                 <li key={e.id}>
-                  <span className="t-num block text-[11px] text-muted">
+                  <span className="t-num block t-small text-muted">
                     {formatWhen(e.loggedAt)} · {e.loggedByName}
                   </span>
                   {e.did && <span className="block">{e.did}</span>}
@@ -536,14 +546,14 @@ function StageBar({ w, tally }: { w: Workflow; tally: (key: string) => { met: nu
           );
         })}
       </div>
-      <div className="mt-1 grid gap-1 font-mono text-[10px] uppercase tracking-wide" style={columns}>
+      <div className="mt-1 grid gap-1 font-mono t-small uppercase tracking-wide" style={columns}>
         {w.stages.map((s) => (
           <span key={s.key} className={`min-w-0 truncate ${s.key === w.stage ? 'font-medium text-ink' : 'text-muted'}`}>
             {s.label}
           </span>
         ))}
       </div>
-      <p className="t-num mt-1 text-[11px] text-muted">
+      <p className="t-num mt-1 t-small text-muted">
         {w.finishedAt
           ? `Finished · ${met} of ${total} criteria met`
           : `Stage ${pos} of ${w.stages.length} · ${cur?.label ?? ''}${cur?.standard ? `: ${cur.standard}` : ''} · ${met} of ${total} criteria met`}
@@ -583,12 +593,12 @@ function StructureReview({ w, url, canEdit, busy, call }: { w: Workflow; url: st
               <li key={c.uid} className="flex items-start gap-2 py-1.5">
                 {canEdit && <input type="checkbox" checked={chosen.has(c.uid)} onChange={() => toggle(c.uid)} aria-label={c.name} className="mt-1" />}
                 <div className="min-w-0 flex-1">
-                  <span className="block text-[11px] text-muted">
+                  <span className="block t-small text-muted">
                     {c.change === 'new' ? 'New' : 'Changed'}
                     {c.parentName ? ` · part of ${c.parentName}` : ''}
                   </span>
-                  <span className="block font-mono text-[12px]">{c.now}</span>
-                  {c.was && <span className="block font-mono text-[12px] text-muted line-through">{c.was}</span>}
+                  <span className="block font-mono t-small">{c.now}</span>
+                  {c.was && <span className="block font-mono t-small text-muted line-through">{c.was}</span>}
                 </div>
               </li>
             ))}
@@ -601,7 +611,7 @@ function StructureReview({ w, url, canEdit, busy, call }: { w: Workflow; url: st
               <button onClick={() => call(url, 'POST', { op: 'structure', uids: [] })} disabled={busy} className={BUTTON}>
                 Dismiss all
               </button>
-              <span className="text-[11px] text-muted">Cards stay on their elements. The State tab reads the project&rsquo;s sets with the zones it has.</span>
+              <span className="t-small text-muted">Cards stay on their elements. The State tab reads the project&rsquo;s sets with the zones it has.</span>
             </div>
           )}
         </>
@@ -642,11 +652,11 @@ function TemplateReview({ w, url, canEdit, busy, call }: { w: Workflow; url: str
                   <input type="checkbox" checked={chosen.has(c.uid)} onChange={() => toggle(c.uid)} aria-label={c.body} className="mt-1" />
                 )}
                 <div className="min-w-0 flex-1">
-                  <span className="block text-[11px] text-muted">
+                  <span className="block t-small text-muted">
                     {c.change === 'new' ? 'New' : 'Changed'} · {c.stageLabel}
                   </span>
                   <span className="block">{c.body}</span>
-                  {c.was && c.was.body !== c.body && <span className="block text-[12px] text-muted line-through">{c.was.body}</span>}
+                  {c.was && c.was.body !== c.body && <span className="block t-small text-muted line-through">{c.was.body}</span>}
                   {c.hint.trim() && <HintText hint={c.hint} />}
                 </div>
               </li>
@@ -660,7 +670,7 @@ function TemplateReview({ w, url, canEdit, busy, call }: { w: Workflow; url: str
               <button onClick={() => call(url, 'POST', { op: 'template', uids: [] })} disabled={busy} className={BUTTON}>
                 Dismiss all
               </button>
-              <span className="text-[11px] text-muted">A changed criterion keeps whether it is met. Dismissed ones come back only when the template changes again.</span>
+              <span className="t-small text-muted">A changed criterion keeps whether it is met. Dismissed ones come back only when the template changes again.</span>
             </div>
           )}
         </>
@@ -681,7 +691,7 @@ type Call = (url: string, method: string, body?: unknown) => Promise<boolean>;
 function HintText({ hint }: { hint: string }) {
   type Node = { text: string; children: Node[] };
   const lines = hint.split('\n').filter((l) => l.trim());
-  if (lines.length <= 1) return <span className="block text-[12px] text-muted">{hint.trim()}</span>;
+  if (lines.length <= 1) return <span className="block t-small text-muted">{hint.trim()}</span>;
   const root: Node = { text: '', children: [] };
   const stack: { depth: number; node: Node }[] = [{ depth: -1, node: root }];
   for (const l of lines) {
@@ -701,7 +711,7 @@ function HintText({ hint }: { hint: string }) {
       ))}
     </ul>
   );
-  return <div className="text-[12px] text-muted">{list(root.children)}</div>;
+  return <div className="t-small text-muted">{list(root.children)}</div>;
 }
 
 function formatDay(iso: string): string {
@@ -744,7 +754,7 @@ function CriterionRow({
         {c.hint.trim() && <HintText hint={c.hint} />}
         {result && !c.metAt && (
           <span
-            className={`mt-1 inline-block rounded-[3px] border px-1.5 py-px font-mono text-[10px] ${
+            className={`mt-1 inline-block rounded-[3px] border px-1.5 py-px font-mono t-small ${
               result.verdict === 'likely' ? 'border-dashed border-ink text-ink' : 'border-dashed border-ink/30 text-muted'
             }`}
           >
@@ -753,7 +763,7 @@ function CriterionRow({
           </span>
         )}
         {c.metAt && (
-          <span className="block text-[11px] text-muted">
+          <span className="block t-small text-muted">
             Met · {c.metByName ?? ''} · {formatWhen(c.metAt)}
           </span>
         )}
@@ -993,7 +1003,7 @@ function CardRow({
     <li className="t-body py-2">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className={`min-w-0 flex-1 ${c.status === 'done' ? 'text-muted line-through' : ''}`}>
-          {c.isNext && <span className="mr-1.5 rounded bg-ink px-1 py-px font-mono text-[10px] uppercase tracking-wide text-parchment">Next</span>}
+          {c.isNext && <span className="mr-1.5 rounded bg-ink px-1 py-px font-mono t-small uppercase tracking-wide text-parchment">Next</span>}
           {c.what}
         </span>
         {changeable ? (
@@ -1001,7 +1011,7 @@ function CardRow({
             value={c.status}
             onChange={(e) => call(`/api/cards/${c.id}`, 'PATCH', { status: e.target.value as CardStatus })}
             disabled={busy}
-            className={`${FIELD} text-[11px]`}
+            className={`${FIELD} t-small`}
             aria-label="Status"
           >
             {PERSON_STATUSES.map((s) => (
@@ -1011,13 +1021,13 @@ function CardRow({
             ))}
           </select>
         ) : (
-          <span className="text-[11px] text-muted">{c.status}</span>
+          <span className="t-small text-muted">{c.status}</span>
         )}
       </div>
-      <p className="text-[11px] text-muted">
+      <p className="t-small text-muted">
         {c.doneWhen === DONE_WHEN_UNWRITTEN ? <span className="italic">Done when: not written yet{changeable ? ' · Edit to add it' : ''}</span> : `Done when: ${c.doneWhen}`}
       </p>
-      <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-[11px] text-muted">
+      <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 t-small text-muted">
         {el.part && <span>{el.part}</span>}
         {c.kind && <span>· {c.kind}</span>}
         {c.audioLabel !== null && (
@@ -1108,7 +1118,7 @@ function SettledRow({
   return (
     <li className="py-2">
       <p>{c.what}</p>
-      <div className="flex flex-wrap items-baseline gap-x-2 text-[11px] text-muted">
+      <div className="flex flex-wrap items-baseline gap-x-2 t-small text-muted">
         <span>{describeElement(elementName(c.elementId))}</span>
         {c.settledReason && <span>· “{c.settledReason}”</span>}
         {c.settledAt && <span>· settled {formatWhen(c.settledAt)}</span>}
@@ -1165,7 +1175,7 @@ function ElementTree({
             <li key={t.id}>
               {t.color && <span className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle" style={{ background: t.color }} aria-hidden />}
               <span className="font-medium">{t.name}</span>
-              {t.isZone && t.prefixes.length > 0 && <span className="ml-1.5 font-mono text-[10px] text-muted">{t.prefixes.join(', ')}</span>}
+              {t.isZone && t.prefixes.length > 0 && <span className="ml-1.5 font-mono t-small text-muted">{t.prefixes.join(', ')}</span>}
               {children(t.id).length > 0 && <span className="text-muted"> · {children(t.id).map((c) => c.name).join(', ')}</span>}
             </li>
           ))}
@@ -1202,7 +1212,7 @@ function ElementTree({
       <button onClick={() => setEditing(false)} className={`mt-2 ${BUTTON}`}>
         Done editing
       </button>
-      {isOwner && <p className="mt-1 text-[11px] text-muted">Deleting an element deletes the parts under it; their cards stay, without an element.</p>}
+      {isOwner && <p className="mt-1 t-small text-muted">Deleting an element deletes the parts under it; their cards stay, without an element.</p>}
     </div>
   );
 }
@@ -1262,10 +1272,10 @@ function Learnings({
         <p className="t-label">
           Learnings · {stageLabel} · {kept.length}
         </p>
-        {templateName && <p className="text-[11px] text-muted">From “{templateName}” · on every project at this stage</p>}
+        {templateName && <p className="t-small text-muted">From “{templateName}” · on every project at this stage</p>}
       </div>
       {kept.length === 0 && proposed.length === 0 && (
-        <p className="mt-1 text-[12px] text-muted">
+        <p className="mt-1 t-small text-muted">
           Something worth remembering at {stageLabel} on every project. A note or a card can be moved here with → Learning.
         </p>
       )}
@@ -1275,7 +1285,7 @@ function Learnings({
         ))}
         {proposed.map((l) => (
           <li key={l.id} className="space-y-1 rounded border border-dashed border-ink bg-card px-2.5 py-2">
-            <p className="font-mono text-[10px] text-muted">Proposed by Claude</p>
+            <p className="font-mono t-small text-muted">Proposed by Claude</p>
             <p>{l.body}</p>
             {l.canEdit && (
               <span className="flex gap-2">
@@ -1332,7 +1342,7 @@ function LearningRow({
   return (
     <li className="space-y-0.5 rounded border border-line bg-card px-2.5 py-2">
       <p className="whitespace-pre-line">{l.body}</p>
-      <p className="flex flex-wrap items-center gap-x-2 font-mono text-[10px] text-muted">
+      <p className="flex flex-wrap items-center gap-x-2 font-mono t-small text-muted">
         <span>
           {l.createdByName}
           {l.source ? ` · from ${l.source}` : ''} · {formatDay(l.createdAt)}
@@ -1378,10 +1388,10 @@ export function LearningMove({
       }}
       className="mt-1.5 space-y-1.5 rounded border border-line p-2"
     >
-      <p className="text-[12px] font-medium">Make it a learning</p>
+      <p className="t-small font-medium">Make it a learning</p>
       <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={2} className={`${FIELD} w-full`} aria-label="The learning" />
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-1.5 text-[11px] text-muted">
+        <label className="flex items-center gap-1.5 t-small text-muted">
           Stage
           <select value={to} onChange={(e) => setTo(e.target.value)} className={FIELD}>
             {stages.map((s) => (
@@ -1398,7 +1408,7 @@ export function LearningMove({
           Cancel
         </button>
       </div>
-      <p className="text-[11px] text-muted">It goes on the project&rsquo;s template, shown on every project at that stage, and leaves this project.</p>
+      <p className="t-small text-muted">It goes on the project&rsquo;s template, shown on every project at that stage, and leaves this project.</p>
     </form>
   );
 }
@@ -1423,7 +1433,7 @@ function StartForm({ w, busy, onStart }: { w: Workflow; busy: boolean; onStart: 
       }}
       className="space-y-2 rounded border border-ink p-3"
     >
-      <label className="flex flex-col gap-0.5 text-[11px] text-muted">
+      <label className="flex flex-col gap-0.5 t-small text-muted">
         Workflow template
         <select value={templateId ?? ''} onChange={(e) => setTemplateId(e.target.value ? Number(e.target.value) : null)} className={FIELD}>
           {choices.templates.map((t) => (
@@ -1434,7 +1444,7 @@ function StartForm({ w, busy, onStart }: { w: Workflow; busy: boolean; onStart: 
         </select>
       </label>
       {choices.structures.length > 0 && (
-        <label className="flex flex-col gap-0.5 text-[11px] text-muted">
+        <label className="flex flex-col gap-0.5 t-small text-muted">
           Track structure
           <select value={structureId ?? ''} onChange={(e) => setStructureId(e.target.value ? Number(e.target.value) : null)} className={FIELD}>
             {choices.structures.map((t) => (
@@ -1445,7 +1455,7 @@ function StartForm({ w, busy, onStart }: { w: Workflow; busy: boolean; onStart: 
           </select>
         </label>
       )}
-      <p className="text-[11px] text-muted">The project gets its own copy of each; later changes to a template are offered, never forced.</p>
+      <p className="t-small text-muted">The project gets its own copy of each; later changes to a template are offered, never forced.</p>
       <button type="submit" disabled={busy} className={BUTTON_PRIMARY}>
         Start
       </button>

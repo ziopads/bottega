@@ -257,7 +257,7 @@ export default function Upload() {
                 Choose a folder
               </button>
             </p>
-            <p className="text-[11px] text-muted">PDFs up to 150 MB each; anything else is skipped. A folder’s subfolders are read too.</p>
+            <p className="t-small text-muted">PDFs up to 150 MB each; anything else is skipped. A folder’s subfolders are read too.</p>
             <input
               ref={filesInput}
               type="file"
@@ -304,7 +304,7 @@ export default function Upload() {
                   <input value={model} onChange={(e) => setModel(e.target.value)} disabled={running} placeholder="Model (Matriarch)" className={`${field} w-40`} aria-label="Model" />
                 )}
               </div>
-              {!single && <p className="text-[11px] text-muted">The kind applies to every file here; models are set on each document’s page afterwards.</p>}
+              {!single && <p className="t-small text-muted">The kind applies to every file here; models are set on each document’s page afterwards.</p>}
 
               <ul className="divide-y divide-line border-y border-line">
                 {items.map((x) => (
@@ -320,9 +320,9 @@ export default function Upload() {
                     ) : (
                       <span className="min-w-0 flex-1 truncate">{x.title}</span>
                     )}
-                    <span className="t-num text-[11px] text-muted">{formatBytes(x.file.size)}</span>
+                    <span className="t-num t-small text-muted">{formatBytes(x.file.size)}</span>
                     <span
-                      className={`w-40 text-right text-[11px] ${
+                      className={`w-40 text-right t-small ${
                         x.status === 'added' ? 'text-moss' : x.status === 'failed' ? 'text-rust' : 'text-muted'
                       }`}
                     >
@@ -339,7 +339,7 @@ export default function Upload() {
                                 : 'Failed'}
                     </span>
                     {x.link ? (
-                      <Link href={`/library/${x.link.id}`} className="w-12 text-[11px] text-rust hover:underline">
+                      <Link href={`/library/${x.link.id}`} className="w-12 t-small text-rust hover:underline">
                         {x.link.label === 'Open' ? 'Open' : 'Open it'}
                       </Link>
                     ) : x.status !== 'working' && !running ? (
@@ -350,7 +350,7 @@ export default function Upload() {
                       <span className="w-12" />
                     )}
                     {(x.status === 'failed' || x.status === 'exists') && x.detail && (
-                      <span className="basis-full text-[11px] text-muted">{x.detail}</span>
+                      <span className="basis-full t-small text-muted">{x.detail}</span>
                     )}
                   </li>
                 ))}
@@ -365,7 +365,7 @@ export default function Upload() {
                     Clear the list
                   </button>
                 )}
-                <span className="text-[11px] text-muted">
+                <span className="t-small text-muted">
                   {[
                     counts('added') && `${counts('added')} added`,
                     counts('exists') && `${counts('exists')} already here`,
@@ -377,7 +377,7 @@ export default function Upload() {
                 </span>
               </div>
               {library && counts('added') > 0 && (
-                <p className="text-[11px] text-muted">
+                <p className="t-small text-muted">
                   Added documents wait under “Your submissions” below: open each to fill in its model, link it to the catalogue, approve and
                   process it.
                 </p>

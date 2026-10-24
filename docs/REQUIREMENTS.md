@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.31
+**Version:** 0.32
 **Date:** 2026-10-25
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -9,6 +9,10 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.32** (2026-10-25) — Where it stands moves from the top of every tab to
+  the Overview tab, above the current mix; On deck opens on the next to-do
+  (W-39).
 
 - **0.31** (2026-10-25) — From Gordon's use of his own version: the next move
   becomes a to-do marked next (W-38), the blocker becomes an ordinary to-do,
@@ -681,15 +685,16 @@ there may be lost in the move.
   opened again. Marking another moves the mark. When the next one is done,
   rejected, settled, deleted or made a note, the next open to-do of the
   current stage takes the mark (one in progress first, then the oldest). It
-  shows in the project's header, on the board, on the To-dos page and in the
+  shows on the project's Overview, at the head of On deck, on the board, on the To-dos page and in the
   working panel. There is no separate blocker: what stops work is a to-do
   like any other. Next moves and blockers set before 029 became to-dos.
-- **W-39** Where it stands: the top of every tab of a project shows its stage
-  and criteria met, the next to-do (done, start, or a new one), the stage's
-  other open to-dos (top three, each can be made next), how long since it was
-  worked on (marked after 21 days), the last session, the current mix to
-  play, and a button for the working panel. Before the workflow starts it
-  says so and links to starting it.
+- **W-39** Where it stands: the Overview tab of a project opens, above the
+  current mix, on its stage and criteria met, how long since it was worked
+  on (marked after 21 days), the next to-do (done, start, or a new one), the
+  stage's other open to-dos (top three, each can be made next), the criteria
+  still unmet (top three), the last session, and a link to the working
+  panel. Before the workflow starts it says so and links to starting it. On
+  the Workflow tab, On deck lists the next to-do first.
 - **W-40** Sessions from saved sets: saves with no gap longer than two hours
   are one session; what it did is what changed from the save before it to
   its last save in the same variant (tracks, plugins, clips, length, tempo,

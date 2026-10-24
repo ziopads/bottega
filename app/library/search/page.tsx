@@ -82,13 +82,13 @@ export default async function SearchPage({ searchParams }: Props) {
                     {h.title}, {pagesLabel(h.firstPage, h.lastPage)}
                   </Link>
                   {(h.manufacturer || h.model) && <span className="text-muted">{[h.manufacturer, h.model].filter(Boolean).join(' ')}</span>}
-                  <span className="ml-auto text-[11px] text-muted">by {h.by.join(' and ')}</span>
+                  <span className="ml-auto t-small text-muted">by {h.by.join(' and ')}</span>
                 </p>
                 <p className="mt-1 max-w-prose whitespace-pre-wrap text-muted">{h.text.length > 700 ? `${h.text.slice(0, 700)}…` : h.text}</p>
               </li>
             ))}
           </ol>
-          <p className="mt-2 text-[11px] text-muted">Pages are PDF pages, from 1; printed page numbers may differ.</p>
+          <p className="mt-2 t-small text-muted">Pages are PDF pages, from 1; printed page numbers may differ.</p>
         </>
       )}
     </div>

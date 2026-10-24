@@ -57,7 +57,7 @@ export default function CatalogueAdmin({ initialModels, defs }: { initialModels:
       <div className="flex flex-wrap items-baseline gap-3 t-body">
         <button onClick={() => setOpen(open === m.id ? null : m.id)} className="min-w-0 flex-1 text-left hover:text-rust">
           {m.manufacturer} {m.model}
-          <span className="text-[11px] text-muted">
+          <span className="t-small text-muted">
             {' '}
             · {m.category} · {m.kind}
             {m.status !== 'approved' && ` · ${m.status}`} · suggested by {m.suggestedByName}
@@ -133,7 +133,7 @@ export default function CatalogueAdmin({ initialModels, defs }: { initialModels:
                       onSave={(v) => saveCapability(m.id, d.key, v)}
                     />
                   </td>
-                  <td className="w-48 py-1.5 text-right text-[11px] text-muted">
+                  <td className="w-48 py-1.5 text-right t-small text-muted">
                     {m.capabilities[d.key] !== undefined && formatCapability(d, m.capabilities[d.key])}
                   </td>
                 </tr>

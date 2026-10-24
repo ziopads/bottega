@@ -68,7 +68,7 @@ export default function StructureEditor({ initial }: { initial: Editor }) {
       {error && <p className="t-body mb-2 text-rust">{error}</p>}
       <div className="t-body flex flex-wrap items-end justify-between gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] text-muted">New music projects take</span>
+          <span className="t-small text-muted">New music projects take</span>
           <select
             value={ed.chosen.id}
             onChange={async (e) => {
@@ -76,7 +76,7 @@ export default function StructureEditor({ initial }: { initial: Editor }) {
               if (await post({ op: 'choose', templateId: t?.isDefault ? null : Number(e.target.value) })) setElementId(null);
             }}
             disabled={busy}
-            className={`${FIELD} text-[15px] font-medium`}
+            className={`${FIELD} t-lead font-medium`}
           >
             {choosable.map((t) => (
               <option key={t.id} value={t.id}>
@@ -87,7 +87,7 @@ export default function StructureEditor({ initial }: { initial: Editor }) {
         </label>
         {ed.templates.length > 1 && (
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] text-muted">Editing</span>
+            <span className="t-small text-muted">Editing</span>
             <select value={ed.editing.id} onChange={(e) => edit(Number(e.target.value))} disabled={busy} className={FIELD}>
               {ed.templates.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -101,7 +101,7 @@ export default function StructureEditor({ initial }: { initial: Editor }) {
         {ed.editing.mine && (
           <span className="flex flex-wrap items-end gap-2">
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] text-muted">Name</span>
+              <span className="t-small text-muted">Name</span>
               <input
                 key={ed.editing.name}
                 defaultValue={ed.editing.name}
@@ -122,7 +122,7 @@ export default function StructureEditor({ initial }: { initial: Editor }) {
           </span>
         )}
       </div>
-      <p className="mt-2 text-[11px] text-muted">
+      <p className="mt-2 t-small text-muted">
         A project takes a copy when its workflow starts; its Workflow tab offers your later changes. The State tab reads every saved set with the
         project&rsquo;s zones, so a change there sorts old sets too.
       </p>
@@ -148,10 +148,10 @@ export default function StructureEditor({ initial }: { initial: Editor }) {
 
       <div className="t-body mt-4 flex flex-wrap items-center gap-2 rounded border border-line px-3 py-2">
         <label className="flex items-center gap-2">
-          <span className="text-[11px] text-muted">Try a track name</span>
-          <input value={trial} onChange={(e) => setTrial(e.target.value)} placeholder="TAC Kick" className={`${FIELD} w-48 font-mono text-[12px]`} />
+          <span className="t-small text-muted">Try a track name</span>
+          <input value={trial} onChange={(e) => setTrial(e.target.value)} placeholder="TAC Kick" className={`${FIELD} w-48 font-mono t-small`} />
         </label>
-        <label className="flex items-center gap-1 text-[11px] text-muted">
+        <label className="flex items-center gap-1 t-small text-muted">
           <input type="checkbox" checked={trialGroup} onChange={(e) => setTrialGroup(e.target.checked)} /> a group
         </label>
         {trial.trim() && (
@@ -170,14 +170,14 @@ export default function StructureEditor({ initial }: { initial: Editor }) {
                 <button onClick={() => setElementId(e.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left" aria-pressed={e.id === el?.id}>
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full border border-line" style={{ background: e.color ?? 'transparent' }} aria-hidden />
                   <span className="min-w-0 flex-1 truncate font-medium">{e.name}</span>
-                  <span className="truncate font-mono text-[10px] text-muted">{e.isZone ? list(e.prefixes) || 'zone' : 'not a zone'}</span>
+                  <span className="truncate font-mono t-small text-muted">{e.isZone ? list(e.prefixes) || 'zone' : 'not a zone'}</span>
                 </button>
                 {!readOnly && (
                   <>
-                    <button onClick={() => post({ op: 'move', elementId: e.id, dir: -1 })} disabled={busy || i === 0} className="px-1 text-[11px] text-muted hover:text-ink disabled:opacity-30" aria-label={`Move ${e.name} earlier`}>
+                    <button onClick={() => post({ op: 'move', elementId: e.id, dir: -1 })} disabled={busy || i === 0} className="px-1 t-small text-muted hover:text-ink disabled:opacity-30" aria-label={`Move ${e.name} earlier`}>
                       ↑
                     </button>
-                    <button onClick={() => post({ op: 'move', elementId: e.id, dir: 1 })} disabled={busy || i === ed.elements.length - 1} className="px-1 text-[11px] text-muted hover:text-ink disabled:opacity-30" aria-label={`Move ${e.name} later`}>
+                    <button onClick={() => post({ op: 'move', elementId: e.id, dir: 1 })} disabled={busy || i === ed.elements.length - 1} className="px-1 t-small text-muted hover:text-ink disabled:opacity-30" aria-label={`Move ${e.name} later`}>
                       ↓
                     </button>
                   </>
@@ -186,7 +186,7 @@ export default function StructureEditor({ initial }: { initial: Editor }) {
             ))}
           </ul>
           {!readOnly && <AddLine placeholder="A new zone or element" busy={busy} onAdd={(name) => post({ op: 'add', templateId: ed.editing.id, name })} />}
-          <p className="mt-2 text-[11px] text-muted">Zones come first on the State tab in this order; cards can hang on any element.</p>
+          <p className="mt-2 t-small text-muted">Zones come first on the State tab in this order; cards can hang on any element.</p>
         </div>
         <div className="min-w-0 lg:col-span-8">{el && <ElementEditor key={el.id} e={el} ed={ed} readOnly={readOnly} busy={busy} post={post} />}</div>
       </div>
@@ -200,11 +200,11 @@ function ElementEditor({ e, ed, readOnly, busy, post }: { e: StructureElement; e
     <div className="t-body space-y-3">
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-[2_1_200px] flex-col gap-1">
-          <span className="text-[11px] text-muted">Name</span>
+          <span className="t-small text-muted">Name</span>
           <input key={e.name} defaultValue={e.name} disabled={readOnly} onBlur={(x) => x.target.value.trim() && x.target.value.trim() !== e.name && void save({ name: x.target.value })} className={`${FIELD} font-medium`} />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] text-muted">Colour</span>
+          <span className="t-small text-muted">Colour</span>
           <span className="flex items-center gap-1.5">
             <input type="color" value={e.color ?? '#9a948a'} disabled={readOnly || busy} onChange={(x) => void save({ color: x.target.value })} className="h-7 w-10 cursor-pointer rounded border border-line bg-card" aria-label="Colour" />
             {!readOnly && e.color && (
@@ -214,34 +214,34 @@ function ElementEditor({ e, ed, readOnly, busy, post }: { e: StructureElement; e
             )}
           </span>
         </label>
-        {e.difference === 'changed' && <span className="text-[11px] text-muted">Edited · differs from the default</span>}
-        {e.difference === 'added' && <span className="text-[11px] text-muted">Yours · not in the default</span>}
+        {e.difference === 'changed' && <span className="t-small text-muted">Edited · differs from the default</span>}
+        {e.difference === 'added' && <span className="t-small text-muted">Yours · not in the default</span>}
       </div>
       <label className="flex flex-col gap-1">
-        <span className="text-[11px] text-muted">What it holds</span>
+        <span className="t-small text-muted">What it holds</span>
         <input key={e.description} defaultValue={e.description} disabled={readOnly} placeholder="The pulse: drums and percussion that carry the beat." onBlur={(x) => x.target.value.trim() !== e.description && void save({ description: x.target.value })} className={FIELD} />
       </label>
       <label className="flex items-center gap-2">
         <input type="checkbox" checked={e.isZone} disabled={readOnly || busy} onChange={(x) => void save({ isZone: x.target.checked })} />
         <span>Tracks belong here (a zone)</span>
-        <span className="text-[11px] text-muted">Leave it off for work that belongs to no track, such as STRUCTURE or BUS.</span>
+        <span className="t-small text-muted">Leave it off for work that belongs to no track, such as STRUCTURE or BUS.</span>
       </label>
       {e.isZone && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] text-muted">Track name prefixes, separated by commas</span>
-            <input key={list(e.prefixes)} defaultValue={list(e.prefixes)} disabled={readOnly} placeholder="TAC, DRM" onBlur={(x) => x.target.value !== list(e.prefixes) && void save({ prefixes: x.target.value })} className={`${FIELD} font-mono text-[12px]`} />
-            <span className="text-[11px] text-muted">“TAC Kick”, “TAC-hat” and “{e.name} snare” all belong here; case does not matter.</span>
+            <span className="t-small text-muted">Track name prefixes, separated by commas</span>
+            <input key={list(e.prefixes)} defaultValue={list(e.prefixes)} disabled={readOnly} placeholder="TAC, DRM" onBlur={(x) => x.target.value !== list(e.prefixes) && void save({ prefixes: x.target.value })} className={`${FIELD} font-mono t-small`} />
+            <span className="t-small text-muted">“TAC Kick”, “TAC-hat” and “{e.name} snare” all belong here; case does not matter.</span>
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] text-muted">Group names, separated by commas</span>
-            <input key={list(e.groupNames)} defaultValue={list(e.groupNames)} disabled={readOnly} placeholder="Drums, Percussion" onBlur={(x) => x.target.value !== list(e.groupNames) && void save({ groupNames: x.target.value })} className={`${FIELD} font-mono text-[12px]`} />
-            <span className="text-[11px] text-muted">A group with one of these names, and every track in it, belongs here.</span>
+            <span className="t-small text-muted">Group names, separated by commas</span>
+            <input key={list(e.groupNames)} defaultValue={list(e.groupNames)} disabled={readOnly} placeholder="Drums, Percussion" onBlur={(x) => x.target.value !== list(e.groupNames) && void save({ groupNames: x.target.value })} className={`${FIELD} font-mono t-small`} />
+            <span className="t-small text-muted">A group with one of these names, and every track in it, belongs here.</span>
           </label>
         </div>
       )}
       <div>
-        <p className="mb-1 text-[11px] text-muted">Parts · what cards in {e.name} can be about</p>
+        <p className="mb-1 t-small text-muted">Parts · what cards in {e.name} can be about</p>
         {e.parts.length === 0 && <p className="text-muted">No parts.</p>}
         <ul className="space-y-1">
           {e.parts.map((p, i) => (
@@ -249,10 +249,10 @@ function ElementEditor({ e, ed, readOnly, busy, post }: { e: StructureElement; e
               <input key={p.name} defaultValue={p.name} disabled={readOnly} onBlur={(x) => x.target.value.trim() && x.target.value.trim() !== p.name && void post({ op: 'element', elementId: p.id, name: x.target.value })} className={`${FIELD} min-w-0 flex-1`} aria-label="Part" />
               {!readOnly && (
                 <>
-                  <button onClick={() => post({ op: 'move', elementId: p.id, dir: -1 })} disabled={busy || i === 0} className="px-1 text-[11px] text-muted hover:text-ink disabled:opacity-30" aria-label="Move up">
+                  <button onClick={() => post({ op: 'move', elementId: p.id, dir: -1 })} disabled={busy || i === 0} className="px-1 t-small text-muted hover:text-ink disabled:opacity-30" aria-label="Move up">
                     ↑
                   </button>
-                  <button onClick={() => post({ op: 'move', elementId: p.id, dir: 1 })} disabled={busy || i === e.parts.length - 1} className="px-1 text-[11px] text-muted hover:text-ink disabled:opacity-30" aria-label="Move down">
+                  <button onClick={() => post({ op: 'move', elementId: p.id, dir: 1 })} disabled={busy || i === e.parts.length - 1} className="px-1 t-small text-muted hover:text-ink disabled:opacity-30" aria-label="Move down">
                     ↓
                   </button>
                   <button onClick={() => post({ op: 'remove', elementId: p.id })} disabled={busy} className={BUTTON_DANGER}>

@@ -82,11 +82,11 @@ export default function SitePlayer() {
               <Link href={mixHref(item)} className="min-w-0 truncate hover:text-rust" title="Open this mix on its project page">
                 <span className="font-mono">{item.code}</span>
                 {item.title && <span className="ml-2">{item.title}</span>}
-                <span className="ml-2 text-[11px] text-muted">{item.kind === 'reference' ? `reference · ${item.label}` : item.label}</span>
+                <span className="ml-2 t-small text-muted">{item.kind === 'reference' ? `reference · ${item.label}` : item.label}</span>
               </Link>
-              {error && <span className="text-[11px] text-rust">{error}</span>}
+              {error && <span className="t-small text-rust">{error}</span>}
             </div>
-            <div className="mt-1 flex items-center gap-2 text-[11px] tabular-nums text-muted">
+            <div className="mt-1 flex items-center gap-2 t-small tabular-nums text-muted">
               <span className="w-10 text-right">{formatDuration(time) || '0:00'}</span>
               <input
                 type="range"
@@ -102,7 +102,7 @@ export default function SitePlayer() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 text-[11px] text-muted">
+          <div className="flex items-center gap-3 t-small text-muted">
             {item.kind === 'mix' && (
               <button
                 onClick={() => {
@@ -130,7 +130,7 @@ export default function SitePlayer() {
                 continue
               </label>
             )}
-            <button onClick={stop} className="px-1 text-base leading-none hover:text-ink" aria-label="Stop and close the player" title="Stop">
+            <button onClick={stop} className="px-1 t-lead leading-none hover:text-ink" aria-label="Stop and close the player" title="Stop">
               ×
             </button>
           </div>

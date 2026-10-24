@@ -5,17 +5,19 @@ import Link from 'next/link';
 import { GenreSelect, InlineEdit } from '@/app/_studio/controls';
 import { formatMoment, mixMarkers } from '@/app/_studio/Notes';
 import Sharing from '@/app/_studio/Sharing';
+import WhereItStands from '@/app/_studio/WhereItStands';
 import Player from '@/app/_ui/audio/Player';
 import { DetailGrid, MetaList, Section } from '@/app/_ui/layout';
 import type { StudioName, StudioNote, StudioProject, StudioRelease, StudioShare, StudioTrack } from '@/lib/studioTypes';
 import { formatDuration } from '@/lib/studioTypes';
+import type { WorkSession } from '@/lib/sessionTypes';
 import type { Workflow } from '@/lib/workflowTypes';
 
 import { formatDate } from './audioUpload';
 import { TEXT_LINK } from '@/app/_ui/styles';
 
-// The Overview tab (REQUIREMENTS S-1, S-2): the current mix to play, where
-// the session stands, the latest notes; to their left, its details and who it
+// The Overview tab (REQUIREMENTS S-1, S-2, W-39): where the project stands,
+// the current mix to play, the latest notes; to their left, its details and who it
 // is shared with.
 
 export default function OverviewTab({
@@ -34,6 +36,9 @@ export default function OverviewTab({
   onLength,
   onTab,
   workflow,
+  setWorkflow,
+  sessions,
+  canContribute,
   setKey,
 }: {
   project: StudioProject;
@@ -51,20 +56,28 @@ export default function OverviewTab({
   onLength: (id: number, seconds: number) => void;
   onTab: (key: string) => void;
   workflow: Workflow;
+  setWorkflow: (w: Workflow) => void;
+  /** The latest sessions read from saved sets (W-39). */
+  sessions: WorkSession[];
+  canContribute: boolean;
   /** The key of the newest saved set: undefined when no set (or none read with keys) is stored, null when it has none. */
   setKey: string | null | undefined;
 }) {
   const latest = notes.slice(0, 4);
-  const stageLabel = workflow.stages.find((x) => x.key === workflow.stage)?.label ?? '';
-  const criteria = workflow.criteria.filter((c) => c.stage === workflow.stage && c.reviewed && !c.rejected);
-  const openCards = workflow.cards.filter(
-    (c) => c.stage === workflow.stage && !c.settled && (c.status === 'accepted' || c.status === 'in progress'),
-  );
-  const proposals = workflow.cards.filter((c) => c.status === 'proposed').length + workflow.criteria.filter((c) => !c.reviewed).length;
   const markers = current ? mixMarkers(notes, workflow.cards, current.id) : [];
 
   const main = (
     <>
+      <WhereItStands
+        projectId={project.id}
+        workflow={workflow}
+        setWorkflow={setWorkflow}
+        sessions={sessions}
+        mixUploadedAt={current?.uploadedAt ?? null}
+        canContribute={canContribute}
+        onTab={onTab}
+      />
+
       <Section
         label={current ? `Current mix · ${current.label}` : 'Current mix'}
         action={
@@ -110,39 +123,6 @@ export default function OverviewTab({
       </Section>
 
       <Section
-        label={stageLabel ? `Where it stands · ${stageLabel}` : 'Where it stands'}
-        action={
-          <button onClick={() => onTab('workflow')} className={TEXT_LINK}>
-            Workflow →
-          </button>
-        }
-      >
-        {workflow.stage ? (
-          <div className="t-body space-y-1">
-            <p>
-              {criteria.length === 0
-                ? 'No exit criteria written for this stage yet.'
-                : `${criteria.filter((c) => c.metAt).length} of ${criteria.length} exit criteria met.`}{' '}
-              {openCards.length} open {openCards.length === 1 ? 'card' : 'cards'}
-              {proposals > 0 ? `, ${proposals} proposed by Claude` : ''}.
-            </p>
-            {criteria.filter((c) => !c.metAt).slice(0, 3).map((c) => (
-              <p key={c.id} className="text-muted">
-                ☐ {c.body}
-              </p>
-            ))}
-          </div>
-        ) : (
-          <p className="t-body text-muted">
-            The workflow has not been started.{' '}
-            <button onClick={() => onTab('workflow')} className="underline hover:text-ink">
-              Start it
-            </button>
-          </p>
-        )}
-      </Section>
-
-      <Section
         label="Latest notes"
         action={
           notes.length > 0 && (
@@ -158,7 +138,7 @@ export default function OverviewTab({
           <ul className="t-body divide-y divide-line">
             {latest.map((n) => (
               <li key={n.id} className="py-2">
-                <div className="flex gap-2 text-[11px] text-muted">
+                <div className="flex gap-2 t-small text-muted">
                   {n.positionS !== null && <span className="t-num font-medium text-ink">{formatMoment(n.positionS)}</span>}
                   <span className="font-medium text-ink">{n.authorName}</span>
                   {n.trackLabel !== null && <span>{n.trackLabel}</span>}
@@ -236,7 +216,7 @@ export default function OverviewTab({
                       <ul>
                         {pastNames.map((n, i) => (
                           <li key={i}>
-                            {n.name} <span className="text-[11px] text-muted">{formatDate(n.setAt)}</span>
+                            {n.name} <span className="t-small text-muted">{formatDate(n.setAt)}</span>
                           </li>
                         ))}
                       </ul>

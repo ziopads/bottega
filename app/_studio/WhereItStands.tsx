@@ -3,28 +3,26 @@
 import { useState } from 'react';
 
 import { api } from '@/app/_studio/controls';
-import { toggle as deckToggle, useDeck, type PlayItem } from '@/app/_ui/audio/deck';
+import { Section } from '@/app/_ui/layout';
 import { BUTTON, BUTTON_PRIMARY, FIELD, TEXT_LINK } from '@/app/_ui/styles';
 import type { WorkSession } from '@/lib/sessionTypes';
-import type { StudioTrack } from '@/lib/studioTypes';
 import { DONE_WHEN_UNWRITTEN } from '@/lib/workflowInput';
-import type { Workflow, WorkflowCard } from '@/lib/workflowTypes';
+import type { Workflow } from '@/lib/workflowTypes';
 
-// Where it stands (REQUIREMENTS W-39, plan of 25 October): the top of every
-// tab of a project, for getting back in after weeks away or deciding to move
-// on. Left: the stage and how far it has come, the next to-do (done, another,
-// or a new one), and the stage's other open to-dos. Right: how long since it
-// was worked on, the last session read from the saved sets, the current mix
-// to play, and the working panel to open beside Live.
+// Where it stands (REQUIREMENTS W-39, plan of 25 October): the first section of
+// the Overview tab's main column, above the current mix, for getting back in
+// after weeks away or deciding to move on. The stage and how far it has come,
+// how long since it was worked on, the next to-do and the stage's other open
+// ones, the criteria still unmet, and what changed the last time.
+// Text sizes: t-lead for the next to-do, t-body, t-small, t-label; nothing else.
 
 type Props = {
   projectId: number;
-  code: string;
-  title: string;
   workflow: Workflow;
   setWorkflow: (w: Workflow) => void;
   sessions: WorkSession[];
-  current: StudioTrack | null;
+  /** When the current mix was uploaded, counted as work on the project. */
+  mixUploadedAt: string | null;
   canContribute: boolean;
   onTab: (tab: string) => void;
 };
@@ -32,26 +30,22 @@ type Props = {
 const COLD_DAYS = 21;
 
 function day(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  return new Date(iso).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 function clockTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
-/**
- * Opens the working panel in a narrow window of its own, to sit beside Live;
- * where pop-ups are blocked, in a tab.
- */
+/** Opens the working panel in a narrow window of its own, to sit beside Live. */
 export function openWorkPanel(projectId: number) {
   const w = window.open(`/projects/${projectId}/work`, `bottega-work-${projectId}`, 'popup,width=480,height=920');
   if (!w) window.open(`/projects/${projectId}/work`, '_blank');
 }
 
-export default function WhereItStands({ projectId, code, title, workflow: w, setWorkflow, sessions, current, canContribute, onTab }: Props) {
+export default function WhereItStands({ projectId, workflow: w, setWorkflow, sessions, mixUploadedAt, canContribute, onTab }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [writing, setWriting] = useState('');
-  const deck = useDeck();
   // The page opened at this moment: days since are counted from it.
   const [openedAt] = useState(() => Date.now());
 
@@ -74,16 +68,16 @@ export default function WhereItStands({ projectId, code, title, workflow: w, set
   const next = w.cards.find((c) => c.isNext) ?? null;
   const others = open.filter((c) => !c.isNext);
   const criteria = w.criteria.filter((c) => c.stage === w.stage && c.reviewed && !c.rejected);
-  const met = criteria.filter((c) => c.metAt).length;
+  const unmet = criteria.filter((c) => !c.metAt);
+  const proposals = w.cards.filter((c) => c.status === 'proposed').length + w.criteria.filter((c) => !c.reviewed).length;
   const last = sessions[0] ?? null;
 
   // The last thing done: a session of saves, a to-do changed, a stage moved, a mix uploaded.
-  const touched = [last?.end, ...w.cards.map((c) => c.updatedAt), w.moves[0]?.movedAt, current?.uploadedAt].filter((x): x is string => !!x).sort().pop() ?? null;
-  const days = touched ? Math.floor((openedAt - Date.parse(touched)) / 86_400_000) : null;
-  const playing = !!current && deck.item?.trackId === current.id && deck.playing;
-  const item: PlayItem | null = current
-    ? { trackId: current.id, projectId, code, title, label: current.label, kind: 'mix', variant: current.variant, durationS: current.durationS }
-    : null;
+  const touched = [last?.end, ...w.cards.map((c) => c.updatedAt), w.moves[0]?.movedAt, mixUploadedAt].filter((x): x is string => !!x).sort().pop() ?? null;
+  // Never below zero: a clock a little ahead on the server would give "-1 days".
+  const days = touched ? Math.max(0, Math.floor((openedAt - Date.parse(touched)) / 86_400_000)) : null;
+  const since =
+    days === null ? 'Not worked on yet' : days === 0 ? 'Worked on today' : days === 1 ? 'Last worked on yesterday' : `Last worked on ${days} days ago`;
 
   async function writeNext(e: React.FormEvent) {
     e.preventDefault();
@@ -94,144 +88,144 @@ export default function WhereItStands({ projectId, code, title, workflow: w, set
     if (made && (await call(url, 'POST', { op: 'next-card', cardId: made.id }))) setWriting('');
   }
 
-  if (!w.stage) {
+  const action = (
+    <button type="button" onClick={() => openWorkPanel(projectId)} className={TEXT_LINK} title="Opens a narrow window to keep beside Live">
+      Working session ↗
+    </button>
+  );
+
+  if (!w.stage || !stage) {
     return (
-      <section aria-label="Where it stands" className="t-body mb-4 flex flex-wrap items-center gap-3 rounded-md border border-line px-4 py-2.5">
-        <span className="text-muted">The workflow has not been started, so Bottega can&rsquo;t yet say where this project stands.</span>
-        <button type="button" onClick={() => onTab('workflow')} className={BUTTON}>
-          Start it on the Workflow tab
-        </button>
-      </section>
+      <Section label="Where it stands" action={action}>
+        <p className="t-body text-muted">
+          The workflow has not been started.{' '}
+          <button type="button" onClick={() => onTab('workflow')} className={TEXT_LINK}>
+            Start it
+          </button>
+        </p>
+      </Section>
     );
   }
 
   return (
-    <section aria-label="Where it stands" className="t-body mb-4 rounded-md border border-ink p-4">
-      <div className="flex flex-wrap gap-x-8 gap-y-4">
-        <div className="min-w-0 flex-[999_1_480px] space-y-3">
-          <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="t-label">Where it stands</span>
-            <button type="button" onClick={() => onTab('workflow')} className="text-left font-medium hover:text-rust">
-              Stage {stage?.position} of {w.stages.length} · {stage?.label}
-              {stage?.standard ? `: ${stage.standard}` : ''}
-            </button>
-            <span className="t-num text-[12px] text-muted">
-              {met} of {criteria.length} criteria met
-            </span>
-          </p>
+    <Section label={`Where it stands · ${stage.label}`} action={action}>
+      <div className="t-body space-y-3">
+        <p className="t-small text-muted">
+          <button type="button" onClick={() => onTab('workflow')} className={TEXT_LINK}>
+            Stage {stage.position} of {w.stages.length}
+          </button>
+          <span className="t-num">
+            {' · '}
+            {criteria.length === 0 ? 'no criteria written' : `${criteria.length - unmet.length} of ${criteria.length} criteria met`}
+            {' · '}
+          </span>
+          <span className={days !== null && days >= COLD_DAYS ? 'font-medium text-ink' : ''}>{since}</span>
+          {proposals > 0 && <span className="t-num">{` · ${proposals} proposed by Claude`}</span>}
+        </p>
 
-          <div>
-            <p className="text-[11px] text-muted">Next</p>
-            {next ? (
-              <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
-                <p className="min-w-0 flex-1 text-[18px] font-medium leading-snug">
-                  {next.what}
-                  {next.doneWhen && next.doneWhen !== DONE_WHEN_UNWRITTEN && (
-                    <span className="mt-0.5 block text-[12px] font-normal text-muted">Done when: {next.doneWhen}</span>
-                  )}
-                </p>
-                {canContribute && (
-                  <span className="flex flex-wrap gap-1.5">
-                    <button type="button" onClick={() => call(`/api/cards/${next.id}`, 'PATCH', { status: 'done' })} disabled={busy} className={BUTTON_PRIMARY}>
-                      Done · next one up
-                    </button>
-                    {next.status === 'accepted' && (
-                      <button type="button" onClick={() => call(`/api/cards/${next.id}`, 'PATCH', { status: 'in progress' })} disabled={busy} className={BUTTON}>
-                        Start
-                      </button>
-                    )}
-                  </span>
-                )}
+        <div>
+          <p className="t-small text-muted">Next</p>
+          {next ? (
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
+              <div className="min-w-0 flex-1">
+                <p className="t-lead font-medium">{next.what}</p>
+                {next.doneWhen && next.doneWhen !== DONE_WHEN_UNWRITTEN && <p className="t-small text-muted">Done when {next.doneWhen}</p>}
               </div>
-            ) : (
-              <p className="text-[15px] text-muted">No to-do marked next.</p>
-            )}
-            {canContribute && !next && (
-              <form onSubmit={writeNext} className="mt-1.5 flex gap-2">
-                <input
-                  value={writing}
-                  onChange={(e) => setWriting(e.target.value)}
-                  placeholder="Something you could start within five minutes of opening the set"
-                  className={`${FIELD} min-w-0 flex-1`}
-                />
-                <button type="submit" disabled={busy || !writing.trim()} className={BUTTON}>
-                  Make it next
-                </button>
-              </form>
-            )}
-          </div>
-
-          {others.length > 0 && (
-            <div>
-              <p className="text-[11px] text-muted">
-                Also open in {stage?.label} · {others.length}
-              </p>
-              <ul className="mt-0.5 space-y-0.5">
-                {others.slice(0, 3).map((c: WorkflowCard) => (
-                  <li key={c.id} className="flex items-baseline gap-2">
-                    <span className="min-w-0 flex-1">
-                      {c.status === 'in progress' && <span className="mr-1 font-mono text-[10px] text-muted">in progress</span>}
-                      {c.what}
-                    </span>
-                    {canContribute && (
-                      <button type="button" onClick={() => call(url, 'POST', { op: 'next-card', cardId: c.id })} disabled={busy} className={BUTTON}>
-                        Make next
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              {others.length > 3 && (
-                <button type="button" onClick={() => onTab('workflow')} className={`mt-1 text-[12px] ${TEXT_LINK}`}>
-                  All {others.length} on the Workflow tab
-                </button>
+              {canContribute && (
+                <span className="flex gap-1.5">
+                  {next.status === 'accepted' && (
+                    <button type="button" onClick={() => call(`/api/cards/${next.id}`, 'PATCH', { status: 'in progress' })} disabled={busy} className={BUTTON}>
+                      Start
+                    </button>
+                  )}
+                  <button type="button" onClick={() => call(`/api/cards/${next.id}`, 'PATCH', { status: 'done' })} disabled={busy} className={BUTTON_PRIMARY}>
+                    Done
+                  </button>
+                </span>
               )}
             </div>
+          ) : canContribute ? (
+            <form onSubmit={writeNext} className="mt-1 flex gap-2">
+              <input
+                value={writing}
+                onChange={(e) => setWriting(e.target.value)}
+                placeholder="Something to start within five minutes of opening the set"
+                className={`${FIELD} min-w-0 flex-1`}
+              />
+              <button type="submit" disabled={busy || !writing.trim()} className={BUTTON}>
+                Make it next
+              </button>
+            </form>
+          ) : (
+            <p className="text-muted">No to-do marked next.</p>
           )}
-          {error && <p className="text-rust">{error}</p>}
         </div>
 
-        <div className="min-w-0 flex-[1_1_280px] space-y-3 border-line lg:border-l lg:pl-6">
-          <p className={days !== null && days >= COLD_DAYS ? 'font-medium text-rust' : 'text-muted'}>
-            {days === null ? 'Not worked on yet.' : days === 0 ? 'Worked on today.' : days === 1 ? 'Last worked on yesterday.' : `Last worked on ${days} days ago.`}
-          </p>
+        {others.length > 0 && (
           <div>
-            <p className="text-[11px] text-muted">Last time</p>
-            {last ? (
-              <>
-                <p>
-                  {day(last.start)}, {clockTime(last.start)}
-                  {last.saves > 1 ? `–${clockTime(last.end)}` : ''} · {last.saves} {last.saves === 1 ? 'save' : 'saves'}
-                  {last.variant ? ` · ${last.variant}` : ''}
-                </p>
-                {last.first ? (
-                  <p className="text-[12px] text-muted">The first set Bottega read.</p>
-                ) : last.changes === null ? null : last.changes.length === 0 ? (
-                  <p className="text-[12px] text-muted">Nothing the set reader tracks changed.</p>
-                ) : (
-                  <ul className="mt-0.5 list-disc pl-4 text-[12px] text-muted">
-                    {last.changes.slice(0, 6).map((c, i) => (
-                      <li key={i}>{c}</li>
-                    ))}
-                  </ul>
-                )}
-              </>
-            ) : (
-              <p className="text-[12px] text-muted">No saved sets read yet. The watcher sends them as Live saves.</p>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {item && (
-              <button type="button" onClick={() => deckToggle(item)} className={BUTTON}>
-                {playing ? '❚❚ Pause' : `▶ Play ${current?.label}`}
+            <p className="t-small text-muted">Also open · {others.length}</p>
+            <ul className="mt-0.5 space-y-1">
+              {others.slice(0, 3).map((c) => (
+                <li key={c.id} className="flex items-baseline gap-2">
+                  <span className="min-w-0 flex-1">
+                    {c.what}
+                    {c.status === 'in progress' && <span className="t-small text-muted"> · in progress</span>}
+                  </span>
+                  {canContribute && (
+                    <button type="button" onClick={() => call(url, 'POST', { op: 'next-card', cardId: c.id })} disabled={busy} className={BUTTON}>
+                      Make next
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {others.length > 3 && (
+              <button type="button" onClick={() => onTab('workflow')} className={`t-small mt-1 ${TEXT_LINK}`}>
+                All {others.length} on the Workflow tab
               </button>
             )}
-            <button type="button" onClick={() => openWorkPanel(projectId)} className={BUTTON_PRIMARY} title="Opens a narrow window to keep beside Live">
-              Working session ↗
-            </button>
           </div>
+        )}
+
+        {unmet.length > 0 && (
+          <div>
+            <p className="t-small text-muted">Still to meet</p>
+            <ul className="mt-0.5 space-y-0.5 text-muted">
+              {unmet.slice(0, 3).map((c) => (
+                <li key={c.id}>☐ {c.body}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div>
+          <p className="t-small text-muted">Last time</p>
+          {last ? (
+            <>
+              <p>
+                {day(last.start)}, {clockTime(last.start)}
+                {last.saves > 1 ? `–${clockTime(last.end)}` : ''} · {last.saves} {last.saves === 1 ? 'save' : 'saves'}
+                {last.variant ? ` · ${last.variant}` : ''}
+              </p>
+              {last.first ? (
+                <p className="text-muted">The first set Bottega read.</p>
+              ) : last.changes === null ? null : last.changes.length === 0 ? (
+                <p className="text-muted">Nothing the set reader tracks changed.</p>
+              ) : (
+                <ul className="list-disc pl-4 text-muted">
+                  {last.changes.slice(0, 4).map((c, i) => (
+                    <li key={i}>{c}</li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : (
+            <p className="text-muted">No saved sets read yet. The watcher sends them as Live saves.</p>
+          )}
         </div>
+
+        {error && <p className="text-rust">{error}</p>}
       </div>
-    </section>
+    </Section>
   );
 }

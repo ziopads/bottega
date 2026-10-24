@@ -25,13 +25,13 @@ export default function Contents({ g, viewerId, lessonId }: { g: StudyGroup; vie
                 <span className="t-num w-5 shrink-0 text-muted">{i + 1}</span>
                 <span className="min-w-0 flex-1">{t.title}</span>
                 {exercises.length > 0 && (
-                  <span className={`t-num text-[11px] ${done === exercises.length ? 'text-moss' : 'text-muted'}`}>
+                  <span className={`t-num t-small ${done === exercises.length ? 'text-moss' : 'text-muted'}`}>
                     {done}/{exercises.length}
                   </span>
                 )}
               </a>
               {lessons.length > 0 && (
-                <ol className="ml-7 mt-0.5 space-y-0.5 text-[12px]">
+                <ol className="ml-7 mt-0.5 space-y-0.5 t-small">
                   {lessons.map((l, j) => (
                     <li key={l.id}>
                       <Link

@@ -157,7 +157,7 @@ export default function GroupView({
             call={call}
           >
             <p>{e.task}</p>
-            <p className="text-[11px] text-muted">Done when: {e.doneWhen}</p>
+            <p className="t-small text-muted">Done when: {e.doneWhen}</p>
           </ReviewRow>
         ))}
       </ul>
@@ -312,9 +312,9 @@ function ReviewRow({
   return (
     <li className="py-1.5">
       <div className="flex flex-wrap items-baseline gap-x-3">
-        <span className="text-[11px] text-muted">{label}</span>
+        <span className="t-small text-muted">{label}</span>
         {canReview && (
-          <span className="ml-auto flex gap-3 text-[11px]">
+          <span className="ml-auto flex gap-3 t-small">
             <button onClick={() => call(url, 'PATCH', { accept: true })} disabled={busy || !!blocked} title={blocked} className={BUTTON_PRIMARY}>
               Accept
             </button>
@@ -325,7 +325,7 @@ function ReviewRow({
         )}
       </div>
       <div className="min-w-0">{children}</div>
-      {canReview && blocked && <p className="text-[11px] text-muted">{blocked}.</p>}
+      {canReview && blocked && <p className="t-small text-muted">{blocked}.</p>}
     </li>
   );
 }
@@ -361,7 +361,7 @@ function Topic({
     <section id={`topic-${t.id}`} className="mb-10 scroll-mt-4">
       <div className="mb-2 flex items-baseline gap-3 border-b border-line pb-1">
         <span className="t-num t-label">{n}</span>
-        <h2 className="t-lead min-w-0 flex-1 font-semibold">
+        <h2 className="t-lead min-w-0 flex-1 font-medium">
           {custodian ? <InlineEdit value={t.title} placeholder="Title" label="Topic title" textClass="t-lead" onSave={(v) => call(url, 'PATCH', { title: v })} /> : t.title}
         </h2>
         {custodian ? (
@@ -383,7 +383,7 @@ function Topic({
           t.model && <span className="t-body text-muted">{t.model.manufacturer} {t.model.model}</span>
         )}
         {custodian && (
-          <span className="flex gap-2 text-[11px]">
+          <span className="flex gap-2 t-small">
             <button onClick={() => call(url, 'PATCH', { move: 'up' })} disabled={busy} className={BUTTON} aria-label="Move topic up">
               ↑
             </button>
@@ -413,7 +413,7 @@ function Topic({
                 {l.title}
               </Link>
               {custodian && (
-                <span className="flex gap-2 text-[11px]">
+                <span className="flex gap-2 t-small">
                   <button onClick={() => call(`/api/study/lessons/${l.id}`, 'PATCH', { move: 'up' })} disabled={busy} className={BUTTON} aria-label="Move lesson up">
                     ↑
                   </button>
@@ -498,8 +498,8 @@ export function LessonForm({
       className="max-w-prose space-y-2"
     >
       <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Lesson title" aria-label="Lesson title" className={`${FIELD} w-full`} />
-      <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={14} aria-label="Lesson" className={`${FIELD} w-full font-mono text-[12px]`} />
-      <p className="text-[11px] text-muted">
+      <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={14} aria-label="Lesson" className={`${FIELD} w-full font-mono t-small`} />
+      <p className="t-small text-muted">
         Cite a page as [15:p42], a range as [15:p42-43], or with the words quoted: [15:p42 &quot;chop the sample&quot;]. Document numbers are in
         each document’s address in the Library. Quotations are checked against the page text. ## starts a heading, - a list, **bold**.
       </p>
@@ -648,7 +648,7 @@ function Members({ g, viewerId, custodian, busy, call }: { g: StudyGroup; viewer
           </button>
         </form>
       )}
-      {custodian && <p className="mt-1 text-[11px] text-muted">They need an approved account. The invitation waits on their Learning page.</p>}
+      {custodian && <p className="mt-1 t-small text-muted">They need an approved account. The invitation waits on their Learning page.</p>}
     </Section>
   );
 }
@@ -712,8 +712,8 @@ function ReadingList({
                   <span className="text-muted">Document {d.id}</span>
                 )}
                 {d.about && <span className="text-muted">{d.about}</span>}
-                <span className="text-[11px] text-muted">{d.library ? 'library manual' : 'shared by its owner'}</span>
-                <span className="ml-auto text-[11px] text-muted">
+                <span className="t-small text-muted">{d.library ? 'library manual' : 'shared by its owner'}</span>
+                <span className="ml-auto t-small text-muted">
                   {[
                     d.pagesDone === 0
                       ? 'not searchable yet'
@@ -768,7 +768,7 @@ function ReadingList({
           </div>
         )}
         {!custodian && g.status === 'open' && (
-          <p className="mt-2 text-[11px] text-muted">{g.custodianName}, the custodian, adds library manuals; you can add your own documents.</p>
+          <p className="mt-2 t-small text-muted">{g.custodianName}, the custodian, adds library manuals; you can add your own documents.</p>
         )}
       </Section>
 
@@ -784,7 +784,7 @@ function ReadingList({
                 ) : (
                   <span className="text-muted">Document {d.id} (not readable by you)</span>
                 )}
-                <span className="text-[11px] text-muted"> · cited in {d.citedBy} {d.citedBy === 1 ? 'lesson' : 'lessons'}</span>
+                <span className="t-small text-muted"> · cited in {d.citedBy} {d.citedBy === 1 ? 'lesson' : 'lessons'}</span>
                 {((d.library && custodian) || (!d.library && d.mine)) && (
                   <button onClick={() => change(d.id, true)} disabled={busy} className={`ml-2 ${BUTTON}`}>
                     Add to the list
@@ -793,7 +793,7 @@ function ReadingList({
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[11px] text-muted">Members who cannot read a private one see its citations without links.</p>
+          <p className="mt-2 t-small text-muted">Members who cannot read a private one see its citations without links.</p>
         </Section>
       )}
 

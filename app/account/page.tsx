@@ -91,7 +91,7 @@ export default async function AccountPage({ searchParams }: Props) {
                   {activity.map((a) => (
                     <li key={a.id} className="flex items-baseline gap-3 py-1.5">
                       <span className="min-w-0 flex-1">{a.text}</span>
-                      <span className="shrink-0 text-[11px] text-muted">
+                      <span className="shrink-0 t-small text-muted">
                         {a.mine ? '' : `${a.actorName} · `}
                         <When iso={a.at} />
                       </span>
@@ -99,7 +99,7 @@ export default async function AccountPage({ searchParams }: Props) {
                   ))}
                 </ul>
               )}
-              <p className="mt-2 text-[11px] text-muted">
+              <p className="mt-2 t-small text-muted">
                 The latest 50 entries about your account and your items. Entries are permanent.
               </p>
             </Section>

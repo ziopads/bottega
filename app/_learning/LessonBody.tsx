@@ -43,7 +43,7 @@ function Line({ parts, titles, labels }: { parts: Inline[]; titles: Titles; labe
     <>
       {parts.map((p, i) => {
         if (p.kind === 'bold') return <strong key={i}>{p.text}</strong>;
-        if (p.kind === 'code') return <code key={i} className="rounded bg-card px-1 font-mono text-[12px]">{p.text}</code>;
+        if (p.kind === 'code') return <code key={i} className="rounded bg-card px-1 font-mono t-small">{p.text}</code>;
         if (p.kind === 'cite') return <Cite key={i} citation={p.citation} n={p.n} titles={titles} labels={labels} />;
         return <span key={i}>{p.text}</span>;
       })}
@@ -69,11 +69,11 @@ export default function LessonBody({
       {blocks.map((b, i) => {
         if (b.kind === 'heading') {
           return b.level === 2 ? (
-            <h3 key={i} className="t-lead mt-5 font-semibold">
+            <h3 key={i} className="t-lead mt-5 font-medium">
               <Line parts={b.inline} titles={titles} labels={labels} />
             </h3>
           ) : (
-            <h4 key={i} className="mt-4 font-semibold">
+            <h4 key={i} className="mt-4 font-medium">
               <Line parts={b.inline} titles={titles} labels={labels} />
             </h4>
           );
@@ -100,7 +100,7 @@ export default function LessonBody({
       {sources.length > 0 && (
         <div className="mt-6 border-t border-line pt-2">
           <p className="t-label mb-1">Sources</p>
-          <ol className="space-y-1 text-[12px]">
+          <ol className="space-y-1 t-small">
             {sources.map(({ n, citation }) => {
               const title = titles.get(citation.documentId);
               return (

@@ -45,9 +45,9 @@ function localInput(iso: string): string {
 function Badges({ origin, published, isPrivate }: { origin: string; published: boolean; isPrivate: boolean }) {
   return (
     <>
-      {!published && <span className="rounded border border-rust px-1 text-[11px] text-rust">draft</span>}
-      {origin === 'assistant' && <span className="text-[11px] text-muted">documented by Claude</span>}
-      {isPrivate && <span className="text-[11px] text-muted">private</span>}
+      {!published && <span className="rounded border border-rust px-1 t-small text-rust">draft</span>}
+      {origin === 'assistant' && <span className="t-small text-muted">documented by Claude</span>}
+      {isPrivate && <span className="t-small text-muted">private</span>}
     </>
   );
 }
@@ -152,7 +152,7 @@ export function NoteItem({
 
   return (
     <li id={`note-${n.id}`} className="py-2">
-      <p className="flex flex-wrap items-baseline gap-x-2 text-[11px] text-muted">
+      <p className="flex flex-wrap items-baseline gap-x-2 t-small text-muted">
         <span className="text-ink">{n.authorName}</span>
         <span>{formatWhen(n.createdAt)}</span>
         {showContext && topic && <span>· {topic.title}</span>}
@@ -331,7 +331,7 @@ function SessionItem({ s, g, viewerId, titles, call, busy }: { s: StudySession; 
         </span>
         <Badges origin={s.origin} published={s.published} isPrivate={s.private} />
         {mine && !editing && (
-          <span className="t-body ml-auto flex gap-3 text-[11px]">
+          <span className="ml-auto flex gap-3 t-small">
             {!s.published && (
               <button onClick={() => call(`/api/study/sessions/${s.id}`, 'POST', { op: 'publish' })} disabled={busy} className={BUTTON_PRIMARY}>
                 Publish
@@ -352,9 +352,9 @@ function SessionItem({ s, g, viewerId, titles, call, busy }: { s: StudySession; 
           </span>
         )}
       </div>
-      {topicNames.length > 0 && <p className="text-[11px] text-muted">Topics: {topicNames.join(', ')}</p>}
+      {topicNames.length > 0 && <p className="t-small text-muted">Topics: {topicNames.join(', ')}</p>}
       {spentOn && (
-        <p className="text-[11px] text-muted">
+        <p className="t-small text-muted">
           On{' '}
           <Link href={resourceHref(g.id, spentOn.id)} className="hover:text-rust">
             {spentOn.title}
@@ -559,7 +559,7 @@ export function ProgressTab({ g }: { g: StudyGroup }) {
             </tbody>
           </table>
         )}
-        {h.untagged > 0 && <p className="mt-2 text-[11px] text-muted">{h.untagged} sessions named no topic.</p>}
+        {h.untagged > 0 && <p className="mt-2 t-small text-muted">{h.untagged} sessions named no topic.</p>}
       </Section>
 
       <Section label="Exercises">

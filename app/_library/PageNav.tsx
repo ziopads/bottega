@@ -61,7 +61,7 @@ export default function PageNav({ documentId, page, total, q }: { documentId: nu
             type="button"
             onClick={() => go(page - 1)}
             disabled={page <= 1}
-            className="px-1 text-base leading-none hover:text-ink disabled:opacity-30"
+            className="px-1 t-lead leading-none hover:text-ink disabled:opacity-30"
             aria-label="Previous page"
           >
             ‹
@@ -86,7 +86,7 @@ export default function PageNav({ documentId, page, total, q }: { documentId: nu
             type="button"
             onClick={() => go(page + 1)}
             disabled={page >= last}
-            className="px-1 text-base leading-none hover:text-ink disabled:opacity-30"
+            className="px-1 t-lead leading-none hover:text-ink disabled:opacity-30"
             aria-label="Next page"
           >
             ›

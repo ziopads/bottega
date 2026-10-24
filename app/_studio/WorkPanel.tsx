@@ -139,13 +139,13 @@ export default function WorkPanel({
     <div className="t-body mx-auto max-w-xl space-y-5">
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <p className="text-[16px] font-medium">{title}</p>
-          <p className="text-[12px] text-muted">
+          <p className="t-lead font-medium">{title}</p>
+          <p className="t-small text-muted">
             Stage {pos} of {w.stages.length} · {stage?.label}
             {stage?.standard ? `: ${stage.standard}` : ''}
           </p>
         </div>
-        <Link href={`/projects/${projectId}?tab=workflow`} target="_blank" className="text-[12px] text-muted underline underline-offset-2 hover:text-ink">
+        <Link href={`/projects/${projectId}?tab=workflow`} target="_blank" className="t-small text-muted underline underline-offset-2 hover:text-ink">
           Open the project ↗
         </Link>
       </header>
@@ -158,15 +158,15 @@ export default function WorkPanel({
             placeholder="Snare too loud against the hats #tactus"
             aria-label="Log a line"
             autoFocus
-            className={`${FIELD} w-full text-[15px]`}
+            className={`${FIELD} w-full t-lead`}
           />
-          <p className="text-[11px] text-muted">
+          <p className="t-small text-muted">
             Enter logs a to-do. Start with <span className="font-mono">note:</span>, <span className="font-mono">learn:</span> or{' '}
             <span className="font-mono">next:</span>; a <span className="font-mono">#tag</span> names the element or parks it for a later stage; after{' '}
             <span className="font-mono">--</span>, how you&rsquo;ll know it&rsquo;s done.
           </p>
           {logged.length > 0 && (
-            <ul className="space-y-0.5 text-[12px]">
+            <ul className="space-y-0.5 t-small">
               {logged.map((l, i) => (
                 <li key={i} className="text-muted">
                   {clockTime(l.at)} · <span className="text-ink">{l.kind}</span>: {l.text}
@@ -182,8 +182,8 @@ export default function WorkPanel({
         <p className="t-label">Next</p>
         {next ? (
           <>
-            <p className="mt-0.5 text-[16px] font-medium">{next.what}</p>
-            {next.doneWhen && next.doneWhen !== DONE_WHEN_UNWRITTEN && <p className="text-[12px] text-muted">Done when: {next.doneWhen}</p>}
+            <p className="mt-0.5 t-lead font-medium">{next.what}</p>
+            {next.doneWhen && next.doneWhen !== DONE_WHEN_UNWRITTEN && <p className="t-small text-muted">Done when: {next.doneWhen}</p>}
             {canContribute && (
               <button type="button" onClick={() => call(`/api/cards/${next.id}`, 'PATCH', { status: 'done' })} disabled={busy} className={`mt-2 ${BUTTON_PRIMARY}`}>
                 Done · next one up
@@ -215,7 +215,7 @@ export default function WorkPanel({
                 />
                 <span className="min-w-0 flex-1">
                   {c.what}
-                  {c.status === 'in progress' && <span className="ml-1 font-mono text-[10px] text-muted">in progress</span>}
+                  {c.status === 'in progress' && <span className="ml-1 font-mono t-small text-muted">in progress</span>}
                 </span>
                 {canContribute && (
                   <button type="button" onClick={() => call(url, 'POST', { op: 'next-card', cardId: c.id })} disabled={busy} className={BUTTON}>
@@ -248,11 +248,11 @@ export default function WorkPanel({
                 <span className="min-w-0 flex-1">
                   <span className={c.metAt ? 'text-muted line-through' : ''}>{c.body}</span>
                   {r && !c.metAt && r.verdict !== 'unknown' && (
-                    <span className="mt-0.5 block font-mono text-[10px] text-muted">
+                    <span className="mt-0.5 block font-mono t-small text-muted">
                       {r.verdict === 'likely' ? 'Likely done' : 'Likely not yet'} · {r.reading}
                     </span>
                   )}
-                  {c.hint && !c.metAt && <span className="block whitespace-pre-line text-[11px] text-muted">{c.hint}</span>}
+                  {c.hint && !c.metAt && <span className="block whitespace-pre-line t-small text-muted">{c.hint}</span>}
                 </span>
               </li>
             );
@@ -278,7 +278,7 @@ export default function WorkPanel({
         {feed.saves.length === 0 ? (
           <p className="text-muted">No sets read yet. With the watcher running, each save Live makes shows here within a minute.</p>
         ) : (
-          <ul className="mt-1 space-y-0.5 text-[12px]">
+          <ul className="mt-1 space-y-0.5 t-small">
             {feed.saves.map((s) => (
               <li key={s.id} className="flex gap-2">
                 <span className="t-num w-16 shrink-0 text-muted">{clockTime(s.savedAt)}</span>
@@ -289,8 +289,8 @@ export default function WorkPanel({
         )}
         {feed.sessions[0]?.changes && feed.sessions[0].changes.length > 0 && (
           <div className="mt-2">
-            <p className="text-[11px] text-muted">This session so far</p>
-            <ul className="list-disc pl-4 text-[12px] text-muted">
+            <p className="t-small text-muted">This session so far</p>
+            <ul className="list-disc pl-4 t-small text-muted">
               {feed.sessions[0].changes.slice(0, 8).map((c, i) => (
                 <li key={i}>{c}</li>
               ))}

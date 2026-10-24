@@ -178,7 +178,7 @@ export default function GearDetail({
                         c && formatCapability(d, c.value)
                       )}
                     </td>
-                    <td className="w-28 py-1.5 text-right text-[11px] text-muted">{c?.overridden ? 'this unit' : c ? 'model' : ''}</td>
+                    <td className="w-28 py-1.5 text-right t-small text-muted">{c?.overridden ? 'this unit' : c ? 'model' : ''}</td>
                   </tr>
                 );
               })}
@@ -203,12 +203,12 @@ export default function GearDetail({
               >
                 <RotatedImage src={f.urls?.thumb ?? `/api/gear-files/${f.id}`} alt={f.caption || f.filename} rotation={f.rotation} width={160} height={128} className="rounded" />
                 {isOwner && !f.isPublic && (
-                  <span className="absolute left-1 top-1 rounded bg-ink/75 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-parchment">
+                  <span className="absolute left-1 top-1 rounded bg-ink/75 px-1.5 py-0.5 t-small uppercase tracking-wide text-parchment">
                     Private
                   </span>
                 )}
               </button>
-              <figcaption className="mt-1 flex items-baseline gap-2 text-[11px] text-muted">
+              <figcaption className="mt-1 flex items-baseline gap-2 t-small text-muted">
                 <span className="min-w-0 flex-1 truncate">{f.caption || f.filename}</span>
                 {f.role !== 'photo' && <span>{FILE_ROLE_LABEL[f.role]}</span>}
               </figcaption>
@@ -216,7 +216,7 @@ export default function GearDetail({
           ))}
         </div>
         {isOwner && photos.length > 0 && (
-          <p className="mt-2 text-[11px] text-muted">Click a photo to turn it, make it public or private, or delete it. Private photos are yours alone.</p>
+          <p className="mt-2 t-small text-muted">Click a photo to turn it, make it public or private, or delete it. Private photos are yours alone.</p>
         )}
         {editing && (
           <PhotoEditor
@@ -243,18 +243,18 @@ export default function GearDetail({
         <>
           <section>
             <h2 className="t-label mb-3 border-b border-line pb-1">Receipts and documents</h2>
-            <p className="mb-3 text-[11px] text-muted">Only you can see these, whoever the unit is shared with.</p>
+            <p className="mb-3 t-small text-muted">Only you can see these, whoever the unit is shared with.</p>
             {privateFiles.length === 0 ? (
               <p className="t-body text-muted">None yet. Drop a PDF above to add a receipt or document. Images appear with the photos.</p>
             ) : (
               <ul className="space-y-1 t-body">
                 {privateFiles.map((f) => (
                   <li key={f.id} className="flex items-baseline gap-3">
-                    <span className="w-24 text-[11px] text-muted">{FILE_ROLE_LABEL[f.role]}</span>
+                    <span className="w-24 t-small text-muted">{FILE_ROLE_LABEL[f.role]}</span>
                     <a href={`/api/gear-files/${f.id}?download=1`} className="min-w-0 flex-1 truncate underline hover:text-rust">
                       {f.filename}
                     </a>
-                    <span className="text-[11px] text-muted">{formatBytes(f.bytes)}</span>
+                    <span className="t-small text-muted">{formatBytes(f.bytes)}</span>
                     <FileDelete file={f} onDeleted={() => setFiles((l) => l.filter((x) => x.id !== f.id))} />
                   </li>
                 ))}
@@ -270,7 +270,7 @@ export default function GearDetail({
             note="A share shows the unit, its capabilities, firmware and photos. Serial, price, location, receipts and licence details stay with you."
           />
 
-          <div className="text-[11px]">
+          <div className="t-small">
             {armed ? (
               <span className="flex gap-3">
                 <button onClick={remove} className={BUTTON_PRIMARY}>
@@ -302,7 +302,7 @@ function FileDelete({ file, onDeleted }: { file: GearFile; onDeleted: () => void
     );
   }
   return (
-    <span className="flex gap-2 text-[11px]">
+    <span className="flex gap-2 t-small">
       <button
         onClick={async () => {
           const r = await api(`/api/gear-files/${file.id}`, { method: 'DELETE' });
@@ -345,7 +345,7 @@ function InsuranceRecord({ gearId, initial, isSoftware }: { gearId: number; init
 
   const text = (k: keyof GearPrivate, label: string) => (
     <label className="flex flex-col gap-1">
-      <span className="text-[11px] text-muted">{label}</span>
+      <span className="t-small text-muted">{label}</span>
       <input value={String(rec[k] ?? '')} onChange={(e) => set(k, e.target.value as never)} className={field} />
     </label>
   );
@@ -353,16 +353,16 @@ function InsuranceRecord({ gearId, initial, isSoftware }: { gearId: number; init
   return (
     <section>
       <h2 className="t-label mb-3 border-b border-line pb-1">Insurance record</h2>
-      <p className="mb-3 text-[11px] text-muted">Only you can see this, whoever the unit is shared with.</p>
+      <p className="mb-3 t-small text-muted">Only you can see this, whoever the unit is shared with.</p>
       <div className="grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
         {text('serial', 'Serial number')}
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] text-muted">Purchased</span>
+          <span className="t-small text-muted">Purchased</span>
           <input type="date" value={rec.purchaseDate ?? ''} onChange={(e) => set('purchaseDate', e.target.value || null)} className={field} />
         </label>
         <span className="flex gap-2">
           <label className="flex flex-1 flex-col gap-1">
-            <span className="text-[11px] text-muted">Price</span>
+            <span className="t-small text-muted">Price</span>
             <input
               inputMode="decimal"
               value={rec.purchasePrice ?? ''}
@@ -371,13 +371,13 @@ function InsuranceRecord({ gearId, initial, isSoftware }: { gearId: number; init
             />
           </label>
           <label className="flex w-20 flex-col gap-1">
-            <span className="text-[11px] text-muted">Currency</span>
+            <span className="t-small text-muted">Currency</span>
             <input value={rec.currency} onChange={(e) => set('currency', e.target.value.toUpperCase())} className={field} />
           </label>
         </span>
         {text('purchasedFrom', 'Bought from')}
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] text-muted">Estimated value</span>
+          <span className="t-small text-muted">Estimated value</span>
           <input
             inputMode="decimal"
             value={rec.estimatedValue ?? ''}
@@ -386,13 +386,13 @@ function InsuranceRecord({ gearId, initial, isSoftware }: { gearId: number; init
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] text-muted">Valued on</span>
+          <span className="t-small text-muted">Valued on</span>
           <input type="date" value={rec.valuedOn ?? ''} onChange={(e) => set('valuedOn', e.target.value || null)} className={field} />
         </label>
         {text('condition', 'Condition')}
         {text('location', 'Location')}
         <label className="flex flex-col gap-1 sm:col-span-3">
-          <span className="text-[11px] text-muted">Service history</span>
+          <span className="t-small text-muted">Service history</span>
           <textarea
             rows={2}
             value={rec.serviceHistory}
@@ -404,7 +404,7 @@ function InsuranceRecord({ gearId, initial, isSoftware }: { gearId: number; init
           <>
             {text('licenseKey', 'Licence key')}
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] text-muted">Seats</span>
+              <span className="t-small text-muted">Seats</span>
               <input
                 inputMode="numeric"
                 value={rec.licenseSeats ?? ''}
@@ -414,7 +414,7 @@ function InsuranceRecord({ gearId, initial, isSoftware }: { gearId: number; init
             </label>
             {text('licenseActivation', 'Activation')}
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] text-muted">Renewal</span>
+              <span className="t-small text-muted">Renewal</span>
               <input type="date" value={rec.licenseRenewal ?? ''} onChange={(e) => set('licenseRenewal', e.target.value || null)} className={field} />
             </label>
           </>

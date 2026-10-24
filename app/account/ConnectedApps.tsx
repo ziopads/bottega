@@ -40,7 +40,7 @@ export default function ConnectedApps({ initial }: { initial: Connection[] }) {
               <span className="min-w-0 flex-1" title={c.clientId}>
                 {c.host}
               </span>
-              <span className="text-[11px] text-muted">
+              <span className="t-small text-muted">
                 since <When iso={c.connectedAt} day />
               </span>
               <button onClick={() => revoke(c.clientId)} className={BUTTON_DANGER}>

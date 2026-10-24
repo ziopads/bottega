@@ -4,7 +4,6 @@ import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import BoardPlaceSelect from '@/app/_board/BoardPlaceSelect';
 import type { BoardPlace } from '@/lib/boardTypes';
 import type { WorkSession } from '@/lib/sessionTypes';
-import WhereItStands from './WhereItStands';
 
 import { onNoteRequest, type NoteRequest } from '@/app/_ui/audio/deck';
 
@@ -301,20 +300,6 @@ export default function ProjectDetail({
         </div>
       </div>
 
-      <div className="mt-3">
-        <WhereItStands
-          projectId={project.id}
-          code={`${project.artist.code} ${project.canonicalId}`}
-          title={project.workingName}
-          workflow={workflow}
-          setWorkflow={setWorkflow}
-          sessions={workSessions}
-          current={current}
-          canContribute={canContribute}
-          onTab={(t) => selectTab(t as SessionTab)}
-        />
-      </div>
-
       <div className="mb-6 mt-3 border-b border-line">
         <TabBar
           current={tab}
@@ -349,6 +334,9 @@ export default function ProjectDetail({
           onLength={fillLength}
           onTab={selectTab}
           workflow={workflow}
+          setWorkflow={setWorkflow}
+          sessions={workSessions}
+          canContribute={canContribute}
           setKey={sessionState.selected?.set.key === undefined ? undefined : keyLabel(sessionState.selected.set.key)}
         />
       )}

@@ -64,14 +64,14 @@ export default async function ProjectsPage() {
             {shared.map((p) => (
               <li key={p.id} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 py-2">
                 <Link href={`/projects/${p.id}`} className="min-w-0 flex-1 hover:text-rust">
-                  <span className="font-mono text-[11px] text-muted">
+                  <span className="font-mono t-small text-muted">
                     {p.artist.code} {p.canonicalId}
                   </span>{' '}
                   {p.workingName || <span className="text-muted">untitled</span>}
                 </Link>
-                <span className="text-[11px] text-muted">{formatDuration(p.latest?.durationS ?? null)}</span>
+                <span className="t-small text-muted">{formatDuration(p.latest?.durationS ?? null)}</span>
                 <BoardPlaceSelect projectId={p.id} initial={boardPlaces[p.id] ?? null} compact />
-                <span className="text-[11px] text-muted">
+                <span className="t-small text-muted">
                   {p.ownerName} · {LEVEL_WORD[p.level]}
                 </span>
               </li>

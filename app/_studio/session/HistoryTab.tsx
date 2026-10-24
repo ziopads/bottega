@@ -44,7 +44,7 @@ export default function HistoryTab({
                   <span className="min-w-0 flex-1 truncate" title={e.text}>
                     {e.text}
                   </span>
-                  <span className="shrink-0 text-[11px] text-muted">
+                  <span className="shrink-0 t-small text-muted">
                     {e.who} · {formatWhen(e.at)}
                   </span>
                 </li>

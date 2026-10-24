@@ -68,7 +68,7 @@ export default async function ReadPage({ params, searchParams }: Props) {
                   className={`flex gap-2 ${i === current ? 'text-rust' : 'hover:text-rust'}`}
                 >
                   <span className="min-w-0 flex-1">{s.title}</span>
-                  <span className="t-num text-[11px] text-muted">{s.page}</span>
+                  <span className="t-num t-small text-muted">{s.page}</span>
                 </Link>
               </li>
             ))}
