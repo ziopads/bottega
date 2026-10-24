@@ -88,6 +88,8 @@ export default function StudioProjects({
   initialReleases,
   defaultArtistId,
   boardPlaces,
+  finishedIds = [],
+  initialFinishedOnly = false,
 }: {
   initialProjects: StudioProject[];
   artists: StudioArtist[];
@@ -96,6 +98,9 @@ export default function StudioProjects({
   defaultArtistId: number | null;
   /** Each project's place on the person's board (W-21). */
   boardPlaces: Record<number, BoardPlace>;
+  /** Projects whose workflow is finished, for the filter the board links to (?show=finished). */
+  finishedIds?: number[];
+  initialFinishedOnly?: boolean;
 }) {
   const [projects, setProjects] = useState(initialProjects);
   const [places, setPlaces] = useState(boardPlaces);
@@ -111,6 +116,8 @@ export default function StudioProjects({
   // '' all · 'none' not on any release · a release id
   const [releaseFilter, setReleaseFilter] = useState<'' | 'none' | number>('');
   const [audioOnly, setAudioOnly] = useState(false);
+  const [finishedOnly, setFinishedOnly] = useState(initialFinishedOnly);
+  const finishedSet = useMemo(() => new Set(finishedIds), [finishedIds]);
   const [sort, setSort] = useState<Sort>({ key: 'rating', dir: -1 });
 
   const filtering =
@@ -119,7 +126,8 @@ export default function StudioProjects({
     ratingFilter !== 'any' ||
     genreFilter !== '' ||
     releaseFilter !== '' ||
-    audioOnly;
+    audioOnly ||
+    finishedOnly;
 
   const releaseTitle = useMemo(() => new Map(releases.map((r) => [r.id, r.title])), [releases]);
 
@@ -127,6 +135,7 @@ export default function StudioProjects({
     const q = query.trim().toLowerCase();
     return sortProjects(projects, sort).filter((p) => {
       if (audioOnly && !p.latest) return false;
+      if (finishedOnly && !finishedSet.has(p.id)) return false;
       if (artistFilter !== '' && p.artist.id !== artistFilter) return false;
       if (ratingFilter === 'unrated' && p.rating !== 0) return false;
       if (typeof ratingFilter === 'number' && p.rating < ratingFilter) return false;
@@ -380,6 +389,11 @@ export default function StudioProjects({
         {filtering && (
           <span className="flex items-baseline gap-2 t-small text-muted">
             showing {shown.length} of {projects.length}
+            {finishedOnly && (
+              <button onClick={() => setFinishedOnly(false)} className={BUTTON} aria-label="Show unfinished projects too">
+                finished only ×
+              </button>
+            )}
             <button
               onClick={() => {
                 setQuery('');
@@ -388,6 +402,7 @@ export default function StudioProjects({
                 setGenreFilter('');
                 setReleaseFilter('');
                 setAudioOnly(false);
+                setFinishedOnly(false);
               }}
               className={BUTTON}
             >

@@ -37,6 +37,10 @@ export type BoardCandidate = {
   ownerName: string | null;
   /** When the project was made, for showing the newest first. */
   createdAt: string;
+  /** The last thing done on it, as for a project on the board. */
+  touchedAt: string | null;
+  /** 0 = unrated, 1–5 stars. */
+  rating: number;
 };
 
 export type Board = {

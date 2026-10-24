@@ -40,8 +40,10 @@ export async function getBoard(db: Scoped, userId: string): Promise<Board> {
   const byId = new Map(projects.map((p) => [p.id, p]));
   const places = placeRows.filter((r) => byId.has(num(r.project_id)));
   const ids = places.map((r) => num(r.project_id));
+  // Last worked on, for the board's projects and for sorting the ones to add.
+  const allIds = projects.map((p) => p.id);
 
-  const [stageRows, tallyRows, cardRows, touchRows] = ids.length
+  const [stageRows, tallyRows, cardRows, touchRows] = allIds.length
     ? await db.tx([
         { text: 'select project_id, key, label, position from project_stages where project_id = any($1) order by project_id, position', params: [ids] },
         {
@@ -64,7 +66,7 @@ export async function getBoard(db: Scoped, userId: string): Promise<Board> {
                    (select max(uploaded_at) from audio x where x.project_id = p.id),
                    (select max(saved_at) from als_snapshots x where x.project_id = p.id)) as touched
                    from unnest($1::bigint[]) as p(id)`,
-          params: [ids],
+          params: [allIds],
         },
       ])
     : [[], [], [], []];
@@ -109,12 +111,24 @@ export async function getBoard(db: Scoped, userId: string): Promise<Board> {
     rotationLimit: prefRows[0] ? num(prefRows[0].rotation_limit) : 4,
     coldDays: prefRows[0] ? num(prefRows[0].cold_days) : 21,
     projects: boardProjects,
-    // Newest first, one's own before those shared with one: the board's search shows the top of this list.
+    // Newest first, one's own before those shared with one; the board sorts them again by last worked on or stars.
     candidates: projects
       .filter((p) => !onBoard.has(p.id))
-      .map((p) => ({ id: p.id, ...label(p.id), createdAt: String(p.createdAt) }))
+      .map((p) => ({
+        id: p.id,
+        ...label(p.id),
+        createdAt: String(p.createdAt),
+        touchedAt: touched.get(p.id) ?? isoOrNull(p.createdAt),
+        rating: p.rating,
+      }))
       .sort((a, b) => Number(a.ownerName !== null) - Number(b.ownerName !== null) || b.createdAt.localeCompare(a.createdAt)),
   };
+}
+
+/** Projects whose workflow is finished (every criterion of the last stage met), for the Projects list's filter. */
+export async function listFinishedIds(db: Scoped): Promise<number[]> {
+  const rows = await db.q('select project_id from project_workflow where finished_at is not null');
+  return rows.map((r) => num(r.project_id));
 }
 
 export async function placeOnBoard(db: Scoped, projectId: number, place: BoardPlace): Promise<void> {

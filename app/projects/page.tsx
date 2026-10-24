@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import BoardPlaceSelect from '@/app/_board/BoardPlaceSelect';
-import { listBoardPlaces } from '@/lib/board';
+import { listBoardPlaces, listFinishedIds } from '@/lib/board';
 
 import StudioProjects from '@/app/_studio/StudioProjects';
 import { getPreferences } from '@/lib/account';
@@ -22,16 +22,18 @@ const LEVEL_WORD: Record<AccessLevel, string> = {
   view: 'can listen',
 };
 
-export default async function ProjectsPage() {
+export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ show?: string }> }) {
   const { db, userId } = await requireAccount();
+  const { show } = await searchParams;
 
-  const [projects, artists, genres, releases, preferences, boardPlaces] = await Promise.all([
+  const [projects, artists, genres, releases, preferences, boardPlaces, finishedIds] = await Promise.all([
     listProjects(db),
     listArtists(db),
     listGenres(db),
     listReleases(db),
     getPreferences(db),
     listBoardPlaces(db),
+    listFinishedIds(db),
   ]);
   const own = projects.filter((p) => p.ownerId === userId);
   const shared = projects.filter((p) => p.ownerId !== userId);
@@ -55,6 +57,8 @@ export default async function ProjectsPage() {
         initialReleases={myReleases}
         defaultArtistId={defaultArtist?.id ?? null}
         boardPlaces={boardPlaces}
+        finishedIds={finishedIds}
+        initialFinishedOnly={show === 'finished'}
       />
 
       {shared.length > 0 && (

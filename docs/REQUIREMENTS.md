@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.33
+**Version:** 0.34
 **Date:** 2026-10-25
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -9,6 +9,11 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.34** (2026-10-25) — The board shows the work in hand (W-21): no
+  Finished column (a count links to the Projects list filtered to finished
+  projects); adding moves to the foot of the backlog, with the top five by
+  newest, last worked on or stars.
 
 - **0.33** (2026-10-25) — Themes (O-9): five looks in light and dark, chosen
   per account; element colours become eight slots. Migration 030.
@@ -595,11 +600,15 @@ there may be lost in the move.
   the next card up" logs the next move as done and makes the top open card
   the next move.
 - **W-21** The board. Each person has their own board, the page Bottega opens
-  on: columns Backlog, In rotation, Finished, each project with its stage bar,
-  next move and how long since it was touched. A project lands in its owner's
-  backlog when its workflow starts; anyone who can see a project can put it
-  on their own board. Dragging on the board moves only between Backlog and
-  In rotation; stage moves stay on the project page.
+  on: columns Backlog and In rotation, each project with its stage bar, next
+  to-do and how long since it was touched. Finished projects leave the board;
+  its header counts them and links to the Projects list filtered to them
+  (25 October). A project lands in its owner's backlog when its workflow
+  starts; anyone who can see a project can put it on their own board, from
+  "+ Add a project" at the foot of the backlog: a search, the top five by
+  newest, last worked on or stars, and a new project from a name that
+  matches nothing. Dragging on the board moves only between Backlog and In
+  rotation; stage moves stay on the project page.
 - **W-22** Rotation holds at most the person's limit (Preferences, default 4).
   When it is full, moving one in means choosing one to swap out. A project
   untouched for the person's cold-after days (default 21) shows as cold.
