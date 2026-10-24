@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "check": "tsc --noEmit && node scripts/check-access.mjs"
+    "check": "tsc --noEmit && node scripts/check-access.mjs",
+    "watcher:build": "tsc -p watcher/tsconfig.json"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1149.0",

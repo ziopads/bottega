@@ -21,7 +21,8 @@ const APP = join(ROOT, 'app');
 
 const CHECKED = /(^|\/)(page\.tsx|route\.ts|actions\.ts)$/;
 const EXEMPT = [/^app\/auth\/sign-in\//, /^app\/auth\/sign-up\//, /^app\/api\/auth\//, /^app\/oauth\//, /^app\/\.well-known\//, /^app\/api\/mcp\//];
-const GUARDS = /\b(requireAccount|requirePlatformAdmin|apiAccount|getAccount)\s*\(/;
+// tokenAccount (lib/tokens.ts): the Mac watcher's routes, signed in with a personal access token.
+const GUARDS = /\b(requireAccount|requirePlatformAdmin|apiAccount|getAccount|tokenAccount)\s*\(/;
 
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {

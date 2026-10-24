@@ -1,6 +1,6 @@
 # Bottega — architecture
 
-**Version:** 0.18
+**Version:** 0.19
 **Date:** 2026-10-23
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
@@ -10,6 +10,18 @@ story IDs below (S-3, W-6 and so on) refer to it.
 
 ## Changelog
 
+- **0.19** (2026-10-23) — The Mac watcher: `watcher/main.ts`, compiled with
+  the repository's TypeScript (`npm run watcher:build`, `watcher/tsconfig.json`,
+  CommonJS into `watcher/dist`, ignored by git and lint) together with
+  `lib/als/parse.ts`, `xml.ts` and `types.ts`; runs under a LaunchAgent; keeps
+  its token in the login keychain and its queue in `state.json`. Migration
+  026: `personal_tokens` (hash only, no grant on it), `token_create()`,
+  `token_revoke()`, `token_verify()`, `watcher_reports`, `watcher_report()`.
+  `lib/tokens.ts` (`tokenAccount`, the watcher routes' guard, added to
+  `scripts/check-access.mjs`); routes under `/api/watcher` (projects, a
+  project's sets, its folder, report), left out of `proxy.ts`'s sign-in;
+  `lib/als/input.ts` shared with the State tab's routes; `/api/account/tokens`
+  and `app/account/WatcherTokens.tsx` under Security.
 - **0.18** (2026-10-23) — Migration 025: track structures
   (`structure_templates`, `structure_elements` with `prefixes` and
   `group_names`, `structure_copy()`, `account_structure()`), each project's

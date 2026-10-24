@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The Mac watcher, compiled (npm run watcher:build).
+    "watcher/dist/**",
   ]),
 ]);
 

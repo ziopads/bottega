@@ -10,11 +10,13 @@ export default auth.middleware({
 
 export const config = {
   matcher: [
-    // Everything except the auth pages, the auth API, static assets, and the
+    // Everything except the auth pages, the auth API, static assets, the
     // three paths Claude calls from Anthropic's servers for the connector
-    // (api/mcp, .well-known, oauth), which cannot follow a redirect to a
-    // sign-in form and decide access themselves. Anything with a file
-    // extension is an asset; a page route never has a dot in its last segment.
-    '/((?!auth|api/auth|api/mcp|\\.well-known|oauth|_next/static|_next/image|.*\\.[a-zA-Z0-9]+$).*)',
+    // (api/mcp, .well-known, oauth), and the Mac watcher's routes
+    // (api/watcher, signed in with a personal access token), none of which
+    // can follow a redirect to a sign-in form; they decide access themselves.
+    // Anything with a file extension is an asset; a page route never has a
+    // dot in its last segment.
+    '/((?!auth|api/auth|api/mcp|api/watcher|\\.well-known|oauth|_next/static|_next/image|.*\\.[a-zA-Z0-9]+$).*)',
   ],
 };

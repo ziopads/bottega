@@ -14,6 +14,7 @@ import { getAllowance } from '@/lib/documents';
 import { listUnconvertedImages } from '@/lib/gear';
 import { getStructureEditor } from '@/lib/structure';
 import { getTemplateEditor } from '@/lib/templates';
+import { listTokens } from '@/lib/tokens';
 import { getUsage } from '@/lib/usage';
 
 import ChangePasswordForm from './ChangePasswordForm';
@@ -24,6 +25,7 @@ import PreferencesTab from './PreferencesTab';
 import ProfileTab from './ProfileTab';
 import SharingTab from './SharingTab';
 import UsageTab from './UsageTab';
+import WatcherTokens from './WatcherTokens';
 import When from './When';
 
 export const metadata = { title: 'Account · Bottega' };
@@ -74,7 +76,7 @@ export default async function AccountPage({ searchParams }: Props) {
     const [outgoing, incoming] = await Promise.all([listOutgoingShares(db), listIncomingShares(db)]);
     body = <SharingTab initialOutgoing={outgoing} incoming={incoming} />;
   } else if (tab === 'security') {
-    const [activity, connections] = await Promise.all([listActivity(db), listConnections(db)]);
+    const [activity, connections, tokens] = await Promise.all([listActivity(db), listConnections(db), listTokens(db)]);
     body = (
       <DetailGrid
         main={
@@ -104,6 +106,9 @@ export default async function AccountPage({ searchParams }: Props) {
             </Section>
             <Section label="Connected apps">
               <ConnectedApps initial={connections} />
+            </Section>
+            <Section label="Mac watcher">
+              <WatcherTokens initial={tokens} />
             </Section>
           </>
         }

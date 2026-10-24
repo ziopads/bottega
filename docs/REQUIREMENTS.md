@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.27
+**Version:** 0.28
 **Date:** 2026-10-23
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -9,6 +9,12 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.28** (2026-10-23) — The Mac watcher (A-9) built: a program started at
+  login that sends each set Live saves, and the folder's file list, as the
+  person, holding what it cannot send until Bottega answers; folders it cannot
+  match are listed, never guessed. Personal access tokens to sign it in
+  (AC-15). Migration 026; `docs/watcher.md`.
 
 - **0.27** (2026-10-23) — Track structure per account (W-25 to W-29): the
   zones a set's tracks are sorted into, matched by track-name prefixes, the
@@ -275,6 +281,12 @@ group (L-18), a separate thing.
   minutes, or 5 sign-ups from one address within an hour, further attempts
   wait. Only hashes of emails and addresses are kept, for a day. Built 12
   October 2026 (migration 021).
+- **AC-15** Personal access tokens: a person makes tokens under Account ›
+  Security for programs of their own (today the Mac watcher), names them, sees
+  when each was last used, and revokes them. The secret is shown once; only
+  its hash is kept. A token can send sets and file lists, nothing else; at most
+  ten live at once; making and revoking go to the access log; a disabled
+  account's tokens stop at once. Built 23 October 2026 (migration 026).
 - **AC-13** A person manages their own account from the account page: the
   display name others see (the change is logged), their artists (add,
   rename, delete one nothing is credited to), every share they have granted
@@ -710,10 +722,14 @@ travel to the database.
   snapshots (tracks, devices, clips, coverage per element, length) as a log
   of work sessions. Plugin use and sample references are also kept in tables
   of their own, for questions across projects.
-- **A-9 (planned)** Automatic updates: a small program on the Mac watches the
-  sessions folder and sends each newly saved set, using the same parser and
-  a token of the person's own, so Bottega follows the work in Live without an
-  extra step.
+- **A-9** Automatic updates (built 23 October 2026, `docs/watcher.md`): a
+  program on the Mac, started at login, watches the sessions folder and sends
+  each newly saved set and the folder's file list, read with the same parser,
+  as the person, signed in with a personal access token (AC-15). What it
+  cannot send waits on the Mac and goes when Bottega answers. It finds a
+  folder's project by the folder name last dropped on it, else by the date its
+  name starts with; a folder with no project, or more than one, is listed in
+  its status and under Account › Security, never guessed or created.
 
 ## 10. Study (L)
 

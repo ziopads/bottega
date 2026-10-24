@@ -250,6 +250,10 @@ function describe(r: Row, subjectName: string, itemLabel: string | null): string
       return 'Connector access granted';
     case 'token_revoked':
       return 'Connector access revoked';
+    case 'personal_token_created':
+      return `Token “${String(after.name ?? '')}” made for the Mac watcher`;
+    case 'personal_token_revoked':
+      return `Token “${String(before.name ?? '')}” revoked`;
     case 'share_granted':
       return `Shared ${item} with ${subjectName} (${String(after.level ?? '')})`;
     case 'share_changed':

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 
 import { apiAccount, projectRefusal } from '@/lib/access';
-import { getSessionState, listSnapshotMeta, looksLikeSet, saveSnapshot } from '@/lib/als/store';
+import { readSetInput } from '@/lib/als/input';
+import { getSessionState, listSnapshotMeta, saveSnapshot } from '@/lib/als/store';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,14 +50,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   } catch {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
-  const fileName = typeof body.fileName === 'string' ? body.fileName.trim().slice(0, 255) : '';
-  const savedAt = typeof body.savedAt === 'string' && !Number.isNaN(Date.parse(body.savedAt)) ? body.savedAt : '';
-  const sha256 = typeof body.sha256 === 'string' && /^[0-9a-f]{64}$/.test(body.sha256) ? body.sha256 : '';
-  const bytes = Number(body.bytes);
-  if (!fileName.endsWith('.als') || !savedAt || !sha256 || !(bytes > 0)) {
-    return NextResponse.json({ error: 'A set needs its file name, save time, fingerprint and size.' }, { status: 400 });
-  }
-  if (!looksLikeSet(body.set)) return NextResponse.json({ error: 'That is not a set this parser wrote.' }, { status: 400 });
-  const result = await saveSnapshot(account.db, id, { fileName, savedAt, sha256, bytes, set: body.set });
+  const input = readSetInput(body);
+  if ('error' in input) return NextResponse.json({ error: input.error }, { status: 400 });
+  const result = await saveSnapshot(account.db, id, input);
   return NextResponse.json({ result });
 }
