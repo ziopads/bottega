@@ -59,6 +59,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
         boardPlaces={boardPlaces}
         finishedIds={finishedIds}
         initialFinishedOnly={show === 'finished'}
+        initialColumns={preferences.projectColumns}
       />
 
       {shared.length > 0 && (

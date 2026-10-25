@@ -9,8 +9,8 @@ import {
   IBM_Plex_Mono,
   IBM_Plex_Sans,
   Instrument_Sans,
+  Space_Grotesk,
   Space_Mono,
-  Work_Sans,
 } from 'next/font/google';
 import './globals.css';
 import MainNav from '@/app/_ui/MainNav';
@@ -27,14 +27,14 @@ const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin']
 // a face only when the theme in use asks for it. next/font needs each call's
 // options written out in full (no shared object).
 const geist = Geist({ subsets: ['latin'], preload: false, variable: '--font-geist' });
-const work = Work_Sans({ subsets: ['latin'], preload: false, variable: '--font-work' });
+const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], preload: false, variable: '--font-space-grotesk' });
 const spaceMono = Space_Mono({ subsets: ['latin'], preload: false, weight: ['400', '700'], variable: '--font-space-mono' });
 const anton = Anton({ subsets: ['latin'], preload: false, weight: '400', variable: '--font-anton' });
 const bodoni = Bodoni_Moda({ subsets: ['latin'], preload: false, style: ['normal', 'italic'], variable: '--font-bodoni' });
 const plex = IBM_Plex_Sans({ subsets: ['latin'], preload: false, variable: '--font-plex' });
 const plexMono = IBM_Plex_Mono({ subsets: ['latin'], preload: false, weight: ['400', '500'], variable: '--font-plex-mono' });
 const shoulders = Big_Shoulders({ subsets: ['latin'], preload: false, variable: '--font-shoulders' });
-const FONTS = [instrument, geistMono, geist, work, spaceMono, anton, bodoni, plex, plexMono, shoulders].map((f) => f.variable).join(' ');
+const FONTS = [instrument, geistMono, geist, spaceGrotesk, spaceMono, anton, bodoni, plex, plexMono, shoulders].map((f) => f.variable).join(' ');
 
 export const metadata: Metadata = {
   title: 'Bottega',

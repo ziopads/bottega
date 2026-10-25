@@ -2,6 +2,7 @@ import type { Scoped } from '@/lib/db';
 import { accountNames, nameOf } from '@/lib/names';
 import type { ShareLevel } from '@/lib/studioTypes';
 import type { Mode, Theme } from '@/lib/theme';
+import { isProjectColumn, type ProjectColumn } from '@/lib/projectColumns';
 
 // The account page's reads and writes (REQUIREMENTS AC-12, AC-13): the
 // signed-in person's name, artists, preferences, shares in both directions,
@@ -118,12 +119,18 @@ export async function deleteArtist(db: Scoped, id: number): Promise<DeleteArtist
 
 export interface Preferences {
   defaultArtistId: number | null;
+  /** The Projects list's columns (db/033); null for the default. */
+  projectColumns: ProjectColumn[] | null;
 }
 
 export async function getPreferences(db: Scoped): Promise<Preferences> {
-  const rows = await db.q('select default_artist_id from account_preferences where user_id = app_user()');
+  const rows = await db.q('select default_artist_id, project_columns from account_preferences where user_id = app_user()');
   const v = rows[0]?.default_artist_id;
-  return { defaultArtistId: v === null || v === undefined ? null : num(v) };
+  const cols = rows[0]?.project_columns;
+  return {
+    defaultArtistId: v === null || v === undefined ? null : num(v),
+    projectColumns: Array.isArray(cols) ? cols.filter(isProjectColumn) : null,
+  };
 }
 
 export type PreferencesResult = { ok: true; preferences: Preferences } | { ok: false; reason: 'not-yours' };
@@ -140,6 +147,15 @@ export async function setDefaultArtist(db: Scoped, artistId: number | null): Pro
     throw err;
   }
   return { ok: true, preferences: await getPreferences(db) };
+}
+
+/** The Projects list's columns (db/033); null goes back to the default. */
+export async function setProjectColumns(db: Scoped, cols: ProjectColumn[] | null): Promise<void> {
+  await db.q(
+    `insert into account_preferences (project_columns) values ($1)
+     on conflict (user_id) do update set project_columns = excluded.project_columns`,
+    [cols],
+  );
 }
 
 /** The site's look (db/030): the theme and light, dark or as the computer. */

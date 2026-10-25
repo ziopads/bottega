@@ -9,6 +9,8 @@ import NewProject from './NewProject';
 import { BUTTON } from '@/app/_ui/styles';
 import { get as deckState, itemOfProject, setRater, toggle as deckToggle, useDeck, type PlayItem } from '@/app/_ui/audio/deck';
 import BoardPlaceSelect from '@/app/_board/BoardPlaceSelect';
+import { columnLabel, DEFAULT_COLUMNS, RESPONSIVE, type ProjectColumn } from '@/lib/projectColumns';
+import ColumnsMenu from './ColumnsMenu';
 import type { BoardPlace } from '@/lib/boardTypes';
 
 // The sessions list: a sortable table with inline editing, multi-select with
@@ -81,6 +83,8 @@ function sortProjects(list: StudioProject[], { key, dir }: Sort): StudioProject[
   });
 }
 
+const NO_IDS: number[] = [];
+
 export default function StudioProjects({
   initialProjects,
   artists,
@@ -88,8 +92,9 @@ export default function StudioProjects({
   initialReleases,
   defaultArtistId,
   boardPlaces,
-  finishedIds = [],
+  finishedIds = NO_IDS,
   initialFinishedOnly = false,
+  initialColumns = null,
 }: {
   initialProjects: StudioProject[];
   artists: StudioArtist[];
@@ -101,6 +106,8 @@ export default function StudioProjects({
   /** Projects whose workflow is finished, for the filter the board links to (?show=finished). */
   finishedIds?: number[];
   initialFinishedOnly?: boolean;
+  /** The columns chosen and kept with the account (db/033); null for the default. */
+  initialColumns?: ProjectColumn[] | null;
 }) {
   const [projects, setProjects] = useState(initialProjects);
   const [places, setPlaces] = useState(boardPlaces);
@@ -117,6 +124,8 @@ export default function StudioProjects({
   const [releaseFilter, setReleaseFilter] = useState<'' | 'none' | number>('');
   const [audioOnly, setAudioOnly] = useState(false);
   const [finishedOnly, setFinishedOnly] = useState(initialFinishedOnly);
+  const [custom, setCustom] = useState<ProjectColumn[] | null>(initialColumns);
+  const columns = custom ?? DEFAULT_COLUMNS;
   const finishedSet = useMemo(() => new Set(finishedIds), [finishedIds]);
   const [sort, setSort] = useState<Sort>({ key: 'rating', dir: -1 });
 
@@ -150,7 +159,7 @@ export default function StudioProjects({
       }
       return true;
     });
-  }, [projects, query, artistFilter, ratingFilter, genreFilter, releaseFilter, audioOnly, sort, releaseTitle]);
+  }, [projects, query, artistFilter, ratingFilter, genreFilter, releaseFilter, audioOnly, finishedOnly, finishedSet, sort, releaseTitle]);
 
   function clickSort(key: SortKey) {
     setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: FIRST_DIR[key] }));
@@ -311,10 +320,11 @@ export default function StudioProjects({
     return () => window.removeEventListener('keydown', onKey);
   }, [queue]);
 
-  const th = 'px-2 py-2 text-left t-small font-normal uppercase tracking-wide text-muted';
+  // Every heading set alike: the label role, sortable or not (a button does not inherit capitals by itself).
+  const th = 'px-2 py-2 text-left align-bottom t-label font-normal';
   const SortHead = ({ k, children, className = '' }: { k: SortKey; children: React.ReactNode; className?: string }) => (
     <th className={`${th} ${className}`} aria-sort={sort.key === k ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
-      <button onClick={() => clickSort(k)} className={`hover:text-ink ${sort.key === k ? 'text-ink' : ''}`}>
+      <button onClick={() => clickSort(k)} className={`whitespace-nowrap [letter-spacing:inherit] [text-transform:inherit] hover:text-ink ${sort.key === k ? 'text-ink' : ''}`}>
         {children}
         <span className="ml-1 inline-block w-2">{sort.key === k ? (sort.dir === 1 ? '↑' : '↓') : ''}</span>
       </button>
@@ -386,6 +396,9 @@ export default function StudioProjects({
           <input type="checkbox" checked={audioOnly} onChange={(e) => setAudioOnly(e.target.checked)} />
           <span className="text-muted">With audio</span>
         </label>
+        <span className="ml-auto">
+          <ColumnsMenu value={custom} onSaved={setCustom} />
+        </span>
         {filtering && (
           <span className="flex items-baseline gap-2 t-small text-muted">
             showing {shown.length} of {projects.length}
@@ -433,7 +446,7 @@ export default function StudioProjects({
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-line bg-card">
-          <table className="w-full min-w-[900px] border-collapse t-body">
+          <table className="w-full min-w-[56rem] border-collapse t-body">
             <thead className="border-b border-line">
               <tr>
                 <th className={`${th} w-8`}>
@@ -445,18 +458,18 @@ export default function StudioProjects({
                   />
                 </th>
                 <th className={`${th} w-9`} />
-                <SortHead k="rating">Rating</SortHead>
-                <SortHead k="artist">Artist</SortHead>
-                <SortHead k="id">ID</SortHead>
-                <SortHead k="name">Working name</SortHead>
-                <SortHead k="genre">Genre</SortHead>
-                <SortHead k="bpm" className="text-right">BPM</SortHead>
-                <SortHead k="versions">Ver.</SortHead>
-                <SortHead k="length" className="text-right">Length</SortHead>
-                <th className={th}>Collections</th>
-                <SortHead k="date">Project</SortHead>
-                <SortHead k="upload">Uploaded</SortHead>
-                <th className={th}>Board</th>
+                {columns.map((k) => {
+                  const cls = [k === 'bpm' || k === 'length' ? 'text-right' : '', custom ? '' : (RESPONSIVE[k] ?? '')].filter(Boolean).join(' ');
+                  return k === 'collections' || k === 'board' ? (
+                    <th key={k} className={`${th} ${cls}`}>
+                      {columnLabel(k)}
+                    </th>
+                  ) : (
+                    <SortHead key={k} k={k} className={cls}>
+                      {columnLabel(k)}
+                    </SortHead>
+                  );
+                })}
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -478,6 +491,8 @@ export default function StudioProjects({
                   onRate={(n) => rate(p, n)}
                   onPatch={(f) => patch(p, f)}
                   boardPlace={places[p.id] ?? null}
+                  columns={columns}
+                  responsive={!custom}
                 />
               ))}
             </tbody>
@@ -689,6 +704,8 @@ function ProjectRow({
   onRate,
   onPatch,
   boardPlace,
+  columns,
+  responsive,
 }: {
   project: StudioProject;
   selected: boolean;
@@ -702,6 +719,9 @@ function ProjectRow({
   onRate: (rating: number) => void;
   onPatch: (fields: Record<string, unknown>) => Promise<boolean>;
   boardPlace: BoardPlace | null;
+  columns: ProjectColumn[];
+  /** The default columns drop the minor ones on narrow windows; a saved choice shows what was chosen. */
+  responsive: boolean;
 }) {
   const td = 'px-2 py-2 align-middle';
   const date = (iso: string) =>
@@ -732,55 +752,91 @@ function ProjectRow({
           </button>
         ) : null}
       </td>
-      <td className={td}>
-        <Stars rating={p.rating} onRate={onRate} />
-      </td>
-      <td className={`${td} t-small font-medium tracking-[0.04em] text-muted`} title={p.artist.name}>
-        {p.artist.code}
-      </td>
-      <td className={`${td} whitespace-nowrap`}>
-        <Link
-          href={`/projects/${p.id}`}
-          className="font-mono underline decoration-muted/50 underline-offset-4 hover:decoration-ink"
-          title="Open the project"
-        >
-          {p.canonicalId}
-        </Link>
-      </td>
-      <td className={`${td} min-w-[12rem] max-w-[22rem]`}>
-        <InlineEdit value={p.workingName} placeholder="untitled" label="Working name" onSave={(v) => onPatch({ workingName: v })} />
-      </td>
-      <td className={`${td} w-36 text-muted`}>
-        <GenreSelect
-          value={p.genre}
-          genres={genres}
-          onAddGenre={onAddGenre}
-          onChange={(g) => onPatch({ genre: g })}
-          className="w-full border-transparent bg-transparent hover:border-line"
-        />
-      </td>
-      <td className={`${td} w-16 text-right tabular-nums text-muted`}>
-        <InlineEdit
-          value={p.bpm === null ? '' : String(p.bpm)}
-          placeholder="—"
-          label="BPM"
-          inputMode="decimal"
-          align="right"
-          onSave={(v) => onPatch({ bpm: v })}
-        />
-      </td>
-      <td className={`${td} t-small tabular-nums text-muted`}>{p.latest ? p.latest.label : ''}</td>
-      <td className={`${td} text-right t-small tabular-nums text-muted`}>
-        {p.latest ? formatDuration(p.latest.durationS) : ''}
-      </td>
-      <td className={`${td} max-w-[10rem] truncate t-small text-muted`} title={releaseTitles.join(', ')}>
-        {releaseTitles.join(', ')}
-      </td>
-      <td className={`${td} whitespace-nowrap t-small text-muted`}>{date(p.createdAt)}</td>
-      <td className={`${td} whitespace-nowrap t-small text-muted`}>{p.latest ? date(p.latest.uploadedAt) : ''}</td>
-      <td className={`${td} whitespace-nowrap`}>
-        <BoardPlaceSelect projectId={p.id} initial={boardPlace} compact />
-      </td>
+      {columns.map((k) => {
+        const hide = responsive ? (RESPONSIVE[k] ?? '') : '';
+        switch (k) {
+          case 'rating':
+            return (
+              <td key={k} className={`${td} ${hide}`}>
+                <Stars rating={p.rating} onRate={onRate} />
+              </td>
+            );
+          case 'artist':
+            return (
+              <td key={k} className={`${td} t-small font-medium tracking-[0.04em] text-muted ${hide}`} title={p.artist.name}>
+                {p.artist.code}
+              </td>
+            );
+          case 'id':
+            return (
+              <td key={k} className={`${td} whitespace-nowrap ${hide}`}>
+                <Link href={`/projects/${p.id}`} className="font-mono underline decoration-muted/50 underline-offset-4 hover:decoration-ink" title="Open the project">
+                  {p.canonicalId}
+                </Link>
+              </td>
+            );
+          case 'name':
+            return (
+              <td key={k} className={`${td} min-w-[10rem] max-w-[22rem] ${hide}`}>
+                <InlineEdit value={p.workingName} placeholder="untitled" label="Working name" onSave={(v) => onPatch({ workingName: v })} />
+              </td>
+            );
+          case 'genre':
+            return (
+              <td key={k} className={`${td} w-36 min-w-[8rem] text-muted ${hide}`}>
+                <GenreSelect
+                  value={p.genre}
+                  genres={genres}
+                  onAddGenre={onAddGenre}
+                  onChange={(g) => onPatch({ genre: g })}
+                  className="w-full border-transparent bg-transparent hover:border-line"
+                />
+              </td>
+            );
+          case 'bpm':
+            return (
+              <td key={k} className={`${td} w-16 text-right tabular-nums text-muted ${hide}`}>
+                <InlineEdit value={p.bpm === null ? '' : String(p.bpm)} placeholder="—" label="BPM" inputMode="decimal" align="right" onSave={(v) => onPatch({ bpm: v })} />
+              </td>
+            );
+          case 'versions':
+            return (
+              <td key={k} className={`${td} t-small tabular-nums text-muted ${hide}`}>
+                {p.latest ? p.latest.label : ''}
+              </td>
+            );
+          case 'length':
+            return (
+              <td key={k} className={`${td} text-right t-small tabular-nums text-muted ${hide}`}>
+                {p.latest ? formatDuration(p.latest.durationS) : ''}
+              </td>
+            );
+          case 'collections':
+            return (
+              <td key={k} className={`${td} max-w-[10rem] truncate t-small text-muted ${hide}`} title={releaseTitles.join(', ')}>
+                {releaseTitles.join(', ')}
+              </td>
+            );
+          case 'date':
+            return (
+              <td key={k} className={`${td} whitespace-nowrap t-small text-muted ${hide}`}>
+                {date(p.createdAt)}
+              </td>
+            );
+          case 'upload':
+            return (
+              <td key={k} className={`${td} whitespace-nowrap t-small text-muted ${hide}`}>
+                {p.latest ? date(p.latest.uploadedAt) : ''}
+              </td>
+            );
+          case 'board':
+            return (
+              <td key={k} className={`${td} whitespace-nowrap ${hide}`}>
+                <BoardPlaceSelect projectId={p.id} initial={boardPlace} compact />
+              </td>
+            );
+        }
+      })}
     </tr>
   );
 }

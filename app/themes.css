@@ -267,7 +267,7 @@
 }
 
 /* Riso: underground print. Newsprint or near-black, pink and blue inks
-   (blue for what Live reports), Work Sans with Space Mono labels. */
+   (blue for what Live reports), Space Grotesk with Space Mono labels. */
 [data-theme='riso'] {
   --parchment: #f1ede2;
   --card: #f8f5ee;
@@ -286,7 +286,7 @@
   --fresh: var(--live);
   --cooling: var(--muted);
   --cold: var(--rust);
-  --font-body: var(--font-work), system-ui, sans-serif;
+  --font-body: var(--font-space-grotesk), system-ui, sans-serif;
   --font-display: var(--font-body);
   --font-mono-face: var(--font-space-mono), ui-monospace, monospace;
   --font-label: var(--font-mono-face);
@@ -318,7 +318,7 @@
   --fresh: var(--live);
   --cooling: var(--muted);
   --cold: var(--rust);
-  --font-body: var(--font-work), system-ui, sans-serif;
+  --font-body: var(--font-space-grotesk), system-ui, sans-serif;
   --font-display: var(--font-body);
   --font-mono-face: var(--font-space-mono), ui-monospace, monospace;
   --font-label: var(--font-mono-face);
@@ -351,7 +351,7 @@
     --fresh: var(--live);
     --cooling: var(--muted);
     --cold: var(--rust);
-    --font-body: var(--font-work), system-ui, sans-serif;
+    --font-body: var(--font-space-grotesk), system-ui, sans-serif;
     --font-display: var(--font-body);
     --font-mono-face: var(--font-space-mono), ui-monospace, monospace;
     --font-label: var(--font-mono-face);

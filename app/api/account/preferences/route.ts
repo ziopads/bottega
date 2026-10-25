@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
-import { setDefaultArtist, setLook } from '@/lib/account';
+import { setDefaultArtist, setLook, setProjectColumns } from '@/lib/account';
+import { isProjectColumn } from '@/lib/projectColumns';
 import { apiAccount } from '@/lib/access';
 import { isMode, isTheme } from '@/lib/theme';
 
@@ -10,6 +11,7 @@ export const dynamic = 'force-dynamic';
 
 // PUT /api/account/preferences   { defaultArtistId: number | null }
 //                                 or { theme?, mode? }   (db/030)
+//                                 or { projectColumns: string[] | null }   (db/033)
 export async function PUT(req: Request) {
   const account = await apiAccount();
   if (account instanceof NextResponse) return account;
@@ -19,6 +21,14 @@ export async function PUT(req: Request) {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
+  }
+  if ('projectColumns' in body) {
+    const raw = body.projectColumns;
+    if (raw !== null && !(Array.isArray(raw) && raw.length > 0 && raw.length <= 20 && raw.every(isProjectColumn) && new Set(raw).size === raw.length)) {
+      return NextResponse.json({ error: 'Choose columns from the list' }, { status: 400 });
+    }
+    await setProjectColumns(account.db, raw);
+    return NextResponse.json({ ok: true });
   }
   if ('theme' in body || 'mode' in body) {
     if (body.theme !== undefined && !isTheme(body.theme)) return NextResponse.json({ error: 'Unknown theme' }, { status: 400 });
