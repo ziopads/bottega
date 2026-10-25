@@ -12,6 +12,15 @@ export type BoardProject = {
   /** "VIG 2025 0727". */
   code: string;
   bpm: number | null;
+  /** The newest saved set's key, such as "F Minor"; null when no set says. */
+  key: string | null;
+  genre: string;
+  /** 0 = unrated, 1–5 stars. */
+  rating: number;
+  /** When the project was made. */
+  startedAt: string;
+  /** The current mix, for the board's player. */
+  latest: { trackId: number; label: string; variant: string; durationS: number | null; count: number } | null;
   /** The owner's name when the project is someone else's; null for one's own. */
   ownerName: string | null;
   /** Whether the person may change its to-dos (contribute access or more). */

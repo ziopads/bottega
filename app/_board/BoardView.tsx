@@ -170,8 +170,10 @@ export default function BoardView({ initial, method = [] }: { initial: Board; me
               >
                 <button type="button" onClick={() => setSelectedId(p.id)} aria-pressed={on} className="block w-full space-y-1.5 p-3 text-left">
                   <span className="flex items-baseline justify-between gap-2">
-                    <span className="t-lead min-w-0 truncate font-medium">{p.title}</span>
-                    <span className="t-num shrink-0 t-small text-muted">{p.code}</span>
+                    <span className="t-lead min-w-0 truncate font-medium" style={{ fontFamily: 'var(--font-display)', textTransform: 'var(--title-case)' as React.CSSProperties['textTransform'], letterSpacing: 'var(--title-spacing)' }}>
+                      {p.title}
+                    </span>
+                    <span className="t-num shrink-0 t-small text-muted">{[p.bpm ? `${p.bpm}` : null, p.key].filter(Boolean).join(' · ') || p.code}</span>
                   </span>
                   <Meter p={p} size="small" />
                   <span className="block truncate t-small text-muted">
@@ -200,9 +202,9 @@ export default function BoardView({ initial, method = [] }: { initial: Board; me
           )}
         </section>
 
-        <div className="panel min-w-0 flex-[999_1_480px]">
+        <div className="min-w-0 flex-[999_1_480px]">
           {selected ? (
-            <BoardDetail key={selected.id} project={selected} busy={busy} onBack={() => moveTo(selected.id, 'backlog')} onChanged={reload} />
+            <BoardDetail key={selected.id} project={selected} coldDays={board.coldDays} busy={busy} onBack={() => moveTo(selected.id, 'backlog')} onChanged={reload} />
           ) : (
             <p className="t-body text-muted">Projects in rotation show here, one at a time: choose one on the left.</p>
           )}

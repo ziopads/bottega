@@ -1,6 +1,7 @@
 import type { Scoped } from '@/lib/db';
 import { listProjects } from '@/lib/studio';
 import type { Board, BoardPlace, BoardProject, BoardStage } from '@/lib/boardTypes';
+import { keyLabel, type AlsSet } from '@/lib/als/types';
 
 // Each person's board (REQUIREMENTS W-21 to W-23, db/024): the projects they
 // put in their backlog or rotation, with where each stands. Every statement
@@ -43,7 +44,7 @@ export async function getBoard(db: Scoped, userId: string): Promise<Board> {
   // Last worked on, for the board's projects and for sorting the ones to add.
   const allIds = projects.map((p) => p.id);
 
-  const [stageRows, tallyRows, cardRows, touchRows] = allIds.length
+  const [stageRows, tallyRows, cardRows, touchRows, keyRows] = allIds.length
     ? await db.tx([
         { text: 'select project_id, key, label, position from project_stages where project_id = any($1) order by project_id, position', params: [ids] },
         {
@@ -68,8 +69,14 @@ export async function getBoard(db: Scoped, userId: string): Promise<Board> {
                    from unnest($1::bigint[]) as p(id)`,
           params: [allIds],
         },
+        {
+          // The key of each board project's newest saved set (Live 12's Scale Mode).
+          text: `select distinct on (project_id) project_id, data->'key' as key from als_snapshots
+                  where project_id = any($1) order by project_id, saved_at desc, id desc`,
+          params: [ids],
+        },
       ])
-    : [[], [], [], []];
+    : [[], [], [], [], []];
 
   const tally = new Map(tallyRows.map((r) => [`${r.project_id}:${r.stage}`, { met: num(r.met), total: num(r.total) }]));
   const stagesOf = new Map<number, BoardStage[]>();
@@ -80,6 +87,7 @@ export async function getBoard(db: Scoped, userId: string): Promise<Board> {
   }
   const open = new Map(cardRows.map((r) => [num(r.project_id), num(r.n)]));
   const touched = new Map(touchRows.map((r) => [num(r.id), isoOrNull(r.touched)]));
+  const keyOf = new Map(keyRows.map((r) => [num(r.project_id), keyLabel((r.key ?? null) as AlsSet['key'])]));
 
   const label = (id: number) => {
     const p = byId.get(id)!;
@@ -97,6 +105,11 @@ export async function getBoard(db: Scoped, userId: string): Promise<Board> {
       id,
       ...label(id),
       bpm: p.bpm,
+      key: keyOf.get(id) ?? null,
+      genre: p.genre,
+      rating: p.rating,
+      startedAt: String(p.createdAt),
+      latest: p.latest ?? null,
       canContribute: p.level === 'owner' || p.level === 'edit' || p.level === 'contribute',
       place: String(r.place) as BoardPlace,
       finishedAt: isoOrNull(r.finished_at),
