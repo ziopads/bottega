@@ -3,7 +3,7 @@
 **Date:** 2026-10-13
 **Read first, then `REQUIREMENTS.md` (0.22) and `ARCHITECTURE.md` (0.13).**
 
-Bottega is James's studio platform for Sirsinate Sound Labs: a service with
+Bottega is Person A's studio platform for Sirsinate Sound Labs: a service with
 separate accounts holding sessions, gear, manuals and the work in progress,
 reachable from Claude through a connector so Claude can act as a production
 collaborator and teacher. This file replaces the 12 October handoff and was
@@ -61,20 +61,20 @@ Confirmed working on production: sign-in and accounts, gear, document upload
 and processing, the session page and its tabs, the workflow, the connector
 from Claude Desktop (sessions, proposals, corpus search with cited answers),
 the State tab's folder drop, variant chips, the MPC Bible (document 15)
-processed and in James's private documents, and (13 October) reading printed
+processed and in Person A's private documents, and (13 October) reading printed
 page numbers and contents from a manual's PDF. The R2 files bucket's CORS
 rule for range requests is in place (13 October).
 
 Not yet seen in a browser: the Library tabs, videos, the reading list, the search page,
 sign-in under the attempt limit, and most of Learning.
 
-## 2. How James works, and how to work with him
+## 2. How Person A works, and how to work with him
 
 - Read the code before proposing a change. For anything beyond a small fix:
   understand first, list three or more approaches with their tradeoffs, and
   get his approval before building. Once he says "go", build the whole agreed
   slice.
-- **James runs every install, migration, commit and push himself.** Give each
+- **Person A runs every install, migration, commit and push himself.** Give each
   command in a code block he can copy. Git commands name every file
   explicitly (never `git add -A`) and quote paths with brackets:
   `'app/api/cards/[id]/route.ts'`. Migrations go before the push when the new
@@ -116,7 +116,7 @@ sign-in under the attempt limit, and most of Learning.
   checks run in the VM.
 - The Khione Ableton project folder: `/Volumes/VIGORISH/AUDIO   ABL VIGORISH
   SESSIONS/2025 0727 new studio config euf dp4 Project` (three spaces after
-  AUDIO; James adds such folders with Add folder).
+  AUDIO; Person A adds such folders with Add folder).
 
 Environment variables (names only): `DATABASE_URL`, `DATABASE_URL_UNPOOLED`
 (pipeline), `NEON_AUTH_BASE_URL`, `NEON_AUTH_COOKIE_SECRET`, `R2_ACCOUNT_ID`,
@@ -353,7 +353,7 @@ load stops the sound: variant rename (`reloadWith`) and removing a video
 (`Resources.tsx`) still use `window.location.assign`.
 
 **Controls** (13 October). Every action is drawn as a button
-with an outline or a fill, all at one size (11px text, tight padding; James
+with an outline or a fill, all at one size (11px text, tight padding; Person A
 chose the look of the small Remove button for all of them): `BUTTON`
 (outline at 30% ink, darker on hover), `BUTTON_PRIMARY` (filled: the action a
 form is for, Accept, Confirm delete) and `BUTTON_DANGER` (Delete, Remove,
@@ -400,7 +400,7 @@ gear model links it at once (`c819354`).
   with no reason for it gets missed (the old Link button beside the model
   picker).
 
-## 6. Decisions waiting on James
+## 6. Decisions waiting on Person A
 
 1. **Learning, later** (first slice 12 October; sessions, notes, reading
    list, videos and a first Progress tab since). Candidates: asking to join
@@ -412,7 +412,7 @@ gear model links it at once (`c819354`).
 
 ## 7. Next, in order
 
-0. **Commit Projects and sets, and BPM from sets** (James), after looking
+0. **Commit Projects and sets, and BPM from sets** (Person A), after looking
    on localhost (the projects list and a project's State tab; drop a folder
    and watch the BPM), then the migration before the push:
 
@@ -433,16 +433,16 @@ gear model links it at once (`c819354`).
    14 October (uncommitted; see §4, the reader), not yet seen in a browser.
    Agreed 13 October: one page drawn on a canvas in the existing pane, our own row
    of controls (zoom out, zoom in, fit width), no text layer in this slice;
-   the new tab keeps the browser's viewer for printing and search. James's
+   the new tab keeps the browser's viewer for printing and search. Person A's
    13 October screenshot shows the current pane in Firefox's viewer, which
    ignores `toolbar=0` and opens at 100%, wider than the column. Before
-   building: James pastes the R2 files bucket's CORS rule, to confirm it
+   building: Person A pastes the R2 files bucket's CORS rule, to confirm it
    exposes `Accept-Ranges`, `Content-Range` and `Content-Length` (without
    them PDF.js quietly downloads the whole file). Checked 14 October with
    `scripts/r2-link-test.mjs` (not committed): every link answers a range
    with 206 and the rule exposes all three headers. The same test found
    `.env.local` holding a stale `R2_SECRET_ACCESS_KEY` (every local R2 call
-   failed with SignatureDoesNotMatch); James replaced it.
+   failed with SignatureDoesNotMatch); Person A replaced it.
 2. **State tab, your read** (S-15): a four-step scale per zone and part
    (empty, sketched, working, baked), each change dated.
 3. **Connector analysis tool**: the latest snapshot, changes since the
@@ -468,7 +468,7 @@ gear model links it at once (`c819354`).
    - Khione's v1 and v2 are reversed; renumbering mix versions. Delete the
      test mix v3 (monhegan-windrose-vox-smpl.mp3) on Khione.
    - Linking a remix to its original; a "made for" field (DJ tool or
-     listening); accounts for Gordon and Chris (needed before a study group
+     listening); accounts for Person C and Person B (needed before a study group
      is shared).
    - `StudioProjects.tsx` lint errors (components made during render, unused
      expressions), there since before 12 October.

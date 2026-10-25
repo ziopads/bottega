@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { api } from '@/app/_studio/controls';
 import { Section } from '@/app/_ui/layout';
 import { SEGMENT, SEGMENTS } from '@/app/_ui/styles';
-import { SLOTS } from '@/lib/elementColors';
+import { LIVE_COLORS, SUGGESTED } from '@/lib/liveColors';
 import { MODES, THEMES, type Mode, type Theme } from '@/lib/theme';
 
 // Account › Preferences › Look (REQUIREMENTS O-9, db/030): the theme and
@@ -81,8 +81,8 @@ export default function ThemePicker({ initial }: { initial: Look }) {
               </span>
               <span className="mt-3 flex items-center justify-between gap-2">
                 <span className="flex gap-1" aria-hidden>
-                  {SLOTS.map((s, i) => (
-                    <span key={s.hex} className="h-2 w-2 rounded-full" style={{ background: `var(--el-${i + 1})` }} />
+                  {SUGGESTED.map((i) => (
+                    <span key={i} className="h-2 w-2 rounded-full" style={{ background: LIVE_COLORS[i].hex }} />
                   ))}
                 </span>
                 <span className="rounded-[var(--radius)] bg-accent px-2 py-0.5 text-[11px] leading-[14px] text-on-accent">{on ? 'In use' : 'Use'}</span>

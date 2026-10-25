@@ -10,7 +10,7 @@
 
 select set_config('app.actor', 'bootstrap', false);
 insert into accounts (user_id, email, display_name, status, is_platform_admin) values
-  ('J', 'j@x', 'James', 'active', true), ('C', 'c@x', 'Chris', 'active', false), ('G', 'g@x', 'Gordon', 'active', false)
+  ('J', 'j@x', 'Person A', 'active', true), ('C', 'c@x', 'Person B', 'active', false), ('G', 'g@x', 'Person C', 'active', false)
 on conflict (user_id) do nothing;
 select set_config('app.actor', '', false);
 
@@ -41,7 +41,7 @@ end $$;
 create or replace function tst.unit() returns bigint language sql security definer as $$ select id from gear where name = 'Juno-60' $$;
 grant execute on all functions in schema tst to bottega_app;
 
--- James's unit, shared with Chris at contribute; Gordon has no share.
+-- Person A's unit, shared with Person B at contribute; Person C has no share.
 set role bottega_app;
 select set_config('app.user_id', 'J', false);
 insert into gear (name, manufacturer) values ('Juno-60', 'Roland');
@@ -56,7 +56,7 @@ select set_config('app.user_id', 'C', false);
 select tst.expect((select array_agg(filename order by filename) from gear_files) = array['front.jpg'],
   'a grantee sees public files only, and a private photo is hidden like a receipt');
 insert into gear_files (gear_id, role, r2_key, filename, content_type, public)
-  values (tst.unit(), 'photo', 'k/chris', 'chris.jpg', 'image/jpeg', true);
+  values (tst.unit(), 'photo', 'k/pb', 'pb.jpg', 'image/jpeg', true);
 select tst.refused($$insert into gear_files (gear_id, role, r2_key, filename, content_type, public)
                      values (tst.unit(), 'photo', 'k/hidden', 'hidden.jpg', 'image/jpeg', false)$$,
   'a contributor adding a private photo');

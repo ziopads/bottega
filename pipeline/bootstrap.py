@@ -11,7 +11,7 @@ WHY THIS EXISTS
     Migration 002 gives every project an owner column, but the projects copied
     from Vivarium have none, and the first platform administrator cannot be
     approved through a page that needs an administrator. This script does both
-    from James's machine, as the owner role, which row-level security does not
+    from Person A's machine, as the owner role, which row-level security does not
     restrict.
 
 --admin EMAIL

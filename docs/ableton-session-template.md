@@ -1,4 +1,4 @@
-# Ableton Live Session Template — Sirsinate Sound Labs (vigorish)
+# Ableton Live Session Template — Sirsinate Sound Labs
 
 Status: designed in conversation, not yet saved as a Live set (`User Library/Templates` is empty as of 2026-10-11). This file records the decisions that were settled. Anything listed under "Not yet specified" was never decided and should be worked out before building the set.
 

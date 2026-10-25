@@ -5,6 +5,10 @@ import {
   addStage,
   addTemplateCriterion,
   addTemplateLearning,
+  addTemplatePrinciple,
+  moveTemplatePrinciple,
+  removeTemplatePrinciple,
+  updateTemplatePrinciple,
   chooseTemplate,
   copyTemplate,
   deleteTemplate,
@@ -22,7 +26,7 @@ import {
   updateTemplateCriterion,
   updateTemplateLearning,
 } from '@/lib/templates';
-import { HINT_MAX, LEARNING_MAX, STAGE_LABEL_MAX, STANDARD_MAX, TEMPLATE_NAME_MAX } from '@/lib/templateTypes';
+import { HINT_MAX, LEARNING_MAX, PRINCIPLE_BODY_MAX, PRINCIPLE_TITLE_MAX, STAGE_LABEL_MAX, STANDARD_MAX, TEMPLATE_NAME_MAX } from '@/lib/templateTypes';
 import { parseCriterion, text } from '@/lib/workflowInput';
 import { bad, readBody } from '@/lib/workflowRoutes';
 
@@ -53,6 +57,7 @@ const intIn = (raw: unknown, lo: number, hi: number): number | null =>
 //   add-criterion { stageId, body } · criterion { criterionId, body?, hint?, checkKey? }
 //   move-criterion { criterionId, dir } · remove-criterion { criterionId }
 //   add-learning { stageId, body } · learning { learningId, body?, accept? } · remove-learning { learningId }
+//   add-principle { templateId, title, body } · principle { principleId, title?, body? } · move-principle { principleId, dir } · remove-principle { principleId }
 // Every body may carry editId: the template the editor shows (db/028), else the chosen one.
 export async function POST(req: Request) {
   const account = await apiAccount();
@@ -183,6 +188,39 @@ export async function POST(req: Request) {
         const body = b.body === undefined ? undefined : text(b.body, 'The learning', LEARNING_MAX);
         if (body && 'error' in body) return bad(body.error);
         await updateTemplateLearning(db, id, { body: body?.value, reviewed: b.accept === true ? true : undefined });
+        break;
+      }
+      case 'add-principle': {
+        const id = idOf(b.templateId);
+        const title = text(b.title, 'The principle', PRINCIPLE_TITLE_MAX);
+        const body = text(b.body, 'The explanation', PRINCIPLE_BODY_MAX, false);
+        if (!id) return bad('Name a template');
+        if ('error' in title) return bad(title.error);
+        if ('error' in body) return bad(body.error);
+        await addTemplatePrinciple(db, id, title.value, body.value);
+        break;
+      }
+      case 'principle': {
+        const id = idOf(b.principleId);
+        if (!id) return bad('Name a principle');
+        const title = b.title === undefined ? undefined : text(b.title, 'The principle', PRINCIPLE_TITLE_MAX);
+        const body = b.body === undefined ? undefined : text(b.body, 'The explanation', PRINCIPLE_BODY_MAX, false);
+        if (title && 'error' in title) return bad(title.error);
+        if (body && 'error' in body) return bad(body.error);
+        await updateTemplatePrinciple(db, id, { title: title?.value, body: body?.value });
+        break;
+      }
+      case 'move-principle': {
+        const id = idOf(b.principleId);
+        const dir = dirOf(b.dir);
+        if (!id || !dir) return bad('Name a principle and a direction');
+        await moveTemplatePrinciple(db, id, dir);
+        break;
+      }
+      case 'remove-principle': {
+        const id = idOf(b.principleId);
+        if (!id) return bad('Name a principle');
+        await removeTemplatePrinciple(db, id);
         break;
       }
       case 'remove-learning': {

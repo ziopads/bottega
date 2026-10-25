@@ -53,6 +53,8 @@ export type TemplateEditor = {
   /** Every music template one can read: the default, one's own, and those shared through artists. */
   templates: TemplateSummary[];
   stages: EditorStage[];
+  /** The template's method: principles for the whole workflow (db/032). */
+  principles: Principle[];
   checks: CheckOption[];
   rotationLimit: number;
   coldDays: number;
@@ -63,3 +65,8 @@ export const STAGE_LABEL_MAX = 40;
 export const STANDARD_MAX = 200;
 export const HINT_MAX = 2000;
 export const LEARNING_MAX = 2000;
+
+/** One principle of a template's method (db/032): a bold line and its explanation. */
+export type Principle = { id: number; title: string; body: string };
+export const PRINCIPLE_TITLE_MAX = 200;
+export const PRINCIPLE_BODY_MAX = 1000;

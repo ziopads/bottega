@@ -35,7 +35,7 @@ import { gunzipSync } from 'node:zlib';
 import { parseSet } from '../lib/als/parse';
 import { PARSER_VERSION } from '../lib/als/types';
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const LABEL = 'com.sirsinate.bottega-watcher';
 const KEYCHAIN_SERVICE = 'Bottega Watcher';
 // BOTTEGA_WATCHER_HOME and BOTTEGA_WATCHER_TOKEN stand in for the folder and

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { api } from '@/app/_studio/controls';
 import { BUTTON, FIELD, SEGMENT, SEGMENTS } from '@/app/_ui/styles';
 import { daysSince, progressOf, type Board, type BoardCandidate, type BoardPlace, type BoardProject } from '@/lib/boardTypes';
+import Method, { type MethodPrinciple } from '@/app/_ui/Method';
 
 // The board (REQUIREMENTS W-21 to W-23), layout B of 23 October, cleaned up
 // on 25 October: the work in hand only.
@@ -29,7 +30,7 @@ const SORTS: { key: Sort; label: string }[] = [
   { key: 'title', label: 'A–Z' },
 ];
 
-export default function BoardView({ initial }: { initial: Board }) {
+export default function BoardView({ initial, method = [] }: { initial: Board; method?: MethodPrinciple[] }) {
   const [board, setBoard] = useState(initial);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -243,6 +244,7 @@ export default function BoardView({ initial }: { initial: Board }) {
           Your board is empty. A project lands in your backlog when its workflow starts; add any project you can see with + Add a project in the backlog. <Link href="/projects" className="underline decoration-ink/30 underline-offset-2 hover:decoration-ink">All projects</Link>
         </p>
       )}
+      <Method principles={method} editHref="/account?tab=preferences#template" />
     </div>
   );
 }

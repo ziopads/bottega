@@ -11,8 +11,8 @@
 
 select set_config('app.actor', 'bootstrap', false);
 insert into accounts (user_id, email, display_name, status, is_platform_admin) values
-  ('J', 'j@x', 'James', 'active', true), ('E', 'e@x', 'Eddie', 'active', false),
-  ('C', 'c@x', 'Chris', 'active', false), ('G', 'g@x', 'Gordon', 'active', false),
+  ('J', 'j@x', 'Person A', 'active', true), ('E', 'e@x', 'Person D', 'active', false),
+  ('C', 'c@x', 'Person B', 'active', false), ('G', 'g@x', 'Person C', 'active', false),
   ('O', 'o@x', 'Other', 'active', false)
 on conflict (user_id) do nothing;
 insert into projects (kind, title, created_by, owner_id) values
@@ -64,7 +64,7 @@ select tst.expect((select count(*) = 8 from structure_elements where template_id
                   'every account reads the default: eight top-level elements');
 select tst.expect((select string_agg(name, ',' order by position) from structure_elements where template_id = tst.def() and is_zone)
                   = 'TACTUS,BASS,BACKGROUND,LEADS,TEXTURE,VOX', 'six of them zones, in the Live template''s order');
-select tst.expect((select prefixes = '{TAC}' and color in ('#b5543c', '#e34948') from structure_elements where template_id = tst.def() and name = 'TACTUS'),
+select tst.expect((select prefixes = '{TAC}' and color in ('#b5543c', '#e34948', '#127ebe') from structure_elements where template_id = tst.def() and name = 'TACTUS'),
                   'TACTUS matches TAC and keeps its colour');
 select tst.expect((select count(*) = 23 from structure_elements where template_id = tst.def() and parent_id is not null), 'with 23 parts');
 select tst.affects(format($$update structure_elements set name = 'X' where id = %s$$, tst.el(tst.def(), 'BASS')),
@@ -140,7 +140,7 @@ select set_config('app.user_id', 'E', false);
 select tst.expect(structure_apply(tst.p('khione'),
                     array(select uid from structure_template_elements(tst.p('khione')) where name in ('TACTUS', 'Reese'))) = 2,
                   'an editor brings in a renamed zone and a new part');
-select tst.expect(((tst.pel(tst.p('khione'), 'TACTUS')).color in ('#aa0000', '#e34948')), 'the zone takes the new name and colour');
+select tst.expect(((tst.pel(tst.p('khione'), 'TACTUS')).color in ('#aa0000', '#e34948', '#ad3436')), 'the zone takes the new name and colour');
 select tst.expect((select count(*) = 1 from cards c join elements e on e.id = c.element_id where e.name = 'TACTUS' and c.project_id = tst.p('khione')),
                   'its cards stay on it');
 select tst.expect((select p.name = 'BASS' from elements c join elements p on p.id = c.parent_id where c.project_id = tst.p('khione') and c.name = 'Reese'),

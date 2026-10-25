@@ -9,7 +9,7 @@
 
 select set_config('app.actor', 'bootstrap', false);
 insert into accounts (user_id, email, display_name, status, is_platform_admin) values
-  ('J', 'j@x', 'James', 'active', true), ('C', 'c@x', 'Chris', 'active', false), ('G', 'g@x', 'Gordon', 'active', false)
+  ('J', 'j@x', 'Person A', 'active', true), ('C', 'c@x', 'Person B', 'active', false), ('G', 'g@x', 'Person C', 'active', false)
 on conflict (user_id) do nothing;
 insert into projects (kind, title, created_by, owner_id) values ('music', 'khione', 'j@x', 'J');
 insert into shares (project_id, grantee_id, level, granted_by) select id, 'C', 'edit', 'J' from projects where title = 'khione';
@@ -43,7 +43,7 @@ grant execute on all functions in schema tst to bottega_app;
 
 set role bottega_app;
 
--- Chris has edit access.
+-- Person B has edit access.
 select set_config('app.user_id', 'C', false);
 select tst.save('khione 0.19.als');
 select tst.save('khione 0.20 radio edit.als');
@@ -89,7 +89,7 @@ select tst.expect((select variant from audio where r2_key = 'r1') = 'Radio', 're
 select tst.expect(tst.v('khione 0.19.als') = 'Radio', 'renaming carries the saves moved by hand');
 select tst.expect(tst.v('khione 0.20 radio edit.als') = 'Radio', 'renaming sorts by the new rule');
 
--- Gordon contributes: he may upload to a variant, not make or rename one.
+-- Person C contributes: he may upload to a variant, not make or rename one.
 select set_config('app.user_id', 'G', false);
 insert into audio (project_id, role, version, variant, r2_key, original_filename, uploaded_by)
   values (tst.p(), 'mix', 2, 'Radio', 'r2', 'khione radio 2.mp3', 'g@x');

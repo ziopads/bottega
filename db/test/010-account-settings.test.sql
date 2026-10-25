@@ -10,10 +10,10 @@
 
 select set_config('app.actor', 'bootstrap', false);
 insert into accounts (user_id, email, display_name, status, is_platform_admin) values
-  ('J', 'j@x', 'James', 'active', true), ('C', 'c@x', 'Chris', 'active', false),
-  ('G', 'g@x', 'Gordon', 'active', false), ('P', 'p@x', '', 'pending', false)
+  ('J', 'j@x', 'Person A', 'active', true), ('C', 'c@x', 'Person B', 'active', false),
+  ('G', 'g@x', 'Person C', 'active', false), ('P', 'p@x', '', 'pending', false)
 on conflict (user_id) do nothing;
-insert into artists (code, name, account_id) values ('SIR', 'Sirsinate', 'J'), ('ALT', 'Alter', 'J'), ('CHR', 'Chris Music', 'C');
+insert into artists (code, name, account_id) values ('SIR', 'Sirsinate', 'J'), ('ALT', 'Alter', 'J'), ('CHR', 'Person B Music', 'C');
 insert into projects (kind, title, created_by, owner_id) values ('music', 'khione', 'j@x', 'J');
 insert into music_projects (project_id, canonical_id, artist_id)
   select p.id, 'SIR-001', a.id from projects p, artists a where p.title = 'khione' and a.code = 'SIR';
@@ -54,19 +54,19 @@ set role bottega_app;
 
 -- Display name ------------------------------------------------------------------------
 select set_config('app.user_id', 'C', false);
-select tst.expect(set_my_display_name('  Chris Alvarez ') = 'Chris Alvarez', 'a person sets their own display name, trimmed');
-select tst.expect((select display_name from accounts where user_id = 'C') = 'Chris Alvarez', 'the new name is stored');
+select tst.expect(set_my_display_name('  Person B Alvarez ') = 'Person B Alvarez', 'a person sets their own display name, trimmed');
+select tst.expect((select display_name from accounts where user_id = 'C') = 'Person B Alvarez', 'the new name is stored');
 select tst.expect((select count(*) = 1 from access_log where action = 'display_name_changed' and subject_id = 'C'
-                   and before->>'display_name' = 'Chris' and after->>'display_name' = 'Chris Alvarez'),
+                   and before->>'display_name' = 'Person B' and after->>'display_name' = 'Person B Alvarez'),
                   'the change is in the access log with before and after');
-select set_my_display_name('Chris Alvarez');
+select set_my_display_name('Person B Alvarez');
 select tst.expect((select count(*) = 1 from access_log where action = 'display_name_changed' and subject_id = 'C'),
                   'setting the same name again logs nothing');
 select tst.refused($$select set_my_display_name('   ')$$, 'an empty display name');
 select tst.refused($$select set_my_display_name(repeat('x', 81))$$, 'a display name over 80 characters');
 select tst.refused($$update accounts set display_name = 'Mallory' where user_id = 'C'$$, 'a direct update of accounts');
 select * from register_session('c@x', 'Someone Else');
-select tst.expect((select display_name from accounts where user_id = 'C') = 'Chris Alvarez', 'signing in again keeps the chosen name');
+select tst.expect((select display_name from accounts where user_id = 'C') = 'Person B Alvarez', 'signing in again keeps the chosen name');
 select set_config('app.user_id', 'P', false);
 select tst.refused($$select set_my_display_name('Pat')$$, 'a pending account cannot set a name');
 select set_config('app.user_id', '', false);
@@ -92,7 +92,7 @@ select set_config('app.user_id', 'C', false);
 select tst.refused(format('insert into account_preferences (default_artist_id) values (%s)', tst.artist('SIR')),
                    'another account''s artist as the default');
 select tst.affects(format('insert into account_preferences (default_artist_id) values (%s)', tst.artist('CHR')), 1,
-                   'Chris stores his own artist');
+                   'Person B stores his own artist');
 select set_config('app.user_id', 'J', false);
 select tst.refused(format('update account_preferences set default_artist_id = %s', tst.artist('CHR')),
                    'changing the default to someone else''s artist');

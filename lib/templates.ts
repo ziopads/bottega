@@ -1,6 +1,6 @@
 import type { Scoped, Statement } from '@/lib/db';
 import { accountNames, nameOf } from '@/lib/names';
-import type { CheckOption, EditorCriterion, EditorLearning, EditorStage, TemplateEditor, TemplateSummary } from '@/lib/templateTypes';
+import type { CheckOption, EditorCriterion, EditorLearning, EditorStage, Principle, TemplateEditor, TemplateSummary } from '@/lib/templateTypes';
 
 // Workflow templates in Preferences (REQUIREMENTS W-13 to W-15, W-22;
 // db/024). One's own templates are edited directly; the platform default is
@@ -55,7 +55,7 @@ export async function getTemplateEditor(db: Scoped, editId: number | null = null
   const chosen = templates.find((t) => t.id === chosenId) ?? def;
   const editing = templates.find((t) => t.id === editId) ?? chosen;
 
-  const [stageRows, criteriaRows, defaultRows, learningRows] = await db.tx([
+  const [stageRows, criteriaRows, defaultRows, learningRows, principleRows] = await db.tx([
     { text: 'select id, key, position, label, standard from template_stages where template_id = $1 order by position', params: [editing.id] },
     {
       text: `select c.id, c.stage_id, c.uid, c.position, c.body, c.hint, c.check_key from template_criteria c
@@ -72,6 +72,7 @@ export async function getTemplateEditor(db: Scoped, editId: number | null = null
                join template_stages s on s.id = l.stage_id where s.template_id = $1 order by l.position, l.id`,
       params: [editing.id],
     },
+    { text: 'select id, title, body from template_principles where template_id = $1 order by position, id', params: [editing.id] },
   ]);
   const learners = await accountNames(db, learningRows.map((r) => String(r.created_by)));
   const defaultByUid = new Map(defaultRows.filter((r) => r.uid !== null).map((r) => [String(r.uid), r]));
@@ -131,6 +132,7 @@ export async function getTemplateEditor(db: Scoped, editId: number | null = null
     editing,
     templates,
     stages,
+    principles: principleRows.map((r): Principle => ({ id: num(r.id), title: String(r.title), body: String(r.body) })),
     checks,
     rotationLimit: prefRows[0] ? num(prefRows[0].rotation_limit) : 4,
     coldDays: prefRows[0] ? num(prefRows[0].cold_days) : 21,
@@ -325,6 +327,54 @@ export async function moveTemplateCriterion(db: Scoped, id: number, dir: -1 | 1)
 
 export async function removeTemplateCriterion(db: Scoped, id: number): Promise<void> {
   await run(() => db.q('delete from template_criteria where id = $1', [id]));
+}
+
+// ── The method (W-42, db/032) ───────────────────────────────────────────────
+// Through template_principles' policies: only templates the person can edit.
+
+export async function addTemplatePrinciple(db: Scoped, templateId: number, title: string, body: string): Promise<void> {
+  await run(() =>
+    db.q(
+      `insert into template_principles (template_id, position, title, body)
+       values ($1, (select coalesce(max(position), 0) + 1 from template_principles where template_id = $1), $2, $3)`,
+      [templateId, title, body],
+    ),
+  );
+}
+
+export async function updateTemplatePrinciple(db: Scoped, id: number, patch: { title?: string; body?: string }): Promise<void> {
+  if (patch.title !== undefined) await run(() => db.q('update template_principles set title = $2 where id = $1', [id, patch.title]));
+  if (patch.body !== undefined) await run(() => db.q('update template_principles set body = $2 where id = $1', [id, patch.body]));
+}
+
+export async function moveTemplatePrinciple(db: Scoped, id: number, dir: -1 | 1): Promise<void> {
+  await run(async () => {
+    const rows = await db.q(
+      'select id from template_principles where template_id = (select template_id from template_principles where id = $1) order by position, id',
+      [id],
+    );
+    const ids = rows.map((r) => num(r.id));
+    const i = ids.indexOf(id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    await db.tx(ids.map((pid, k) => ({ text: 'update template_principles set position = $2 where id = $1 and position <> $2', params: [pid, k + 1] })));
+  });
+}
+
+export async function removeTemplatePrinciple(db: Scoped, id: number): Promise<void> {
+  await run(() => db.q('delete from template_principles where id = $1', [id]));
+}
+
+/** The method of the template the person's new projects start from: the board shows it. */
+export async function getAccountMethod(db: Scoped): Promise<Principle[]> {
+  const rows = await db.q(
+    `select p.id, p.title, p.body from template_principles p
+      where p.template_id = coalesce((select music_template_id from account_preferences where user_id = app_user()),
+                                     (select id from workflow_templates where owner_id is null and kind = 'music' order by id limit 1))
+      order by p.position, p.id`,
+  );
+  return rows.map((r) => ({ id: num(r.id), title: String(r.title), body: String(r.body) }));
 }
 
 // ── Learnings (W-33, db/028) ───────────────────────────────────────────────

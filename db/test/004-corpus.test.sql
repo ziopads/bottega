@@ -12,8 +12,8 @@
 
 select set_config('app.actor', 'bootstrap', false);
 insert into accounts (user_id, email, display_name, status, is_platform_admin) values
-  ('J', 'j@x', 'James', 'active', true), ('C', 'c@x', 'Chris', 'active', false),
-  ('G', 'g@x', 'Gordon', 'active', false), ('P', 'p@x', 'Pending', 'pending', false)
+  ('J', 'j@x', 'Person A', 'active', true), ('C', 'c@x', 'Person B', 'active', false),
+  ('G', 'g@x', 'Person C', 'active', false), ('P', 'p@x', 'Pending', 'pending', false)
 on conflict (user_id) do nothing;
 insert into gear_models (kind, category, manufacturer, model, status)
   select 'hardware', 'synthesizer', 'Moog', 'Matriarch', 'approved'
@@ -135,26 +135,26 @@ set role bottega_app;
 -- Private documents and their shares ----------------------------------------------------
 select set_config('app.user_id', 'G', false);
 insert into documents (library, owner_id, review_status, kind, title, r2_key, filename, bytes, sha256)
-  values (false, 'C', 'submitted', 'book', 'Gordon''s Book', 'a/G/document/1/e.pdf', 'e.pdf', 2000, tst.sha('e'));
+  values (false, 'C', 'submitted', 'book', 'Person C''s Book', 'a/G/document/1/e.pdf', 'e.pdf', 2000, tst.sha('e'));
 reset role;
-select tst.expect((select owner_id = 'G' and review_status = 'approved' from documents where title = 'Gordon''s Book'),
+select tst.expect((select owner_id = 'G' and review_status = 'approved' from documents where title = 'Person C''s Book'),
   'a private upload belongs to its uploader, whatever the request said');
 set role bottega_app;
-insert into pages (document_id, page_number, text) values (tst.doc('Gordon''s Book'), 1, 'Chapter one.');
-select tst.expect((select granted from claim_pages(tst.doc('Gordon''s Book'), 1)) = 1, 'the owner processes a private document');
+insert into pages (document_id, page_number, text) values (tst.doc('Person C''s Book'), 1, 'Chapter one.');
+select tst.expect((select granted from claim_pages(tst.doc('Person C''s Book'), 1)) = 1, 'the owner processes a private document');
 select set_config('app.user_id', 'C', false);
-select tst.expect(not exists (select 1 from documents where title = 'Gordon''s Book'), 'by default nobody else sees it');
+select tst.expect(not exists (select 1 from documents where title = 'Person C''s Book'), 'by default nobody else sees it');
 select tst.refused($$insert into shares (document_id, grantee_id, level, granted_by)
-                     values (tst.doc('Gordon''s Book'), 'C', 'edit', 'C')$$, 'sharing someone else''s document with oneself');
+                     values (tst.doc('Person C''s Book'), 'C', 'edit', 'C')$$, 'sharing someone else''s document with oneself');
 select set_config('app.user_id', 'G', false);
-insert into shares (document_id, grantee_id, level, granted_by) values (tst.doc('Gordon''s Book'), 'C', 'view', 'G');
+insert into shares (document_id, grantee_id, level, granted_by) values (tst.doc('Person C''s Book'), 'C', 'view', 'G');
 select tst.refused($$insert into shares (document_id, grantee_id, level, granted_by)
                      values (tst.doc('Matriarch Manual'), 'C', 'view', 'G')$$, 'sharing a library document');
 select tst.refused($$insert into shares (document_id, grantee_id, level, granted_by)
-                     values (tst.doc('Gordon''s Book'), 'P', 'view', 'G')$$, 'sharing with a pending account');
+                     values (tst.doc('Person C''s Book'), 'P', 'view', 'G')$$, 'sharing with a pending account');
 select set_config('app.user_id', 'C', false);
 select tst.expect((select count(*) from pages where text = 'Chapter one.') = 1, 'a view share reads the pages');
-select tst.affects($$update documents set title = 'Mine Now' where title = 'Gordon''s Book'$$, 0, 'and cannot edit');
+select tst.affects($$update documents set title = 'Mine Now' where title = 'Person C''s Book'$$, 0, 'and cannot edit');
 reset role;
 select tst.expect(exists (select 1 from access_log where action = 'share_granted' and item_kind = 'document'),
   'document shares are in the access log');
@@ -162,12 +162,12 @@ set role bottega_app;
 
 -- The administrator's read-only view ----------------------------------------------------
 select set_config('app.user_id', 'J', false);
-select tst.expect(not exists (select 1 from documents where title = 'Gordon''s Book'),
+select tst.expect(not exists (select 1 from documents where title = 'Person C''s Book'),
   'the administrator does not see private documents by default');
 select set_config('app.admin_view', 'on', false);
-select tst.expect(document_level(tst.doc('Gordon''s Book')) = 'view', 'the admin view reads them');
-select tst.affects($$update documents set title = 'Edited' where title = 'Gordon''s Book'$$, 0, 'and cannot edit');
-select tst.affects($$delete from documents where title = 'Gordon''s Book'$$, 0, 'nor delete');
+select tst.expect(document_level(tst.doc('Person C''s Book')) = 'view', 'the admin view reads them');
+select tst.affects($$update documents set title = 'Edited' where title = 'Person C''s Book'$$, 0, 'and cannot edit');
+select tst.affects($$delete from documents where title = 'Person C''s Book'$$, 0, 'nor delete');
 select set_config('app.admin_view', '', false);
 
 -- Allowances ----------------------------------------------------------------------------
@@ -181,10 +181,10 @@ select tst.expect(exists (select 1 from access_log where action = 'limits_change
 set role bottega_app;
 select set_config('app.user_id', 'C', false);
 insert into documents (library, title, r2_key, filename, bytes, sha256)
-  values (false, 'Chris Notes', 'a/C/document/2/f.pdf', 'f.pdf', 3000, tst.sha('f'));
+  values (false, 'Person B Notes', 'a/C/document/2/f.pdf', 'f.pdf', 3000, tst.sha('f'));
 select tst.expect((select pages_per_month = 50 and pages_used = 40 from my_allowance()), 'my_allowance shows the override and the use');
-select tst.expect((select granted from claim_pages(tst.doc('Chris Notes'), 40)) = 10, 'a claim past the allowance gets what is left');
-select tst.expect((select granted from claim_pages(tst.doc('Chris Notes'), 40)) = 0, 'then nothing');
+select tst.expect((select granted from claim_pages(tst.doc('Person B Notes'), 40)) = 10, 'a claim past the allowance gets what is left');
+select tst.expect((select granted from claim_pages(tst.doc('Person B Notes'), 40)) = 0, 'then nothing');
 select tst.expect((select storage_used from my_allowance()) = 3000,
   'storage counts private documents and not approved library contributions');
 
@@ -198,7 +198,7 @@ select tst.expect((select pages_per_month is null and platform_pages_left = 5 fr
 select tst.expect((select granted from claim_pages(tst.doc('Matriarch Manual'), 40)) = 5,
   'the platform ceiling stops the administrator too');
 select set_config('app.user_id', 'G', false);
-select tst.expect((select granted from claim_pages(tst.doc('Gordon''s Book'), 10)) = 0, 'and everyone else');
+select tst.expect((select granted from claim_pages(tst.doc('Person C''s Book'), 10)) = 0, 'and everyone else');
 select set_config('app.user_id', 'J', false);
 update platform_settings set value = jsonb_set(value, '{platform_pages_per_month}', '30000') where key = 'limits';
 reset role;
@@ -218,7 +218,7 @@ select tst.expect((select tokens from processing_usage where account_id = 'G' or
 select tst.refused($$delete from processing_usage$$, 'deleting usage, even as the owner role');
 set role bottega_app;
 select set_config('app.user_id', 'G', false);
-select tst.affects($$delete from documents where title = 'Gordon''s Book'$$, 1, 'the owner deletes a processed document');
+select tst.affects($$delete from documents where title = 'Person C''s Book'$$, 1, 'the owner deletes a processed document');
 reset role;
 select tst.expect((select count(*) from processing_usage where account_id = 'G' and document_id is null) = 2,
   'its usage stays in the ledger');

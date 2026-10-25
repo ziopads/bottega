@@ -22,6 +22,7 @@ import {
 } from '@/lib/workflowTypes';
 import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
 import { elementColor } from '@/lib/elementColors';
+import Method from '@/app/_ui/Method';
 
 // The Workflow tab (REQUIREMENTS W-1 to W-24, db/011, db/024), from 23 October:
 //
@@ -526,6 +527,7 @@ function StartedWorkflow({
         <div className="min-w-0 lg:col-span-4">{criteriaColumn}</div>
         <div className="min-w-0 lg:col-span-5">{cardsColumn}</div>
       </div>
+      <Method principles={w.method} editHref={w.learningsEditable ? '/account?tab=preferences#template' : undefined} />
     </>
   );
 }

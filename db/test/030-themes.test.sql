@@ -4,7 +4,12 @@ do $t$
 declare
   n int;
   v text;
+  allowed text[] := array['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
 begin
+  -- From 031 the stored colours are Live's palette rather than these slots.
+  if to_regprocedure('live_palette()') is not null then
+    execute 'select live_palette()' into allowed;
+  end if;
   -- Slots pass through; seeded colours go to their own slot; others to the nearest.
   if color_slot_hex('#2A78D6') <> '#2a78d6' then raise exception 'a slot should pass through, lower-cased'; end if;
   raise notice 'ok: a slot passes through';
@@ -25,14 +30,14 @@ begin
 
   -- Every stored colour is a slot after the migration.
   select count(*) into n from structure_elements
-   where color is not null and color <> all(array['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948']);
+   where color is not null and color <> all(allowed);
   if n <> 0 then raise exception '% template colours are not slots', n; end if;
   raise notice 'ok: template colours are slots';
 
   -- The trigger moves a colour written later.
   update structure_elements set color = '#123456' where id = (select min(id) from structure_elements where color is not null);
   select color into v from structure_elements where id = (select min(id) from structure_elements where color is not null);
-  if not (v = any(array['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'])) then
+  if not (v = any(allowed)) then
     raise exception 'a colour written later should be moved to a slot, got %', v;
   end if;
   raise notice 'ok: the trigger moves a colour written later';

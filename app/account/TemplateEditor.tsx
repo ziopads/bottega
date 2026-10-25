@@ -219,7 +219,80 @@ export function TemplateEditor({ initial }: { initial: Editor }) {
         </div>
         <div className="min-w-0 lg:col-span-8">{stage && <StageEditor key={stage.id} s={stage} ed={ed} readOnly={readOnly} busy={busy} post={post} />}</div>
       </div>
+      <MethodEditor ed={ed} readOnly={readOnly} busy={busy} post={post} />
     </Section>
+  );
+}
+
+/** The template's method (W-42, db/032): principles for the whole workflow,
+ *  shown at the foot of the Workflow tab and the board. */
+function MethodEditor({ ed, readOnly, busy, post }: { ed: Editor; readOnly: boolean; busy: boolean; post: Post }) {
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  return (
+    <div className="t-body mt-8 border-t border-line pt-4">
+      <p className="t-label">The method · {ed.principles.length}</p>
+      <p className="mt-0.5 t-small text-muted">Principles for the whole workflow, a short line and a sentence or two each. Projects using this template show them at the foot of the Workflow tab; Claude reads them too.</p>
+      <ol className="mt-3 space-y-3">
+        {ed.principles.map((p, i) => (
+          <li key={p.id} className="flex gap-2">
+            {!readOnly && (
+              <span className="flex flex-col">
+                <button onClick={() => post({ op: 'move-principle', principleId: p.id, dir: -1 })} disabled={busy || i === 0} className="px-1 text-muted hover:text-ink disabled:opacity-30" aria-label="Move up">
+                  ↑
+                </button>
+                <button onClick={() => post({ op: 'move-principle', principleId: p.id, dir: 1 })} disabled={busy || i === ed.principles.length - 1} className="px-1 text-muted hover:text-ink disabled:opacity-30" aria-label="Move down">
+                  ↓
+                </button>
+              </span>
+            )}
+            <div className="min-w-0 flex-1 space-y-1">
+              <input
+                key={`t${p.id}:${p.title}`}
+                defaultValue={p.title}
+                disabled={readOnly}
+                aria-label="Principle"
+                onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== p.title && void post({ op: 'principle', principleId: p.id, title: e.target.value })}
+                className={`${FIELD} w-full font-medium`}
+              />
+              <textarea
+                key={`b${p.id}:${p.body}`}
+                defaultValue={p.body}
+                disabled={readOnly}
+                rows={2}
+                aria-label="Explanation"
+                onBlur={(e) => e.target.value.trim() !== p.body && void post({ op: 'principle', principleId: p.id, body: e.target.value })}
+                className={`${FIELD} w-full`}
+              />
+            </div>
+            {!readOnly && (
+              <button onClick={() => post({ op: 'remove-principle', principleId: p.id })} disabled={busy} className={`self-start ${BUTTON_DANGER}`}>
+                Remove
+              </button>
+            )}
+          </li>
+        ))}
+      </ol>
+      {!readOnly && (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (await post({ op: 'add-principle', templateId: ed.editing.id, title, body })) {
+              setTitle('');
+              setBody('');
+            }
+          }}
+          className="mt-3 space-y-1"
+        >
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="A principle, such as: Bounce early." className={`${FIELD} w-full`} />
+          <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={2} placeholder="Why, in a sentence or two" className={`${FIELD} w-full`} />
+          <button type="submit" disabled={busy || !title.trim()} className={BUTTON}>
+            Add principle
+          </button>
+        </form>
+      )}
+      {readOnly && <p className="mt-2 t-small text-muted">Make a copy to change the method.</p>}
+    </div>
   );
 }
 

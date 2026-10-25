@@ -9,7 +9,7 @@
 
 select set_config('app.actor', 'bootstrap', false);
 insert into accounts (user_id, email, display_name, status, is_platform_admin) values
-  ('J', 'j@x', 'James', 'active', true), ('C', 'c@x', 'Chris', 'active', false), ('G', 'g@x', 'Gordon', 'active', false)
+  ('J', 'j@x', 'Person A', 'active', true), ('C', 'c@x', 'Person B', 'active', false), ('G', 'g@x', 'Person C', 'active', false)
 on conflict (user_id) do nothing;
 insert into projects (kind, title, created_by, owner_id) values ('music', 'khione', 'j@x', 'J');
 insert into audio (project_id, role, version, r2_key, original_filename, uploaded_by, uploaded_by_id)

@@ -191,6 +191,8 @@ export type Workflow = {
   learnings: WorkflowLearning[];
   /** Whether the person may add to and change the template's learnings. */
   learningsEditable: boolean;
+  /** The method of the template the project uses (W-42, db/032); edited in Preferences. */
+  method: { id: number; title: string; body: string }[];
   /** Before the workflow starts: the templates it can start with. */
   startChoices: StartChoices | null;
 };

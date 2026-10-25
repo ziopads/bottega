@@ -10,7 +10,7 @@
 
 select set_config('app.actor', 'bootstrap', false);
 insert into accounts (user_id, email, display_name, status, is_platform_admin) values
-  ('J', 'j@x', 'James', 'active', true), ('C', 'c@x', 'Chris', 'active', false), ('G', 'g@x', 'Gordon', 'active', false),
+  ('J', 'j@x', 'Person A', 'active', true), ('C', 'c@x', 'Person B', 'active', false), ('G', 'g@x', 'Person C', 'active', false),
   ('P', 'p@x', 'Pending', 'pending', false), ('O', 'o@x', 'Outsider', 'active', false)
 on conflict (user_id) do nothing;
 insert into gear_models (kind, category, manufacturer, model, status) values ('hardware', 'sampler', 'Akai', 'MPC One', 'approved')

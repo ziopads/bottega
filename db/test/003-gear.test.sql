@@ -10,7 +10,7 @@
 
 select set_config('app.actor', 'bootstrap', false);
 insert into accounts (user_id, email, display_name, status, is_platform_admin) values
-  ('J', 'j@x', 'James', 'active', true), ('C', 'c@x', 'Chris', 'active', false), ('G', 'g@x', 'Gordon', 'active', false)
+  ('J', 'j@x', 'Person A', 'active', true), ('C', 'c@x', 'Person B', 'active', false), ('G', 'g@x', 'Person C', 'active', false)
 on conflict (user_id) do nothing;
 -- As the owner role (the administrator's pipeline), an approved model with capabilities.
 insert into gear_models (kind, category, manufacturer, model, status) values
@@ -46,7 +46,7 @@ exception when others then if sqlerrm like 'FAILED%' then raise; end if; raise n
 end $$;
 set role bottega_app;
 
--- James adds his Prophet-6; Chris suggests a model -----------------------------------
+-- Person A adds his Prophet-6; Person B suggests a model -----------------------------------
 select set_config('app.user_id', 'J', false);
 insert into gear (model_id, nickname) values (tst.model('Prophet-6'), 'P6');
 update gear_private set serial = 'P6-0042', purchase_price = 2999, location = 'studio' where gear_id = (select id from gear where nickname = 'P6');
@@ -68,8 +68,8 @@ select tst.expect(
 select set_config('app.user_id', 'C', false);
 insert into gear_models (kind, category, manufacturer, model, status) values ('hardware', 'sampler', 'Akai', 'MPC Live II', 'approved');
 select tst.expect((select status from gear_models where model = 'MPC Live II') = 'suggested', 'a non-admin suggestion arrives as suggested');
-select tst.expect((select count(*) from gear) = 0, 'Chris sees none of James''s gear');
-select tst.expect((select count(*) from gear_private) = 0, 'Chris sees no insurance records');
+select tst.expect((select count(*) from gear) = 0, 'Person B sees none of Person A''s gear');
+select tst.expect((select count(*) from gear_private) = 0, 'Person B sees no insurance records');
 update gear_models set status = 'approved' where model = 'MPC Live II';
 reset role;
 select tst.expect((select status from gear_models where model = 'MPC Live II') = 'suggested', 'a non-admin cannot approve a model');
@@ -81,10 +81,10 @@ exception when insufficient_privilege then raise notice 'ok: only the administra
 end $$;
 
 select set_config('app.user_id', 'G', false);
-select tst.expect(not exists (select 1 from gear_models where model = 'MPC Live II'), 'Gordon does not see Chris''s pending suggestion');
+select tst.expect(not exists (select 1 from gear_models where model = 'MPC Live II'), 'Person C does not see Person B''s pending suggestion');
 select tst.expect(exists (select 1 from gear_models where model = 'Prophet-6'), 'approved models are visible to all');
 
--- James approves the suggestion ------------------------------------------------------
+-- Person A approves the suggestion ------------------------------------------------------
 select set_config('app.user_id', 'J', false);
 update gear_models set status = 'approved' where model = 'MPC Live II';
 select tst.expect((select status from gear_models where model = 'MPC Live II') = 'approved', 'the administrator approves a model');
@@ -96,7 +96,7 @@ insert into gear_files (gear_id, role, r2_key, filename, public) values
 insert into shares (gear_id, grantee_id, level) values ((select id from gear where nickname = 'P6'), 'C', 'view');
 
 select set_config('app.user_id', 'C', false);
-select tst.expect((select count(*) from gear where nickname = 'P6') = 1, 'Chris sees the shared unit');
+select tst.expect((select count(*) from gear where nickname = 'P6') = 1, 'Person B sees the shared unit');
 select tst.expect((select count(*) from gear_private) = 0, 'but not its serial, price or location');
 select tst.expect((select array_agg(role) from gear_files) = array['photo'], 'and its photos, not its receipt');
 select tst.expect(gear_level((select id from gear where nickname = 'P6')) = 'view', 'at view');
@@ -128,9 +128,9 @@ reset role;
 insert into gear (owner_id, name, manufacturer) values ('G', 'Juno-106', 'Roland');
 set role bottega_app;
 select set_config('app.admin_view', 'on', false);
-select tst.expect((select count(*) from gear where name = 'Juno-106') = 1, 'admin view sees Gordon''s unit');
+select tst.expect((select count(*) from gear where name = 'Juno-106') = 1, 'admin view sees Person C''s unit');
 select tst.expect(not exists (select 1 from gear_private p join gear g on g.id = p.gear_id where g.name = 'Juno-106'),
-  'admin view never sees Gordon''s insurance record');
+  'admin view never sees Person C''s insurance record');
 select set_config('app.admin_view', '', false);
 
 -- Gear shares log themselves -----------------------------------------------------------

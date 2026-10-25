@@ -9,11 +9,11 @@
 
 select set_config('app.actor', 'bootstrap', false);
 insert into accounts (user_id, email, display_name, status, is_platform_admin) values
-  ('J', 'j@x', 'James', 'active', true), ('E', 'e@x', 'Eddie', 'active', false),
-  ('C', 'c@x', 'Chris', 'active', false), ('G', 'g@x', 'Gordon', 'active', false),
+  ('J', 'j@x', 'Person A', 'active', true), ('E', 'e@x', 'Person D', 'active', false),
+  ('C', 'c@x', 'Person B', 'active', false), ('G', 'g@x', 'Person C', 'active', false),
   ('O', 'o@x', 'Other', 'active', false)
 on conflict (user_id) do nothing;
-insert into artists (code, name, account_id) values ('VIG', 'Vigorish', 'J');
+insert into artists (code, name, account_id) values ('VIG', 'Artist V', 'J');
 insert into projects (kind, title, created_by, owner_id) values ('music', 'khione', 'j@x', 'J'), ('music', 'other', 'j@x', 'J');
 insert into music_projects (project_id, canonical_id, artist_id)
   select p.id, '2025 0727', a.id from projects p, artists a where p.title = 'khione';
@@ -22,7 +22,7 @@ insert into audio (project_id, role, version, r2_key, original_filename, uploade
 insert into audio (project_id, role, version, r2_key, original_filename, uploaded_by, uploaded_by_id)
   select id, 'mix', 1, 'o1', 'other v1.mp3', 'j@x', 'J' from projects where title = 'other';
 insert into notes (project_id, audio_id, author, author_id, body, position_s)
-  select p.id, a.id, 'Chris', 'C', 'The second drop is flat', 95 from projects p join audio a on a.project_id = p.id
+  select p.id, a.id, 'Person B', 'C', 'The second drop is flat', 95 from projects p join audio a on a.project_id = p.id
    where p.title = 'khione';
 insert into shares (project_id, grantee_id, level, granted_by)
   select id, 'E', 'edit', 'J' from projects where title = 'khione';

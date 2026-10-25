@@ -9,7 +9,7 @@
 
 select set_config('app.actor', 'bootstrap', false);
 insert into accounts (user_id, email, display_name, status, is_platform_admin) values
-  ('J', 'j@x', 'James', 'active', true), ('C', 'c@x', 'Chris', 'active', false), ('G', 'g@x', 'Gordon', 'active', false)
+  ('J', 'j@x', 'Person A', 'active', true), ('C', 'c@x', 'Person B', 'active', false), ('G', 'g@x', 'Person C', 'active', false)
 on conflict (user_id) do nothing;
 insert into gear_models (kind, category, manufacturer, model, status) values ('hardware', 'sampler', 'Akai', 'MPC One', 'approved')
 on conflict do nothing;
@@ -38,7 +38,7 @@ grant execute on all functions in schema tst to bottega_app;
 
 set role bottega_app;
 
--- Chris puts a book in the library by mistake; Gordon picks it; it is linked to a model.
+-- Person B puts a book in the library by mistake; Person C picks it; it is linked to a model.
 select set_config('app.user_id', 'C', false);
 insert into documents (library, title, kind, r2_key, filename, bytes, sha256) values (true, 'A book', 'manual', 'library/a.pdf', 'a.pdf', 10, repeat('a', 64));
 insert into pages (document_id, page_number, text) values ((tst.doc('A book')).id, 1, 'page one');
@@ -65,9 +65,9 @@ select tst.expect((select count(*) = 0 from model_documents where document_id = 
 select tst.expect((select count(*) from library_picks where document_id = (tst.doc('A book')).id) = 0, 'other accounts'' picks are removed');
 select tst.expect(tst.pages('A book') = 1, 'its pages are kept');
 select set_config('app.user_id', 'G', false);
-select tst.expect(document_rank((tst.doc('A book')).id) = 0, 'Gordon no longer reads it');
+select tst.expect(document_rank((tst.doc('A book')).id) = 0, 'Person C no longer reads it');
 select set_config('app.user_id', 'C', false);
-select tst.expect(document_level((tst.doc('A book')).id) = 'owner', 'Chris owns it');
+select tst.expect(document_level((tst.doc('A book')).id) = 'owner', 'Person B owns it');
 
 -- Private to library: shares go, the former owner stays as contributor.
 insert into shares (document_id, grantee_id, level, granted_by) values ((tst.doc('A book')).id, 'G', 'view', 'C');

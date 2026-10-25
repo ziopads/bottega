@@ -16,12 +16,12 @@
 -- Seed, as the owner ----------------------------------------------------------
 select set_config('app.actor', 'bootstrap', false);
 insert into accounts (user_id, email, display_name, status, is_platform_admin) values
-  ('J', 'j@x', 'James', 'active', true),
-  ('C', 'c@x', 'Chris', 'active', false),
-  ('G', 'g@x', 'Gordon', 'active', false);
-insert into artists (code, name, account_id) values ('VIG', 'Vigorish', 'J'), ('KR', 'Kamikaze Rabbit', 'C'), ('KJI', 'Kawaji', 'G');
+  ('J', 'j@x', 'Person A', 'active', true),
+  ('C', 'c@x', 'Person B', 'active', false),
+  ('G', 'g@x', 'Person C', 'active', false);
+insert into artists (code, name, account_id) values ('VIG', 'Artist V', 'J'), ('KR', 'Kamikaze Rabbit', 'C'), ('KJI', 'Artist K', 'G');
 insert into genres values ('House');
--- James: p1, p2 (music), c1 (collection of p1, p2)
+-- Person A: p1, p2 (music), c1 (collection of p1, p2)
 insert into projects (kind, title, created_by, owner_id) values
   ('music', 'p1', 'j@x', 'J'), ('music', 'p2', 'j@x', 'J'), ('collection', 'c1', 'j@x', 'J'), ('music', 'p3', 'c@x', 'C');
 insert into music_projects (project_id, artist_id, canonical_id)
@@ -50,15 +50,15 @@ set role bottega_app;
 select tst.expect((select count(*) from projects) = 0, 'no person: no projects');
 select tst.expect((select count(*) from accounts) = 0, 'no person: no accounts');
 
--- Chris sees only his own -----------------------------------------------------------
+-- Person B sees only his own -----------------------------------------------------------
 select set_config('app.user_id', 'C', false);
-select tst.expect((select array_agg(title order by title) from projects) = array['p3'], 'Chris sees only p3');
-select tst.expect((select count(*) from audio) = 0, 'Chris sees no audio of James');
-select tst.expect((select array_agg(code) from artists) = array['KR'], 'Chris sees only his artist');
+select tst.expect((select array_agg(title order by title) from projects) = array['p3'], 'Person B sees only p3');
+select tst.expect((select count(*) from audio) = 0, 'Person B sees no audio of Person A');
+select tst.expect((select array_agg(code) from artists) = array['KR'], 'Person B sees only his artist');
 
--- Gordon sees only his own (nothing yet)
+-- Person C sees only his own (nothing yet)
 select set_config('app.user_id', 'G', false);
-select tst.expect((select count(*) from projects) = 0, 'Gordon sees nothing of James or Chris');
+select tst.expect((select count(*) from projects) = 0, 'Person C sees nothing of Person A or Person B');
 
 -- Pending person ------------------------------------------------------------------------
 select set_config('app.user_id', 'P', false);
@@ -66,14 +66,14 @@ select tst.expect((select status from register_session('p@x', 'Pat')) = 'pending
 select tst.expect((select count(*) from projects) = 0, 'pending sees nothing');
 select tst.expect((select count(*) from genres) = 0, 'pending sees no genres');
 
--- James shares c1 with Gordon (view) and p2 with Chris (contribute) -------------------
+-- Person A shares c1 with Person C (view) and p2 with Person B (contribute) -------------------
 select set_config('app.user_id', 'J', false);
 insert into shares (project_id, grantee_id, level) values (tst.id('c1'), 'G', 'view'), (tst.id('p2'), 'C', 'contribute');
 
 select set_config('app.user_id', 'G', false);
-select tst.expect((select array_agg(title order by title) from projects) = array['c1', 'p1', 'p2'], 'Gordon sees c1 and its parts (AC-6)');
-select tst.expect(project_level(tst.id('p1')) = 'view', 'Gordon has view on p1 through c1');
-select tst.expect((select count(*) from audio) = 2, 'Gordon hears the parts');
+select tst.expect((select array_agg(title order by title) from projects) = array['c1', 'p1', 'p2'], 'Person C sees c1 and its parts (AC-6)');
+select tst.expect(project_level(tst.id('p1')) = 'view', 'Person C has view on p1 through c1');
+select tst.expect((select count(*) from audio) = 2, 'Person C hears the parts');
 do $$ begin
   insert into notes (project_id, author, body) values (tst.id('p1'), 'g@x', 'hi');
   raise exception 'FAILED: viewer could add a note';
@@ -83,13 +83,13 @@ update projects set title = 'hacked' where id = tst.id('p1');
 select set_config('app.user_id', 'J', false);
 select tst.expect((select title from projects where id = tst.id('p1')) = 'p1', 'viewer update changed nothing');
 
--- Chris contributes to p2 ---------------------------------------------------------------
+-- Person B contributes to p2 ---------------------------------------------------------------
 select set_config('app.user_id', 'C', false);
-select tst.expect((select array_agg(title order by title) from projects) = array['p2', 'p3'], 'Chris sees p2 (shared) and p3, not p1 or c1');
+select tst.expect((select array_agg(title order by title) from projects) = array['p2', 'p3'], 'Person B sees p2 (shared) and p3, not p1 or c1');
 insert into notes (project_id, author, body) values (tst.id('p2'), 'c@x', 'nice');
 insert into audio (project_id, role, version, r2_key, original_filename, uploaded_by)
   values (tst.id('p2'), 'mix', 2, 'k-p2-v2', 'p2v2.mp3', 'c@x');
-select tst.expect((select author_id from notes where body = 'nice') = 'C', 'note author is Chris by default');
+select tst.expect((select author_id from notes where body = 'nice') = 'C', 'note author is Person B by default');
 update projects set title = 'renamed' where id = tst.id('p2');  -- contribute cannot edit fields
 delete from audio where project_id = tst.id('p2');              -- nor delete
 delete from notes where body = 'nice';                              -- nor delete his own note
@@ -106,7 +106,7 @@ do $$ begin
   raise exception 'FAILED: owner changeable';
 exception when insufficient_privilege then raise notice 'ok: owner not changeable';
 end $$;
--- Chris cannot share James's item onward
+-- Person B cannot share Person A's item onward
 do $$ begin
   insert into shares (project_id, grantee_id, level) values (tst.id('p2'), 'G', 'view');
   raise exception 'FAILED: non-owner could share';
@@ -124,7 +124,7 @@ update projects set title = 'renamed' where id = tst.id('p2');
 select tst.expect((select title from projects where id = tst.id('renamed')) = 'renamed', 'editor renames');
 do $$ begin
   update music_projects set artist_id = (select id from artists where code = 'KR') where project_id = tst.id('renamed');
-  raise exception 'FAILED: credited own artist on James project';
+  raise exception 'FAILED: credited own artist on Person A project';
 exception when others then if sqlerrm like 'FAILED%' then raise; end if; raise notice 'ok: cannot credit another account''s artist';
 end $$;
 
@@ -152,7 +152,7 @@ delete from projects where id = tst.id('p1');
 select tst.expect(tst.id('p1') is null, 'owner deletes');
 
 -- Collections pass on only their owner's tracks ----------------------------------------------
--- James puts Chris's p3? He cannot see it, so cannot add it.
+-- Person A puts Person B's p3? He cannot see it, so cannot add it.
 do $$ begin
   insert into project_parts values (tst.id('c1'), (select id from projects where title = 'p3'), 9);
   raise exception 'FAILED: added an invisible project to a collection';
@@ -163,7 +163,7 @@ end $$;
 select set_config('app.user_id', 'J', false);
 select tst.expect((select count(*) from projects where title = 'p3') = 0, 'admin without admin_view sees only own');
 select set_config('app.admin_view', 'on', false);
-select tst.expect((select count(*) from projects where title = 'p3') = 1, 'admin_view sees Chris''s p3');
+select tst.expect((select count(*) from projects where title = 'p3') = 1, 'admin_view sees Person B''s p3');
 update projects set title = 'x' where title = 'p3';
 select set_config('app.admin_view', '', false);
 reset role;
@@ -176,7 +176,7 @@ select set_config('app.admin_view', '', false);
 
 -- Accounts: admin approves, logged; last admin protected ---------------------------------
 select set_config('app.user_id', 'J', false);
-select admin_set_account('P', 'active', false, 'known to James');
+select admin_set_account('P', 'active', false, 'known to Person A');
 do $$ begin
   perform admin_set_account('J', 'active', false, null);
   raise exception 'FAILED: removed last admin';
@@ -199,8 +199,8 @@ do $$ begin
 exception when others then if sqlerrm like 'FAILED%' then raise; end if; raise notice 'ok: log_event action list closed';
 end $$;
 select log_event('password_changed', null, null, null, null);
-select tst.expect((select count(*) from accounts) = 1, 'Chris reads only his own account row');
-select tst.expect(not exists (select 1 from access_log where subject_id = 'P'), 'Chris does not see others'' log entries');
+select tst.expect((select count(*) from accounts) = 1, 'Person B reads only his own account row');
+select tst.expect(not exists (select 1 from access_log where subject_id = 'P'), 'Person B does not see others'' log entries');
 
 -- Transaction-local setting does not leak --------------------------------------------------
 reset role;
@@ -208,7 +208,7 @@ select set_config('app.user_id', '', false);
 set role bottega_app;
 begin;
 select set_config('app.user_id', 'J', true);
-select tst.expect((select count(*) from projects) > 0, 'inside the transaction James sees his projects');
+select tst.expect((select count(*) from projects) > 0, 'inside the transaction Person A sees his projects');
 commit;
 select tst.expect(app_user() is null, 'after commit nobody is set');
 select tst.expect((select count(*) from projects) = 0, 'after commit nothing visible');

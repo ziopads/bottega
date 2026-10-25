@@ -24,42 +24,10 @@
                 apart from what people wrote
      led-off, meter-done, meter-now   stage meters
      fresh, cooling, cold             how recently a project was worked on
-     el-1 … el-8   element colours: the same eight slots in every theme,
-                checked for colour-blind separation, stepped for light and
-                dark (lib/elementColors.ts, db/030). Always shown with the
-                element's name. */
+   Element colours are Ableton Live's own and the same in every theme
+   (lib/liveColors.ts, db/031), always shown with the element's name. */
 :root {
   color-scheme: light dark;
-  --el-1: #2a78d6;
-  --el-2: #eb6834;
-  --el-3: #1baf7a;
-  --el-4: #eda100;
-  --el-5: #e87ba4;
-  --el-6: #008300;
-  --el-7: #6250d6;
-  --el-8: #e34948;
-}
-:root[data-mode='dark'] {
-  --el-1: #3987e5;
-  --el-2: #d95926;
-  --el-3: #199e70;
-  --el-4: #c98500;
-  --el-5: #d55181;
-  --el-6: #008300;
-  --el-7: #9085e9;
-  --el-8: #e66767;
-}
-@media (prefers-color-scheme: dark) {
-  :root[data-mode='system'] {
-    --el-1: #3987e5;
-    --el-2: #d95926;
-    --el-3: #199e70;
-    --el-4: #c98500;
-    --el-5: #d55181;
-    --el-6: #008300;
-    --el-7: #9085e9;
-    --el-8: #e66767;
-  }
 }
 
 [data-mode='light'] {
@@ -488,7 +456,7 @@
   }
 }
 
-/* Rack: Gordon's Finish Line. Cool grey with white panels, amber for
+/* Rack: a rack of channel strips. Cool grey with white panels, amber for
    progress and actions, teal for what Live reports, condensed capitals for
    names and section heads, IBM Plex. */
 [data-theme='rack'] {

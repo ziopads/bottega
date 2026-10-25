@@ -13,7 +13,8 @@
 // work log, and the person's board (db/024). 0.10.0 (24 October): learnings
 // on a template's stages in get_session, and draft_learning (db/028).
 // 0.11.0 (25 October): the next to-do and sessions from saved sets replace the
-// next move, the blocker and ended sessions (db/029).
+// next move, the blocker and ended sessions (db/029). 0.12.0 (25 October):
+// the template's method in get_session (db/032).
 
 import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
@@ -47,7 +48,7 @@ Everything to be done or figured out is a to-do (a card), tagged to a stage; the
 
 Each person keeps their own board: projects in their backlog, in rotation (the few they are working on now, up to a limit they set) and finished. list_projects gives each project's place on the person's board. Keep advice to the projects in rotation unless they ask about another; when they want to start something new while rotation is full, say so and let them choose what goes back to the backlog.
 
-A workflow template also carries learnings: reminders on a stage, without a checkbox, that the person (or a collaborator sharing the template through an artist) wrote down to remember on every project, such as "pitch the kick and snare up for a two-step feel and to clear room for the bass". get_session gives the learnings for the project's template. Bring up those of the current stage when they bear on the question, and say they are the person's own. When the person says something worth keeping for every project at a stage, or asks you to remember it as a learning, propose it with draft_learning; anything to act on in one track is a card, not a learning.
+A workflow template also carries learnings: reminders on a stage, without a checkbox, that the person (or a collaborator sharing the template through an artist) wrote down to remember on every project, such as "pitch the kick and snare up for a two-step feel and to clear room for the bass". get_session gives the learnings for the project's template, and its method: the person's principles for working (method). Hold advice to the method, and point back to it when they drift from it. Bring up those of the current stage when they bear on the question, and say they are the person's own. When the person says something worth keeping for every project at a stage, or asks you to remember it as a learning, propose it with draft_learning; anything to act on in one track is a card, not a learning.
 
 Start with list_projects to find a project, then get_session for its state. Cards and criteria with status 'proposed' or under awaiting_review are pending proposals, not the person's decisions; say so when you mention them.
 
@@ -398,7 +399,7 @@ export const handler = createMcpHandler(
   },
   {
     instructions: INSTRUCTIONS,
-    serverInfo: { name: 'bottega', version: '0.11.0' },
+    serverInfo: { name: 'bottega', version: '0.12.0' },
     // No subscriptions: this server never sends notifications, and on Vercel
     // each subscriptions/listen stream stayed open until the function timed
     // out, billing memory for the whole wait. Refused with the protocol's

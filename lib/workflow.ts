@@ -140,13 +140,20 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
       params: [projectId],
     },
   ]);
-  const [learningRows, editableRows] = await db.tx([
+  const [learningRows, editableRows, methodRows] = await db.tx([
     {
       text: 'select id, stage, position, body, origin, reviewed, source, created_by_name, created_at, can_edit from project_learnings($1)',
       params: [projectId],
     },
     {
       text: `select template_can_edit(coalesce((select template_id from project_workflow where project_id = $1), project_template($1))) as ok`,
+      params: [projectId],
+    },
+    {
+      // The method of the template the project uses, read live (db/032).
+      text: `select id, title, body from template_principles
+              where template_id = coalesce((select template_id from project_workflow where project_id = $1), project_template($1))
+              order by position, id`,
       params: [projectId],
     },
   ]);
@@ -214,6 +221,7 @@ export async function getWorkflow(db: Scoped, projectId: number): Promise<Workfl
     cards: cardRows.map((r) => toCard(r, who)),
     learnings: learningRows.map(toLearning),
     learningsEditable: editableRows[0]?.ok === true,
+    method: methodRows.map((r) => ({ id: num(r.id), title: String(r.title), body: String(r.body) })),
     startChoices: current[0] ? null : await readStartChoices(db, projectId),
   };
 }

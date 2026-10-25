@@ -6,7 +6,7 @@ export const THEMES = [
   { key: 'console', label: 'Console', blurb: 'Studio hardware: charcoal or aluminium, a lime signal, boxed panels.' },
   { key: 'riso', label: 'Riso', blurb: 'Underground print: newsprint, pink and blue inks.' },
   { key: 'gallery', label: 'Gallery', blurb: 'Editorial: bone and ink, Bodoni names, brass.' },
-  { key: 'rack', label: 'Rack', blurb: 'Gordon’s Finish Line: grey and white panels, amber, teal for Live.' },
+  { key: 'rack', label: 'Rack', blurb: 'Channel strips: grey and white panels, amber, teal for what Live reports.' },
 ] as const;
 
 export type Theme = (typeof THEMES)[number]['key'];

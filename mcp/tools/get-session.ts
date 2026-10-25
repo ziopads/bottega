@@ -120,6 +120,8 @@ export async function getSessionTool(db: Scoped, args: { id: number; notes?: num
             .filter((l) => l.reviewed)
             .map((l) => ({ stage: stageLabel(l.stage), learning: l.body, from: l.source || undefined, by: l.createdByName })),
           you_can_add_learnings: w.learningsEditable,
+          // The template's method (db/032): the person's principles for the whole workflow.
+          method: w.method.length ? w.method.map((p) => (p.body ? `${p.title} ${p.body}` : p.title)) : undefined,
           open_cards: live.filter((c) => c.stage === w.stage && c.status !== 'done').map(card),
           done_this_stage: live.filter((c) => c.stage === w.stage && c.status === 'done').length,
           parked_for_later_stages: live.filter((c) => stagePosition(w, c.stage) > pos).map(card),

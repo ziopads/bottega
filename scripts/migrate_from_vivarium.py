@@ -3,7 +3,7 @@
 (Neon). Phase 0, step 3; run once, then retire.
 
     pipeline/.venv/bin/python3 scripts/migrate_from_vivarium.py
-    pipeline/.venv/bin/python3 scripts/migrate_from_vivarium.py --email ziopads@gmail.com=6gorish@gmail.com
+    pipeline/.venv/bin/python3 scripts/migrate_from_vivarium.py --email owner@example.com=new@example.com
     pipeline/.venv/bin/python3 scripts/migrate_from_vivarium.py --email ... --apply
 
 Without --apply it reads both sides, prints what it would write, and writes

@@ -12,6 +12,7 @@ import type { SaveEntry, SessionState } from '@/lib/als/store';
 import { keyLabel, PARSER_VERSION, type AlsSet, type AlsTrack, type Zone } from '@/lib/als/types';
 import { formatBytes, type StudioVariant } from '@/lib/studioTypes';
 import { elementColor } from '@/lib/elementColors';
+import { liveColorOfIndex } from '@/lib/liveColors';
 
 // The State tab (REQUIREMENTS S-15, S-16, A-6 to A-8): what the saved Live
 // sets show about one variant of the session (the main mix, or a radio edit
@@ -449,7 +450,7 @@ function ArrangementMap({ set, zones }: { set: AlsSet; zones: SessionState['zone
   return (
     <Section label="Arrangement">
       <div className="t-body">
-        <div className="relative ml-32 h-4 t-small text-muted">
+        <div className="relative ml-[9.125rem] h-4 t-small text-muted">
           {ticks.map((b) => (
             <span key={b} className="t-num absolute -translate-x-1/2" style={{ left: pct(b) }}>
               {b / 4 + 1}
@@ -457,7 +458,7 @@ function ArrangementMap({ set, zones }: { set: AlsSet; zones: SessionState['zone
           ))}
         </div>
         <div className="relative">
-          <div className="pointer-events-none absolute inset-y-0 left-32 right-0">
+          <div className="pointer-events-none absolute inset-y-0 left-[9.125rem] right-0">
             {set.locators.map((l, i) => (
               <span key={i} className="absolute inset-y-0 border-l border-dashed border-ink/40" style={{ left: pct(l.beat) }} title={l.name} />
             ))}
@@ -465,6 +466,12 @@ function ArrangementMap({ set, zones }: { set: AlsSet; zones: SessionState['zone
           <ul className="space-y-px">
             {tracks.map((t) => (
               <li key={t.id} className="flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className="h-2.5 w-2.5 shrink-0 rounded-[2px] border border-line"
+                  style={{ background: liveColorOfIndex(t.color)?.hex ?? 'transparent' }}
+                  title={t.color === null || t.color === undefined ? 'Colour not read (drop the folder again)' : 'Its colour in Live'}
+                />
                 <span className={`shrink-0 truncate t-small ${t.on ? '' : 'text-muted line-through'}`} style={{ width: '7.5rem' }} title={t.name}>
                   {t.name}
                 </span>

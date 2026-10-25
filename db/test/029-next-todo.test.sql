@@ -9,9 +9,9 @@
 
 select set_config('app.actor', 'bootstrap', false);
 insert into accounts (user_id, email, display_name, status) values
-  ('J', 'j@x', 'James', 'active'), ('C', 'c@x', 'Chris', 'active'), ('V', 'v@x', 'Viewer', 'active')
+  ('J', 'j@x', 'Person A', 'active'), ('C', 'c@x', 'Person B', 'active'), ('V', 'v@x', 'Viewer', 'active')
 on conflict (user_id) do nothing;
-insert into artists (code, name, account_id) values ('VIG', 'Vigorish', 'J');
+insert into artists (code, name, account_id) values ('VIG', 'Artist V', 'J');
 insert into projects (kind, title, created_by, owner_id) values ('music', 'khione', 'j@x', 'J'), ('music', 'old', 'j@x', 'J');
 insert into music_projects (project_id, artist_id, canonical_id)
 select p.id, (select id from artists where code = 'VIG'), v.cid from (values ('khione', '2025 0727'), ('old', '2024 0101')) v(t, cid)
@@ -49,11 +49,11 @@ insert into cards (project_id, stage, what, done_when) values
   (tst.p('khione'), 'seed', 'Tune the kick', 'Kick at D'),
   (tst.p('khione'), 'palette', 'Pick hats later', 'Hats picked');
 select set_config('app.user_id', 'C', false);
-insert into cards (project_id, stage, what, done_when) values (tst.p('khione'), 'seed', 'Chris: name tracks', 'Tracks named');
+insert into cards (project_id, stage, what, done_when) values (tst.p('khione'), 'seed', 'Person B: name tracks', 'Tracks named');
 
 -- Marking --------------------------------------------------------------------------------------
-select card_set_next(tst.p('khione'), (tst.c('Chris: name tracks')).id);
-select tst.expect(tst.next(tst.p('khione')) = 'Chris: name tracks', 'a contributor marks a to-do next');
+select card_set_next(tst.p('khione'), (tst.c('Person B: name tracks')).id);
+select tst.expect(tst.next(tst.p('khione')) = 'Person B: name tracks', 'a contributor marks a to-do next');
 select set_config('app.user_id', 'J', false);
 select card_set_next(tst.p('khione'), (tst.c('Tune the kick')).id);
 select tst.expect(tst.next(tst.p('khione')) = 'Tune the kick', 'marking another moves the mark: one at a time');
@@ -63,10 +63,10 @@ select tst.refused(format('select card_set_next(%s, null)', tst.p('khione')), 'a
 
 -- Passing the mark on ----------------------------------------------------------------------------
 select set_config('app.user_id', 'J', false);
-update cards set status = 'in progress' where what = 'Chris: name tracks';
+update cards set status = 'in progress' where what = 'Person B: name tracks';
 update cards set status = 'done' where what = 'Tune the kick';
-select tst.expect(tst.next(tst.p('khione')) = 'Chris: name tracks', 'done passes the mark on: in progress first');
-update cards set status = 'done' where what = 'Chris: name tracks';
+select tst.expect(tst.next(tst.p('khione')) = 'Person B: name tracks', 'done passes the mark on: in progress first');
+update cards set status = 'done' where what = 'Person B: name tracks';
 select tst.expect(tst.next(tst.p('khione')) = 'Loop the break', 'then the oldest open to-do of the current stage');
 select card_to_note((tst.c('Loop the break')).id);
 select tst.expect(tst.next(tst.p('khione')) is null, 'a to-do moved to a note passes it on; none left in the stage, none marked');

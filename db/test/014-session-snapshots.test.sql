@@ -10,8 +10,8 @@
 
 select set_config('app.actor', 'bootstrap', false);
 insert into accounts (user_id, email, display_name, status, is_platform_admin) values
-  ('J', 'j@x', 'James', 'active', true), ('E', 'e@x', 'Eddie', 'active', false),
-  ('C', 'c@x', 'Chris', 'active', false), ('O', 'o@x', 'Other', 'active', false)
+  ('J', 'j@x', 'Person A', 'active', true), ('E', 'e@x', 'Person D', 'active', false),
+  ('C', 'c@x', 'Person B', 'active', false), ('O', 'o@x', 'Other', 'active', false)
 on conflict (user_id) do nothing;
 insert into projects (kind, title, created_by, owner_id) values ('music', 'khione', 'j@x', 'J');
 insert into shares (project_id, grantee_id, level, granted_by) select id, 'E', 'edit', 'J' from projects where title = 'khione';

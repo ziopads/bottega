@@ -1,6 +1,6 @@
 # Bottega — architecture
 
-**Version:** 0.24
+**Version:** 0.25
 **Date:** 2026-10-25
 **Status:** draft
 **Scope:** How Bottega is built. What it has to do is in `REQUIREMENTS.md`;
@@ -9,6 +9,16 @@ story IDs below (S-3, W-6 and so on) refer to it.
 ---
 
 ## Changelog
+
+- **0.25** (2026-10-25) — Live colours (migration 031): `lib/liveColors.ts`
+  (Live's 70 colours in grid order, eight suggested), `color_live_hex()` and
+  `live_palette()`, the 030 trigger now moving colours to Live's;
+  `LiveColorPicker.tsx`; the set reader's parser 3 reads each track's
+  `Color` (watcher 1.2.0). The method (migration 032): `template_principles`
+  under the template's read and edit rules, copied with the template, a
+  draft on the default; `Method.tsx` at the foot of the Workflow tab and the
+  board; principle ops on the template route; connector 0.12.0. The `--el-*`
+  theme tokens are gone.
 
 - **0.24** (2026-10-25) — Themes (§13): `app/themes.css`, migration 030
   (`account_preferences.theme`, `.mode`; element colours as eight slots,
@@ -222,7 +232,7 @@ or its sets. `study_sessions` are study sessions (L-18).
 ## 1. Shape
 
 ```
-  James's Mac                         Vercel                       Neon
+  Person A's Mac                         Vercel                       Neon
   ───────────                         ──────                       ────
   pipeline/ (Python)                  Next.js application          Postgres + pgvector
     analyse .als + audio ── measurements ───────────────────────▶  analyses
@@ -724,7 +734,7 @@ Bottega's:
   `notes.author_id`, `projects.created_by_id`. The Phase 0 email columns stay
   as history.
 - Migration 002 gives every existing project, and the artists VIG and ASU, to
-  James's account. KR and KJI pass to Chris's and Gordon's accounts when
+  Person A's account. KR and KJI pass to Person B's and Person C's accounts when
   those exist.
 
 ### Shares
@@ -918,8 +928,8 @@ out. In order:
    policies, so nothing changes yet.
 3. Deploy the code that uses `accounts` and `forUser`, still on the owner
    connection.
-4. Sign in once, which creates James's account as pending, then run
-   `pipeline/bootstrap.py`: it activates James's account, makes it platform
+4. Sign in once, which creates Person A's account as pending, then run
+   `pipeline/bootstrap.py`: it activates Person A's account, makes it platform
    administrator, and assigns existing projects and artists, all logged with
    actor `bootstrap`.
 5. Point Vercel's `DATABASE_URL` at `bottega_app` and redeploy. From here the
@@ -1122,14 +1132,15 @@ so pages differ in content and never in how they are built.
   Tokens keep Vivarium's names where they existed (parchment, card, ink,
   muted, rust, moss, line); `rust` is now the accent as readable text and
   `accent`/`on-accent` the accent as a fill, with `panel`, `danger`,
-  `live`, `led-off`, `meter-done`, `meter-now`, `fresh`, `cooling`, `cold`
-  and `el-1` to `el-8`. Contrast checked for text (4.5:1) and meters (3:1)
+  `live`, `led-off`, `meter-done`, `meter-now`, `fresh`, `cooling` and
+  `cold`. Contrast checked for text (4.5:1) and meters (3:1)
   in each theme and mode. Faces come from `next/font`; only Minimal's are
   preloaded. `Wordmark.tsx` sets the name in the header per theme; `Section`
   draws a box where the theme has one (`panel`) and its heading in
-  `t-section`. Element colours (`lib/elementColors.ts`) are stored as a
-  slot's light hex, so every function copying colours keeps working; a
-  trigger moves any other hex to its slot.
+  `t-section`. Element colours are Live's own (`lib/liveColors.ts`,
+  `lib/elementColors.ts`, migration 031), stored as the colour's hex so
+  every function copying colours keeps working; a trigger moves any other
+  hex to the nearest Live colour.
 - **Type.** Five roles, as utilities in `globals.css`, and nothing else
   sets a text size: `t-title` (18px, the page title only, below the 20px app
   name), `t-lead` (15px, the one line a section leads with, such as the next

@@ -7,8 +7,9 @@
 /**
  * Raised when the parser's output changes shape or meaning; older snapshots are read again.
  * 2 (23 October 2026): the set's key and scale.
+ * 3 (25 October 2026): each track's Live colour.
  */
-export const PARSER_VERSION = 2;
+export const PARSER_VERSION = 3;
 
 /** Pitch classes as Live numbers them, C = 0. */
 export const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const;
@@ -72,6 +73,9 @@ export type AlsTrack = {
   name: string;
   /** The group track it sits in, by id. */
   groupId: string | null;
+  /** Live's colour for the track: its place in Live's palette, 0–69
+   *  (lib/liveColors.ts); null when the set does not say (parser 3). */
+  color?: number | null;
   /** From the name's zone prefix, or its group's. */
   zone: Zone | null;
   /** The track's activator: false when switched off. */

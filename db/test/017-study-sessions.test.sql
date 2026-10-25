@@ -9,7 +9,7 @@
 
 select set_config('app.actor', 'bootstrap', false);
 insert into accounts (user_id, email, display_name, status, is_platform_admin) values
-  ('J', 'j@x', 'James', 'active', true), ('C', 'c@x', 'Chris', 'active', false), ('O', 'o@x', 'Outsider', 'active', false)
+  ('J', 'j@x', 'Person A', 'active', true), ('C', 'c@x', 'Person B', 'active', false), ('O', 'o@x', 'Outsider', 'active', false)
 on conflict (user_id) do nothing;
 select set_config('app.actor', '', false);
 
@@ -43,7 +43,7 @@ grant execute on all functions in schema tst to bottega_app;
 
 set role bottega_app;
 
--- A group with Chris in it, and two topics.
+-- A group with Person B in it, and two topics.
 select set_config('app.user_id', 'J', false);
 insert into study_groups (name) values ('MPC study');
 insert into study_topics (group_id, title) values (tst.g(), 'Sampling'), (tst.g(), 'Programs');

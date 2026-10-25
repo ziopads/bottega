@@ -9,9 +9,9 @@
 
 select set_config('app.actor', 'bootstrap', false);
 insert into accounts (user_id, email, display_name, status, is_platform_admin) values
-  ('J', 'j@x', 'James', 'active', true), ('C', 'c@x', 'Chris', 'active', false)
+  ('J', 'j@x', 'Person A', 'active', true), ('C', 'c@x', 'Person B', 'active', false)
 on conflict (user_id) do nothing;
-insert into artists (code, name, account_id) values ('VIG', 'Vigorish', 'J') on conflict do nothing;
+insert into artists (code, name, account_id) values ('VIG', 'Artist V', 'J') on conflict do nothing;
 insert into projects (kind, title, created_by, owner_id) values ('music', 'bpm-test', 'j@x', 'J');
 insert into music_projects (project_id, artist_id, canonical_id)
   select p.id, a.id, '2026 1014 bpm test' from projects p, artists a where p.title = 'bpm-test' and a.code = 'VIG';
@@ -32,7 +32,7 @@ grant execute on all functions in schema tst to bottega_app;
 set role bottega_app;
 select set_config('app.user_id', 'C', false);
 
--- Chris, with edit access, stores saves as the app does.
+-- Person B, with edit access, stores saves as the app does.
 create or replace function pg_temp.save(f text, at timestamptz, tempo text) returns void language sql as $$
   insert into als_snapshots (project_id, file_name, saved_at, sha256, bytes, parser_version, data)
   values (tst.p(), f, at, encode(sha256(convert_to(f, 'UTF8')), 'hex'), 100, 1,

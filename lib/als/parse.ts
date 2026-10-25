@@ -205,6 +205,7 @@ export function parseSet(xml: string): AlsSet {
       kind,
       name,
       groupId: group && group !== '-1' ? group : null,
+      color: num(val(node, 'Color')) ?? num(val(node, 'ColorIndex')),
       zone: zoneOfName(name),
       on: bool(val(chain, 'Mixer/Speaker/Manual')),
       frozen: bool(val(node, 'Freeze'), false),

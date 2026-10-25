@@ -1,6 +1,6 @@
 # Bottega — requirements
 
-**Version:** 0.34
+**Version:** 0.35
 **Date:** 2026-10-25
 **Status:** draft
 **Scope:** What the application has to do, by layer and by phase. How it is
@@ -9,6 +9,10 @@ built is in `ARCHITECTURE.md`.
 ---
 
 ## Changelog
+
+- **0.35** (2026-10-25) — Element colours are Live's (O-10, migration 031);
+  the method on workflow templates (W-42, migration 032). People in examples
+  and tests are Person A to D.
 
 - **0.34** (2026-10-25) — The board shows the work in hand (W-21): no
   Finished column (a count links to the Projects list filtered to finished
@@ -22,7 +26,7 @@ built is in `ARCHITECTURE.md`.
   the Overview tab, above the current mix; On deck opens on the next to-do
   (W-39).
 
-- **0.31** (2026-10-25) — From Gordon's use of his own version: the next move
+- **0.31** (2026-10-25) — From Person C's use of his own version: the next move
   becomes a to-do marked next (W-38), the blocker becomes an ordinary to-do,
   and ending a session goes; sessions are read from saved sets (W-40). A
   "where it stands" header on every tab of a project (W-39) and a working
@@ -32,7 +36,7 @@ built is in `ARCHITECTURE.md`.
 - **0.30** (2026-10-24) — Templates per artist and shared artists (W-30 to
   W-32), learnings on a template's stages (W-33), moving an item between a
   note, a to-do and a learning (W-34), the To-dos page (W-35, W-36), to-dos
-  on the waveform (W-37). From Gordon's feedback: learnings belong to a
+  on the waveform (W-37). From Person C's feedback: learnings belong to a
   stage, actions to one list of to-dos. Migration 028.
 
 - **0.29** (2026-10-24) — The watcher for other people (A-10 to A-12): each
@@ -158,7 +162,7 @@ built is in `ARCHITECTURE.md`.
 - **0.9** (2026-10-11) — Gear files are public or private (G-9), replacing
   the rule that photos follow a share and everything else is private; images
   can be turned. A public showcase page is recorded under Later.
-- **0.8** (2026-10-11) — Gear fitted to the subject before importing James's
+- **0.8** (2026-10-11) — Gear fitted to the subject before importing Person A's
   hardware list: models name their manufacturer and the years they were made;
   more categories; power, rack units and effect types as capabilities; an
   estimated value on the insurance record; a unit moves between owned and
@@ -217,7 +221,7 @@ particular people. The name is the Renaissance workshop that took commissions, k
 the tools and materials, trained apprentices by working beside them, and moved
 each piece through stages from drawing to finish.
 
-Its first account is James's, for Sirsinate Sound Labs, a music studio. An
+Its first account is Person A's, for Sirsinate Sound Labs, a music studio. An
 account holds:
 
 - the studio's gear, with manuals and private documentation;
@@ -251,13 +255,13 @@ group (L-18), a separate thing.
 
 - **Account holders.** One person, one account. Each account owns its artists
   (the names its work is credited to), projects, gear and documents. The first
-  three: James (artists VIG and ASU, a collaboration), Chris (KR) and Gordon
+  three: Person A (artists VIG and ASU, a collaboration), Person B (KR) and Person C
   (KJI). The account holder is the administrator of everything in it.
 - **Collaborators.** An account holder seen from someone else's account: a
   person an owner has shared items with.
-- **The platform administrator.** James. Approves new accounts, disables
+- **The platform administrator.** Person A. Approves new accounts, disables
   them, reads the access log, and may open any account's content read-only.
-- **Study group.** Chris, Gordon and James, each with their own MPC (Phase 2).
+- **Study group.** Person B, Person C and Person A, each with their own MPC (Phase 2).
 - **Claude**, through the connector, acting as whichever person connected it
   and seeing exactly what that person sees.
 
@@ -273,8 +277,8 @@ group (L-18), a separate thing.
   (projects of every kind, gear, documents) carry their owner; everything
   beneath them (mixes, references, notes, gear files, pages, passages)
   belongs to its parent's owner.
-- **AC-4** By default an account sees only its own items. Chris does not see
-  Gordon's work, nor Gordon Chris's, nor either of them James's.
+- **AC-4** By default an account sees only its own items. Person B does not see
+  Person C's work, nor Person C Person B's, nor either of them Person A's.
 - **AC-5** An owner shares one item with one person at one level:
   - **view** — see it, play and download its audio, read its notes;
   - **contribute** — view, and upload mixes and references and add notes;
@@ -382,7 +386,7 @@ group (L-18), a separate thing.
   and the platform administrator's read-only view does not reach them.
 - **G-8** An account's gear can be imported from a spreadsheet: one row per
   unit, in a documented format, checked by the database in a dry run before
-  anything is kept. The first import is James's hardware list.
+  anything is kept. The first import is Person A's hardware list.
 - **G-9** Each file on a unit is public or private, set by its owner. Public
   files are shown to everyone the unit is shared with, and later on the
   owner's showcase page (§13); private files are the owner's alone. New
@@ -723,6 +727,13 @@ there may be lost in the move.
 
 ## 8. Corpus (K)
 
+- **W-42** The method: a workflow template carries principles for the whole
+  workflow, a short line and a sentence or two each, edited with the
+  template (shared through an artist like the rest of it). Projects show
+  their template's method, closed by default, at the foot of the Workflow
+  tab; the board shows the method of the template new projects start from;
+  Claude reads it through the connector. Bottega's default template starts
+  with a draft (25 October 2026).
 - **K-1** Load a PDF (a manual, a reference book) and extract its text by page.
   Scans are run through OCR first.
 - **K-2** Chunk, embed and index the text; search by keyword, by meaning, and by
@@ -1002,15 +1013,17 @@ travel to the database.
 - **O-8** The site's navigation marks the section one is in the way a page's
   tabs mark the one shown (25 October 2026).
 - **O-9** Themes: each person chooses the site's look in Account ›
-  Preferences › Look: Minimal (the original), Console, Riso, Gallery or Rack
-  (after Gordon's Finish Line), each in light and dark, and whether it
-  follows the computer's setting. The choice is kept with the account. Colour
-  carries meaning and means the same in every theme: element colours (eight
-  slots, checked for colour-blind separation, always shown with the
-  element's name), stage meters, what Bottega read from Live set apart from
-  what people wrote, and how recently a project was worked on (fresh,
-  cooling, cold). A track structure's element colour is one of the eight
-  slots (25 October 2026).
+  Preferences › Look: Minimal (the original), Console, Riso, Gallery or Rack,
+  each in light and dark, and whether it follows the computer's setting. The
+  choice is kept with the account. Colour carries meaning and means the same
+  in every theme: element colours, stage meters, what Bottega read from Live
+  set apart from what people wrote, and how recently a project was worked on
+  (fresh, cooling, cold) (25 October 2026).
+- **O-10** Element colours are Ableton Live's: a track structure's element
+  takes one of Live's 70 colours, picked from Live's grid, with eight
+  suggested that stay apart for colour-blind readers in their order; always
+  shown with the element's name. The set reader reads each track's Live
+  colour, and the State tab shows it (25 October 2026).
 
 ## 13. Later
 

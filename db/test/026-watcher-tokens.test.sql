@@ -9,7 +9,7 @@
 
 select set_config('app.actor', 'bootstrap', false);
 insert into accounts (user_id, email, display_name, status) values
-  ('J', 'j@x', 'James', 'active'), ('G', 'g@x', 'Gordon', 'active'), ('P', 'p@x', 'Pending', 'pending')
+  ('J', 'j@x', 'Person A', 'active'), ('G', 'g@x', 'Person C', 'active'), ('P', 'p@x', 'Pending', 'pending')
 on conflict (user_id) do nothing;
 select set_config('app.actor', '', false);
 

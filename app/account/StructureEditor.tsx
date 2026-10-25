@@ -6,9 +6,10 @@ import { api } from '@/app/_studio/controls';
 import { Section } from '@/app/_ui/layout';
 import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY } from '@/app/_ui/styles';
 import { zoneOfName } from '@/lib/als/zones';
-import { elementColor, SLOTS, slotOf } from '@/lib/elementColors';
+import { elementColor } from '@/lib/elementColors';
 import type { StructureEditor as Editor, StructureElement } from '@/lib/structureTypes';
 
+import LiveColorPicker from './LiveColorPicker';
 import { FIELD } from './parts';
 
 // Preferences › Track structure (REQUIREMENTS W-25 to W-29; db/025): the
@@ -206,27 +207,10 @@ function ElementEditor({ e, ed, readOnly, busy, post }: { e: StructureElement; e
         </label>
         <div className="flex flex-col gap-1">
           <span className="t-small text-muted" id={`colour-${e.id}`}>Colour</span>
-          {/* Eight slots, each drawn in the theme's step for light or dark (db/030). */}
-          <span className="flex flex-wrap items-center gap-1" role="radiogroup" aria-labelledby={`colour-${e.id}`}>
-            {SLOTS.map((s, i) => {
-              const on = slotOf(e.color) === i + 1;
-              return (
-                <button
-                  key={s.hex}
-                  type="button"
-                  role="radio"
-                  aria-checked={on}
-                  aria-label={s.name}
-                  title={s.name}
-                  disabled={readOnly || busy}
-                  onClick={() => void save({ color: s.hex })}
-                  className={`h-6 w-6 rounded-full border-2 ${on ? 'border-ink' : 'border-transparent hover:border-muted'}`}
-                  style={{ background: `var(--el-${i + 1})`, backgroundClip: 'content-box', padding: 2 }}
-                />
-              );
-            })}
+          <LiveColorPicker value={e.color} disabled={readOnly || busy} labelledBy={`colour-${e.id}`} onPick={(hex) => void save({ color: hex })} />
+          <span className="flex">
             {!readOnly && e.color && (
-              <button onClick={() => save({ color: null })} disabled={busy} className={`${BUTTON} ml-1`}>
+              <button onClick={() => save({ color: null })} disabled={busy} className={BUTTON}>
                 None
               </button>
             )}

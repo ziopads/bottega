@@ -9,7 +9,7 @@
 \set QUIET 1
 
 select set_config('app.actor', 'bootstrap', false);
-insert into accounts (user_id, email, display_name, status) values ('J', 'j@x', 'James', 'active'), ('G', 'g@x', 'Gordon', 'active')
+insert into accounts (user_id, email, display_name, status) values ('J', 'j@x', 'Person A', 'active'), ('G', 'g@x', 'Person C', 'active')
 on conflict (user_id) do nothing;
 select set_config('app.actor', '', false);
 
