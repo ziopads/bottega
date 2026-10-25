@@ -604,8 +604,10 @@ there may be lost in the move.
   the next card up" logs the next move as done and makes the top open card
   the next move.
 - **W-21** The board. Each person has their own board, the page Bottega opens
-  on: columns Backlog and In rotation, each project with its stage bar, next
-  to-do and how long since it was touched. Finished projects leave the board;
+  on: the projects in rotation as a rack on the left, each with its stage
+  bar, next to-do and how long since it was touched; the chosen one's Where
+  it stands on the right, where its to-dos can be worked; the backlog as a
+  grid below (25 October). Finished projects leave the board;
   its header counts them and links to the Projects list filtered to them
   (25 October). A project lands in its owner's backlog when its workflow
   starts; anyone who can see a project can put it on their own board, from

@@ -14,6 +14,8 @@ export type BoardProject = {
   bpm: number | null;
   /** The owner's name when the project is someone else's; null for one's own. */
   ownerName: string | null;
+  /** Whether the person may change its to-dos (contribute access or more). */
+  canContribute: boolean;
   place: BoardPlace;
   /** Set while the project is finished (W-23); it then sits under Finished. */
   finishedAt: string | null;

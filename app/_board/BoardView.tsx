@@ -7,15 +7,19 @@ import { api } from '@/app/_studio/controls';
 import { BUTTON, FIELD, SEGMENT, SEGMENTS } from '@/app/_ui/styles';
 import { daysSince, progressOf, type Board, type BoardCandidate, type BoardPlace, type BoardProject } from '@/lib/boardTypes';
 import Method, { type MethodPrinciple } from '@/app/_ui/Method';
+import BoardDetail from './BoardDetail';
 
-// The board (REQUIREMENTS W-21 to W-23), layout B of 23 October, cleaned up
-// on 25 October: the work in hand only.
+// The board (REQUIREMENTS W-21 to W-23), laid out on 25 October like the
+// rack and channel strip of the Finish Line prototype:
 //
-//   Backlog       sortable; ↑ rotates a project in, × takes it off the board;
-//                 at its foot, + Add a project (search, the top five by
-//                 newest, last worked on or stars, or a new project)
-//   In rotation   at most the person's limit; each project with its stage bar
-//                 and the next to-do; ↓ sends it back
+//   In rotation   on the left, a rack of at most the person's limit: each
+//                 project with its stage bar and next to-do; choosing one
+//                 shows it on the right
+//   On the right  the chosen project's Where it stands (BoardDetail), where
+//                 its to-dos can be worked; ↓ Backlog sends it back
+//   Backlog       below, a grid, sortable; ↑ rotates a project in, × takes it
+//                 off the board; at its foot, + Add a project (search, the
+//                 top five by newest, last worked on or stars, or a new one)
 //
 // Finished projects leave the board: the header counts them and links to the
 // Projects list filtered to them. Projects drag between Backlog and In
@@ -37,6 +41,7 @@ export default function BoardView({ initial, method = [] }: { initial: Board; me
   const [sort, setSort] = useState<Sort>('progress');
   const [swapFor, setSwapFor] = useState<number | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   async function post(body: unknown): Promise<boolean> {
     setError('');
@@ -65,6 +70,13 @@ export default function BoardView({ initial, method = [] }: { initial: Board; me
     return a.title.localeCompare(b.title);
   });
   rotation.sort(byRecent);
+  // The project shown on the right: the one chosen, else the most recently worked on.
+  const selected = rotation.find((p) => p.id === selectedId) ?? rotation[0] ?? null;
+
+  async function reload() {
+    const r = await api<{ board: Board }>('/api/board', { method: 'GET' });
+    if (r.ok) setBoard(r.data.board);
+  }
 
   async function moveTo(id: number, place: BoardPlace) {
     const p = board.projects.find((x) => x.id === id);
@@ -134,40 +146,100 @@ export default function BoardView({ initial, method = [] }: { initial: Board; me
         </div>
       )}
 
-      <div className="flex flex-wrap items-start gap-5">
+      <div className="flex flex-wrap items-start gap-6">
         <section
-          aria-label="Backlog"
-          {...dropZone('backlog')}
-          className={`min-w-0 flex-[1_1_300px] space-y-2 rounded-md bg-ink/[0.03] p-3 ${dragging !== null ? 'outline-dashed outline-1 outline-ink/30' : ''}`}
+          aria-label="In rotation"
+          {...dropZone('rotation')}
+          className={`min-w-0 flex-[1_1_320px] space-y-2 lg:max-w-[24rem] ${dragging !== null ? 'rounded-md outline-dashed outline-1 outline-ink/30' : ''}`}
         >
-          <div className="flex items-center justify-between gap-2">
-            <p className="t-label">Backlog · {backlog.length}</p>
-            {backlog.length > 1 && (
-              <label className="flex items-center gap-1.5 t-small text-muted">
-                Sort
-                <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className={`${FIELD} t-small`}>
-                  {SORTS.map((s) => (
-                    <option key={s.key} value={s.key}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="t-section">
+              In rotation · {rotation.length} of {board.rotationLimit}
+            </p>
+            <Link href="/account?tab=preferences#board" className="t-small text-muted underline decoration-ink/30 underline-offset-2 hover:decoration-ink">
+              Limit
+            </Link>
           </div>
-          {sorted.length === 0 && <p className="t-body text-muted">Nothing waiting. Projects you send back from rotation wait here.</p>}
-          {sorted.length + rotation.length > 0 && (
-            <p className="t-small text-muted">Drag a project between the backlog and rotation.</p>
+          {rotation.map((p) => {
+            const on = p.id === selected?.id;
+            return (
+              <article
+                key={p.id}
+                {...dragProps(p.id)}
+                className={`t-body rounded-[var(--radius)] border bg-card ${on ? 'border-rust shadow-[inset_3px_0_0_var(--rust)]' : isCold(p, board.coldDays) ? 'border-dashed border-cold' : 'border-line hover:border-muted'}`}
+              >
+                <button type="button" onClick={() => setSelectedId(p.id)} aria-pressed={on} className="block w-full space-y-1.5 p-3 text-left">
+                  <span className="flex items-baseline justify-between gap-2">
+                    <span className="t-lead min-w-0 truncate font-medium">{p.title}</span>
+                    <span className="t-num shrink-0 t-small text-muted">{p.code}</span>
+                  </span>
+                  <Meter p={p} size="small" />
+                  <span className="block truncate t-small text-muted">
+                    {p.next ? (
+                      <>
+                        <span className="text-ink">Next:</span> {p.next}
+                      </>
+                    ) : (
+                      'No to-do marked next'
+                    )}
+                  </span>
+                  <Foot p={p} coldDays={board.coldDays} />
+                </button>
+              </article>
+            );
+          })}
+          {Array.from({ length: Math.max(0, board.rotationLimit - rotation.length) }, (_, i) => (
+            <div key={i} className="t-small rounded-[var(--radius)] border border-dashed border-line p-3 text-muted">
+              Open slot. {backlog.length ? 'Drag a project up from the backlog, or press ↑ on one.' : 'Add a project in the backlog below.'}
+            </div>
+          ))}
+          {rotation.length > board.rotationLimit && (
+            <p className="t-body text-rust">
+              {rotation.length - board.rotationLimit} over the limit. Send {rotation.length - board.rotationLimit > 1 ? 'some' : 'one'} back to the backlog.
+            </p>
           )}
+        </section>
+
+        <div className="panel min-w-0 flex-[999_1_480px]">
+          {selected ? (
+            <BoardDetail key={selected.id} project={selected} busy={busy} onBack={() => moveTo(selected.id, 'backlog')} onChanged={reload} />
+          ) : (
+            <p className="t-body text-muted">Projects in rotation show here, one at a time: choose one on the left.</p>
+          )}
+        </div>
+      </div>
+
+      <section
+        aria-label="Backlog"
+        {...dropZone('backlog')}
+        className={`mt-10 space-y-3 ${dragging !== null ? 'rounded-md outline-dashed outline-1 outline-ink/30' : ''}`}
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-2 border-b-[length:var(--rule)] border-line pb-1">
+          <p className="t-section">Backlog · {backlog.length}</p>
+          {backlog.length > 1 && (
+            <label className="flex items-center gap-1.5 t-small text-muted">
+              Sort
+              <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className={`${FIELD} t-small`}>
+                {SORTS.map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+        {sorted.length === 0 && <p className="t-body text-muted">Nothing waiting. Projects you send back from rotation wait here.</p>}
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3">
           {sorted.map((p) => (
-            <article key={p.id} {...dragProps(p.id)} className={`t-body space-y-1.5 rounded border bg-card p-2.5 ${isCold(p, board.coldDays) ? 'border-dashed border-cold' : 'border-line'}`}>
+            <article key={p.id} {...dragProps(p.id)} className={`t-body space-y-1.5 rounded-[var(--radius)] border bg-card p-2.5 ${isCold(p, board.coldDays) ? 'border-dashed border-cold' : 'border-line'}`}>
               <div className="flex items-baseline justify-between gap-2">
-                <Link href={`/projects/${p.id}?tab=workflow`} className="min-w-0 font-medium hover:text-rust">
+                <Link href={`/projects/${p.id}?tab=workflow`} className="min-w-0 truncate font-medium hover:text-rust">
                   {p.title}
                 </Link>
                 <span className="flex shrink-0 gap-1">
-                  <button onClick={() => moveTo(p.id, 'rotation')} disabled={busy} className={BUTTON} title="Move into rotation">
-                    ↑ Rotate in
+                  <button onClick={() => moveTo(p.id, 'rotation')} disabled={busy} className={BUTTON} title="Move into rotation" aria-label={`Rotate ${p.title} in`}>
+                    ↑
                   </button>
                   <button onClick={() => post({ op: 'remove', projectId: p.id })} disabled={busy} className={BUTTON} aria-label={`Take ${p.title} off the board`} title="Take off the board">
                     ×
@@ -178,6 +250,8 @@ export default function BoardView({ initial, method = [] }: { initial: Board; me
               <Foot p={p} coldDays={board.coldDays} />
             </article>
           ))}
+        </div>
+        <div className="max-w-2xl">
           <AddToBoard
             candidates={board.candidates}
             busy={busy}
@@ -186,59 +260,8 @@ export default function BoardView({ initial, method = [] }: { initial: Board; me
             onCreated={(b) => setBoard(b)}
             onError={setError}
           />
-        </section>
-
-        <section
-          aria-label="In rotation"
-          {...dropZone('rotation')}
-          className={`min-w-0 flex-[2.2_1_560px] space-y-3 rounded-md border border-ink p-3 ${dragging !== null ? 'outline-dashed outline-1 outline-ink/30' : ''}`}
-        >
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <p className="t-label">
-              In rotation · {rotation.length} of {board.rotationLimit}
-            </p>
-            <p className="t-small text-muted">
-              The limit is in <Link href="/account?tab=preferences" className="underline decoration-ink/30 underline-offset-2 hover:decoration-ink">Preferences</Link> · ↓ sends a project back
-            </p>
-          </div>
-          {rotation.map((p) => (
-            <article key={p.id} {...dragProps(p.id)} className={`t-body space-y-2.5 rounded border p-3.5 ${isCold(p, board.coldDays) ? 'border-dashed border-cold' : 'border-ink/20'}`}>
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <Link href={`/projects/${p.id}?tab=workflow`} className="t-lead font-medium hover:text-rust">
-                  {p.title}
-                </Link>
-                <span className="flex items-center gap-2">
-                  <span className="t-num font-mono t-small text-muted">
-                    {p.code}
-                    {p.bpm ? ` · ${p.bpm} BPM` : ''}
-                    {p.ownerName ? ` · ${p.ownerName}` : ''}
-                  </span>
-                  <button onClick={() => moveTo(p.id, 'backlog')} disabled={busy} className={BUTTON} aria-label={`Send ${p.title} back to the backlog`} title="Back to the backlog">
-                    ↓
-                  </button>
-                </span>
-              </div>
-              <Meter p={p} size="large" />
-              <div className="border-t border-line pt-2">
-                <p className="t-label">Next</p>
-                <p className="t-lead">{p.next || <span className="text-muted">No to-do marked next.</span>}</p>
-              </div>
-              <Foot p={p} coldDays={board.coldDays} withCards />
-            </article>
-          ))}
-          {Array.from({ length: Math.max(0, board.rotationLimit - rotation.length) }, (_, i) => (
-            <div key={i} className="t-body rounded border border-dashed border-line p-3.5 text-muted">
-              Open slot. {backlog.length ? 'Rotate a project in from the backlog.' : 'Add a project to the board.'}
-            </div>
-          ))}
-          {rotation.length > board.rotationLimit && (
-            <p className="t-body text-rust">
-              {rotation.length - board.rotationLimit} over the limit. Send {rotation.length - board.rotationLimit > 1 ? 'some' : 'one'} back to the backlog.
-            </p>
-          )}
-        </section>
-
-      </div>
+        </div>
+      </section>
       {board.projects.length === 0 && (
         <p className="t-body mt-6 text-muted">
           Your board is empty. A project lands in your backlog when its workflow starts; add any project you can see with + Add a project in the backlog. <Link href="/projects" className="underline decoration-ink/30 underline-offset-2 hover:decoration-ink">All projects</Link>
