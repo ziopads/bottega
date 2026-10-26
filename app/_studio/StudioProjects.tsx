@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { StudioArtist, StudioProject, StudioRelease } from '@/lib/studioTypes';
+import type { AccessLevel, StudioArtist, StudioProject, StudioRelease } from '@/lib/studioTypes';
 import { RATING_MAX, formatDuration } from '@/lib/studioTypes';
 import { api, GenreSelect, InlineEdit, Stars } from './controls';
 import NewProject from './NewProject';
@@ -13,20 +13,23 @@ import { columnLabel, DEFAULT_COLUMNS, RESPONSIVE, type ProjectColumn } from '@/
 import ColumnsMenu from './ColumnsMenu';
 import type { BoardPlace } from '@/lib/boardTypes';
 
-// The sessions list: a sortable table with inline editing, multi-select with
+// The projects list: a sortable table with inline editing, multi-select with
 // bulk changes, filters, and one shared player that steps through the rows as
-// they are currently sorted and filtered.
+// they are currently sorted and filtered. It holds the person's own projects
+// and those shared with them (Owner column, Whose filter); a shared row plays
+// like any other, and is edited and selected only with edit access.
 //
 // State is local and updated from each API response, so a change shows at once
 // without re-fetching the whole list.
 
-type SortKey = 'rating' | 'artist' | 'id' | 'name' | 'genre' | 'bpm' | 'versions' | 'length' | 'date' | 'upload';
+type SortKey = 'rating' | 'artist' | 'owner' | 'id' | 'name' | 'genre' | 'bpm' | 'versions' | 'length' | 'date' | 'upload';
 type Sort = { key: SortKey; dir: 1 | -1 };
 
 /** The direction a column sorts in on its first click. */
 const FIRST_DIR: Record<SortKey, 1 | -1> = {
   rating: -1,
   artist: 1,
+  owner: 1,
   id: -1,
   name: 1,
   genre: 1,
@@ -44,6 +47,8 @@ function compare(a: StudioProject, b: StudioProject, key: SortKey): number {
       return a.rating - b.rating;
     case 'artist':
       return a.artist.code.localeCompare(b.artist.code);
+    case 'owner':
+      return a.ownerName.localeCompare(b.ownerName, undefined, { sensitivity: 'base' });
     case 'id':
       return a.canonicalId.localeCompare(b.canonicalId);
     case 'name':
@@ -65,6 +70,7 @@ function compare(a: StudioProject, b: StudioProject, key: SortKey): number {
 
 function isEmpty(p: StudioProject, key: SortKey): boolean {
   return (
+    (key === 'owner' && p.level === 'owner') ||
     (key === 'name' && !p.workingName) ||
     (key === 'genre' && !p.genre) ||
     (key === 'bpm' && p.bpm === null) ||
@@ -85,9 +91,23 @@ function sortProjects(list: StudioProject[], { key, dir }: Sort): StudioProject[
 
 const NO_IDS: number[] = [];
 
+/** What the viewer may do with a shared project, as the Owner column's tooltip says it. */
+const LEVEL_WORD: Record<AccessLevel, string> = {
+  owner: 'yours',
+  edit: 'you can edit',
+  contribute: 'you can contribute',
+  view: 'you can listen',
+};
+
+/** Inline edits, rating and selection need edit access; the server checks again. */
+const canEdit = (p: StudioProject) => p.level === 'owner' || p.level === 'edit';
+
+type Whose = 'all' | 'mine' | 'shared';
+
 export default function StudioProjects({
   initialProjects,
   artists,
+  filterArtists,
   initialGenres,
   initialReleases,
   defaultArtistId,
@@ -97,7 +117,10 @@ export default function StudioProjects({
   initialColumns = null,
 }: {
   initialProjects: StudioProject[];
+  /** The artists the person can credit projects to: new projects and the bulk bar. */
   artists: StudioArtist[];
+  /** Every artist the person can see, for the Artist filter; only those on a listed project are offered. */
+  filterArtists?: StudioArtist[];
   initialGenres: string[];
   initialReleases: StudioRelease[];
   defaultArtistId: number | null;
@@ -118,6 +141,7 @@ export default function StudioProjects({
   // ── Filters and sort ──────────────────────────────────────────────────────
   const [query, setQuery] = useState('');
   const [artistFilter, setArtistFilter] = useState<number | ''>('');
+  const [whose, setWhose] = useState<Whose>('all');
   const [ratingFilter, setRatingFilter] = useState<'any' | 'unrated' | number>('any');
   const [genreFilter, setGenreFilter] = useState('');
   // '' all · 'none' not on any release · a release id
@@ -125,13 +149,20 @@ export default function StudioProjects({
   const [audioOnly, setAudioOnly] = useState(false);
   const [finishedOnly, setFinishedOnly] = useState(initialFinishedOnly);
   const [custom, setCustom] = useState<ProjectColumn[] | null>(initialColumns);
-  const columns = custom ?? DEFAULT_COLUMNS;
+  // The Owner column only when something shared is listed.
+  const hasShared = projects.some((p) => p.level !== 'owner');
+  const columns = (custom ?? DEFAULT_COLUMNS).filter((k) => k !== 'owner' || hasShared);
+  const artistOptions = useMemo(() => {
+    const used = new Set(projects.map((p) => p.artist.id));
+    return (filterArtists ?? artists).filter((a) => used.has(a.id));
+  }, [projects, filterArtists, artists]);
   const finishedSet = useMemo(() => new Set(finishedIds), [finishedIds]);
   const [sort, setSort] = useState<Sort>({ key: 'rating', dir: -1 });
 
   const filtering =
     query.trim() !== '' ||
     artistFilter !== '' ||
+    whose !== 'all' ||
     ratingFilter !== 'any' ||
     genreFilter !== '' ||
     releaseFilter !== '' ||
@@ -146,6 +177,8 @@ export default function StudioProjects({
       if (audioOnly && !p.latest) return false;
       if (finishedOnly && !finishedSet.has(p.id)) return false;
       if (artistFilter !== '' && p.artist.id !== artistFilter) return false;
+      if (whose === 'mine' && p.level !== 'owner') return false;
+      if (whose === 'shared' && p.level === 'owner') return false;
       if (ratingFilter === 'unrated' && p.rating !== 0) return false;
       if (typeof ratingFilter === 'number' && p.rating < ratingFilter) return false;
       if (genreFilter && p.genre !== genreFilter) return false;
@@ -154,12 +187,13 @@ export default function StudioProjects({
       if (typeof releaseFilter === 'number' && !on.includes(releaseFilter)) return false;
       if (q) {
         const rel = on.map((id) => releaseTitle.get(id) ?? '').join(' ');
-        const hay = `${p.canonicalId} ${p.workingName} ${p.genre} ${p.artist.code} ${p.artist.name} ${rel}`.toLowerCase();
+        const owner = p.level === 'owner' ? '' : p.ownerName;
+        const hay = `${p.canonicalId} ${p.workingName} ${p.genre} ${p.artist.code} ${p.artist.name} ${owner} ${rel}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [projects, query, artistFilter, ratingFilter, genreFilter, releaseFilter, audioOnly, finishedOnly, finishedSet, sort, releaseTitle]);
+  }, [projects, query, artistFilter, whose, ratingFilter, genreFilter, releaseFilter, audioOnly, finishedOnly, finishedSet, sort, releaseTitle]);
 
   function clickSort(key: SortKey) {
     setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: FIRST_DIR[key] }));
@@ -178,7 +212,11 @@ export default function StudioProjects({
       const b = shown.findIndex((x) => x.id === p.id);
       if (shift && a >= 0 && b >= 0) {
         const [lo, hi] = a < b ? [a, b] : [b, a];
-        for (let i = lo; i <= hi; i++) (on ? next.add(shown[i].id) : next.delete(shown[i].id));
+        for (let i = lo; i <= hi; i++) {
+          if (!canEdit(shown[i])) continue;
+          if (on) next.add(shown[i].id);
+          else next.delete(shown[i].id);
+        }
       } else if (on) next.add(p.id);
       else next.delete(p.id);
       return next;
@@ -186,11 +224,15 @@ export default function StudioProjects({
     anchor.current = p.id;
   }
 
-  const allShownSelected = shown.length > 0 && shown.every((p) => selected.has(p.id));
+  const selectable = shown.filter(canEdit);
+  const allShownSelected = selectable.length > 0 && selectable.every((p) => selected.has(p.id));
   function toggleAllShown() {
     setSelected((prev) => {
       const next = new Set(prev);
-      for (const p of shown) (allShownSelected ? next.delete(p.id) : next.add(p.id));
+      for (const p of selectable) {
+        if (allShownSelected) next.delete(p.id);
+        else next.add(p.id);
+      }
       return next;
     });
   }
@@ -222,6 +264,10 @@ export default function StudioProjects({
   }
 
   async function rate(p: StudioProject, rating: number) {
+    if (!canEdit(p)) {
+      setError(`${p.ownerName} shared this project without edit access, so its rating is theirs to set.`);
+      return;
+    }
     merge([{ ...p, rating }]); // optimistic
     if (!(await patch(p, { rating }))) merge([p]);
   }
@@ -362,8 +408,20 @@ export default function StudioProjects({
           label="Artist"
           value={String(artistFilter)}
           onChange={(v) => setArtistFilter(v === '' ? '' : Number(v))}
-          options={[['', 'All'], ...artists.map((a) => [String(a.id), `${a.code} — ${a.name}`] as [string, string])]}
+          options={[['', 'All'], ...artistOptions.map((a) => [String(a.id), `${a.code} — ${a.name}`] as [string, string])]}
         />
+        {hasShared && (
+          <FilterSelect
+            label="Whose"
+            value={whose}
+            onChange={(v) => setWhose(v as Whose)}
+            options={[
+              ['all', 'All'],
+              ['mine', 'Mine'],
+              ['shared', 'Shared with me'],
+            ]}
+          />
+        )}
         <FilterSelect
           label="Rating"
           value={String(ratingFilter)}
@@ -411,6 +469,7 @@ export default function StudioProjects({
               onClick={() => {
                 setQuery('');
                 setArtistFilter('');
+                setWhose('all');
                 setRatingFilter('any');
                 setGenreFilter('');
                 setReleaseFilter('');
@@ -452,6 +511,7 @@ export default function StudioProjects({
                 <th className={`${th} w-8`}>
                   <input
                     type="checkbox"
+                    disabled={selectable.length === 0}
                     checked={allShownSelected}
                     onChange={toggleAllShown}
                     aria-label={allShownSelected ? 'Deselect all shown' : 'Select all shown'}
@@ -477,6 +537,7 @@ export default function StudioProjects({
                 <ProjectRow
                   key={p.id}
                   project={p}
+                  editable={canEdit(p)}
                   selected={selected.has(p.id)}
                   onSelect={(shift) => clickSelect(p, shift)}
                   isCurrent={p.id === deck.item?.projectId}
@@ -693,6 +754,7 @@ function BulkBar({
 
 function ProjectRow({
   project: p,
+  editable,
   selected,
   onSelect,
   isCurrent,
@@ -708,6 +770,8 @@ function ProjectRow({
   responsive,
 }: {
   project: StudioProject;
+  /** Edit access: inline edits, rating and selection. Without it the row shows its values and plays. */
+  editable: boolean;
   selected: boolean;
   onSelect: (shift: boolean) => void;
   isCurrent: boolean;
@@ -729,14 +793,16 @@ function ProjectRow({
   return (
     <tr className={isCurrent ? 'bg-ink/5' : selected ? 'bg-ink/[0.03]' : undefined}>
       <td className={td}>
-        <input
-          type="checkbox"
-          checked={selected}
-          // onClick rather than onChange: the change event carries no Shift key.
-          onClick={(e) => onSelect(e.shiftKey)}
-          onChange={() => {}}
-          aria-label={`Select ${p.canonicalId}`}
-        />
+        {editable && (
+          <input
+            type="checkbox"
+            checked={selected}
+            // onClick rather than onChange: the change event carries no Shift key.
+            onClick={(e) => onSelect(e.shiftKey)}
+            onChange={() => {}}
+            aria-label={`Select ${p.canonicalId}`}
+          />
+        )}
       </td>
       <td className={td}>
         {p.latest ? (
@@ -758,13 +824,26 @@ function ProjectRow({
           case 'rating':
             return (
               <td key={k} className={`${td} ${hide}`}>
-                <Stars rating={p.rating} onRate={onRate} />
+                {editable ? (
+                  <Stars rating={p.rating} onRate={onRate} />
+                ) : (
+                  <span className="t-lead leading-none text-ink" aria-label={`Rating: ${p.rating} of ${RATING_MAX}`} title={`Rated by ${p.ownerName}`}>
+                    {'★'.repeat(p.rating)}
+                    <span className="text-muted/40">{'☆'.repeat(RATING_MAX - p.rating)}</span>
+                  </span>
+                )}
               </td>
             );
           case 'artist':
             return (
               <td key={k} className={`${td} t-small font-medium tracking-[0.04em] text-muted ${hide}`} title={p.artist.name}>
                 {p.artist.code}
+              </td>
+            );
+          case 'owner':
+            return (
+              <td key={k} className={`${td} whitespace-nowrap t-small text-muted ${hide}`} title={p.level === 'owner' ? undefined : `${p.ownerName} · ${LEVEL_WORD[p.level]}`}>
+                {p.level === 'owner' ? '' : p.ownerName}
               </td>
             );
           case 'id':
@@ -778,25 +857,39 @@ function ProjectRow({
           case 'name':
             return (
               <td key={k} className={`${td} min-w-[10rem] max-w-[22rem] ${hide}`}>
-                <InlineEdit value={p.workingName} placeholder="untitled" label="Working name" onSave={(v) => onPatch({ workingName: v })} />
+                {editable ? (
+                  <InlineEdit value={p.workingName} placeholder="untitled" label="Working name" onSave={(v) => onPatch({ workingName: v })} />
+                ) : (
+                  <Link href={`/projects/${p.id}`} className="hover:text-rust">
+                    {p.workingName || <span className="text-muted">untitled</span>}
+                  </Link>
+                )}
               </td>
             );
           case 'genre':
             return (
               <td key={k} className={`${td} w-36 min-w-[8rem] text-muted ${hide}`}>
-                <GenreSelect
-                  value={p.genre}
-                  genres={genres}
-                  onAddGenre={onAddGenre}
-                  onChange={(g) => onPatch({ genre: g })}
-                  className="w-full border-transparent bg-transparent hover:border-line"
-                />
+                {editable ? (
+                  <GenreSelect
+                    value={p.genre}
+                    genres={genres}
+                    onAddGenre={onAddGenre}
+                    onChange={(g) => onPatch({ genre: g })}
+                    className="w-full border-transparent bg-transparent hover:border-line"
+                  />
+                ) : (
+                  <span className="px-2">{p.genre}</span>
+                )}
               </td>
             );
           case 'bpm':
             return (
               <td key={k} className={`${td} w-16 text-right tabular-nums text-muted ${hide}`}>
-                <InlineEdit value={p.bpm === null ? '' : String(p.bpm)} placeholder="—" label="BPM" inputMode="decimal" align="right" onSave={(v) => onPatch({ bpm: v })} />
+                {editable ? (
+                  <InlineEdit value={p.bpm === null ? '' : String(p.bpm)} placeholder="—" label="BPM" inputMode="decimal" align="right" onSave={(v) => onPatch({ bpm: v })} />
+                ) : (
+                  (p.bpm ?? '—')
+                )}
               </td>
             );
           case 'versions':

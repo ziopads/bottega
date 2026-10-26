@@ -1,26 +1,17 @@
-import Link from 'next/link';
-import BoardPlaceSelect from '@/app/_board/BoardPlaceSelect';
 import { listBoardPlaces, listFinishedIds } from '@/lib/board';
 
 import StudioProjects from '@/app/_studio/StudioProjects';
 import { getPreferences } from '@/lib/account';
 import { requireAccount } from '@/lib/access';
 import { listArtists, listGenres, listProjects, listReleases } from '@/lib/studio';
-import { formatDuration, type AccessLevel } from '@/lib/studioTypes';
 
-// Projects. The signed-in person's own projects first, with the full list
-// tools; below them, projects other accounts have shared with them, each
-// naming its owner and the access granted (REQUIREMENTS AC-8). The home page
-// was this list until 23 October; it is now the board (W-21).
+// Projects. One table of every project the person can see: their own and
+// those other accounts have shared with them, with an Owner column and a
+// filter between them (REQUIREMENTS AC-8). Shared rows play like any other;
+// editing follows the access granted. The home page was this list until 23
+// October; it is now the board (W-21).
 
 export const metadata = { title: 'Projects · Bottega' };
-
-const LEVEL_WORD: Record<AccessLevel, string> = {
-  owner: 'owner',
-  edit: 'can edit',
-  contribute: 'can contribute',
-  view: 'can listen',
-};
 
 export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ show?: string }> }) {
   const { db, userId } = await requireAccount();
@@ -48,11 +39,13 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
         <h1 className="t-title">Projects</h1>
         <p className="t-body text-muted">
           {own.length} {own.length === 1 ? 'project' : 'projects'}
+          {shared.length > 0 && ` · ${shared.length} shared with you`}
         </p>
       </div>
       <StudioProjects
-        initialProjects={own}
+        initialProjects={projects}
         artists={artists.filter((a) => a.creditable)}
+        filterArtists={artists}
         initialGenres={genres}
         initialReleases={myReleases}
         defaultArtistId={defaultArtist?.id ?? null}
@@ -61,29 +54,6 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
         initialFinishedOnly={show === 'finished'}
         initialColumns={preferences.projectColumns}
       />
-
-      {shared.length > 0 && (
-        <section className="mt-12">
-          <h2 className="t-label mb-3 border-b border-line pb-1">Shared with me</h2>
-          <ul className="divide-y divide-line border-y border-line t-body">
-            {shared.map((p) => (
-              <li key={p.id} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 py-2">
-                <Link href={`/projects/${p.id}`} className="min-w-0 flex-1 hover:text-rust">
-                  <span className="font-mono t-small text-muted">
-                    {p.artist.code} {p.canonicalId}
-                  </span>{' '}
-                  {p.workingName || <span className="text-muted">untitled</span>}
-                </Link>
-                <span className="t-small text-muted">{formatDuration(p.latest?.durationS ?? null)}</span>
-                <BoardPlaceSelect projectId={p.id} initial={boardPlaces[p.id] ?? null} compact />
-                <span className="t-small text-muted">
-                  {p.ownerName} · {LEVEL_WORD[p.level]}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </div>
   );
 }

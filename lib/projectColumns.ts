@@ -4,6 +4,7 @@
 export const PROJECT_COLUMNS = [
   { key: 'rating', label: 'Rating' },
   { key: 'artist', label: 'Artist' },
+  { key: 'owner', label: 'Owner' },
   { key: 'id', label: 'ID' },
   { key: 'name', label: 'Working name' },
   { key: 'genre', label: 'Genre' },
