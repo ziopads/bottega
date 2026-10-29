@@ -9,12 +9,11 @@ import {
   deleteLearning,
   editLearning,
   getWorkflow,
-  moveStage,
   WorkflowError,
   setNextCard,
   startWorkflow,
 } from '@/lib/workflow';
-import { parseOptionalId, parseReason, parseStage, text } from '@/lib/workflowInput';
+import { parseOptionalId, parseStage, text } from '@/lib/workflowInput';
 import { LEARNING_MAX } from '@/lib/workflowTypes';
 import { answer, bad, parseId, readBody } from '@/lib/workflowRoutes';
 
@@ -36,7 +35,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 // POST /api/projects/:id/workflow
-//   edit:       { op: 'start', templateId?, structureId? } | { op: 'move', to, reason? } | { op: 'template', uids: string[] }
+//   edit:       { op: 'start', templateId?, structureId? } | { op: 'template', uids: string[] }
 //               | { op: 'structure', uids: string[] }
 //   contribute: { op: 'next-card', cardId | null }   the to-do to start with next (db/029); done passes it on
 //   learnings:  { op: 'learning', action: 'add', stage, body } | { op: 'learning', action: 'edit', id, body }
@@ -99,13 +98,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const structureId = parseOptionalId(body.structureId ?? null);
     if ('error' in structureId) return bad(structureId.error);
     return answer(db, id, () => startWorkflow(db, id, { templateId: templateId.value, structureId: structureId.value }));
-  }
-  if (body.op === 'move') {
-    const to = parseStage(body.to);
-    if ('error' in to) return bad(to.error);
-    const reason = parseReason(body.reason, false);
-    if ('error' in reason) return bad(reason.error);
-    return answer(db, id, () => moveStage(db, id, to.value, reason.value));
   }
   return bad('Unknown operation');
 }

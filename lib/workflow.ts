@@ -335,10 +335,6 @@ export async function startWorkflow(
   });
 }
 
-export async function moveStage(db: Scoped, projectId: number, to: string, reason: string): Promise<void> {
-  await run(() => db.q('select workflow_move($1, $2, $3)', [projectId, to, reason]));
-}
-
 // ── Likely done (W-18) ───────────────────────────────────────────────────────
 
 /** Runs the checks the criteria name against the newest saved set of the main mix. */

@@ -10,6 +10,10 @@ built is in `ARCHITECTURE.md`.
 
 ## Changelog
 
+- **0.36** (2026-10-29) — The stage follows the exit criteria (W-2 to W-4,
+  migration 034; issue #2): no Advance or Move back button. To-dos do not
+  decide the stage.
+
 - **0.35** (2026-10-25) — Element colours are Live's (O-10, migration 031);
   the method on workflow templates (W-42, migration 032). People in examples
   and tests are Person A to D.
@@ -525,13 +529,17 @@ there may be lost in the move.
   Mixdown and Master). Palette is a stage of its own; sound design stays a
   kind of card (W-6) as well. Collection: select, sequence, master, artwork,
   release, to be confirmed. Installation and multimedia: to be defined.
-- **W-2** Each project is in exactly one stage at a time.
+- **W-2** Each project is in exactly one stage at a time: the first, in
+  order, with an accepted exit criterion not yet met, or the last when every
+  one is met. The stage follows the criteria and is never set by hand.
 - **W-3** Exit criteria are the conditions under which a stage is finished.
   Every stage's criteria are copied from the template when the workflow
   starts, so later stages show how far they have to go; criteria can be
-  added, changed and ticked in any stage. Advancing from the current stage
-  needs each of its accepted criteria met.
-- **W-4** Moving back to an earlier stage requires a reason, which is kept.
+  added, changed and ticked in any stage. Ticking the last open criterion of
+  the current stage moves the project on, past any stage already complete.
+- **W-4** Unticking, or adding, a criterion in an earlier stage makes that
+  stage current again; its to-dos wait until the project is back. Every
+  automatic move is kept, with its cause (the criterion left open).
 - **W-5** Elements: a tree of the parts of a work, copied to each project
   when its workflow starts and editable there; for music from the owner's
   track structure (W-25), for other kinds from a template in code. For
@@ -560,12 +568,12 @@ there may be lost in the move.
 - **W-11** The Workflow tab: the stages across the top with the current one
   marked; Claude's proposals in a band above everything, to accept or reject;
   in the narrow left column the current stage, its exit criteria as a
-  checklist, the move forward and the move back, and the history of moves;
+  checklist, and the history of moves;
   in the main column the open cards by element, the cards parked for later
   stages, the settled decisions and the element tree.
 - **W-12** Who may do what, by level (AC-5): view reads the workflow;
   contribute adds cards and changes the cards they wrote; edit starts the
-  workflow, moves the stage, writes exit criteria and elements, changes any
+  workflow, writes exit criteria and elements, changes any
   card, accepts or rejects Claude's proposals and settles or reopens
   decisions; only the owner deletes (AC-7).
 - **W-13** Workflow templates. A template holds a kind's stages in order, each

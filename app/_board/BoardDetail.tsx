@@ -243,6 +243,8 @@ function PickUp({ project, d, coldDays, openedAt, busy, call }: { project: Board
   const next = w.cards.find((c) => c.isNext) ?? null;
   const now = w.cards.filter((c) => OPEN(c) && c.stage === w.stage && !c.isNext);
   const later = w.cards.filter((c) => OPEN(c) && positionOf(c.stage) > pos);
+  // The stage follows the exit criteria, so with no to-do left in it an unmet criterion is what to pick up.
+  const openCriterion = w.criteria.filter((c) => c.stage === w.stage && c.reviewed && !c.rejected && !c.metAt).sort((a, b) => a.position - b.position)[0] ?? null;
   const days = daysSince(project.touchedAt, openedAt);
   const dot = (c: WorkflowCard) => cardElementColor(w.elements, c.elementId);
   const url = `/api/projects/${project.id}/workflow`;
@@ -292,7 +294,15 @@ function PickUp({ project, d, coldDays, openedAt, busy, call }: { project: Board
                 )}
               </div>
             ) : (
-              <p className="text-muted">No to-do marked next. Make one next below, or add one.</p>
+              <p className="text-muted">
+                {openCriterion && now.length === 0 ? (
+                  <>
+                    No to-do in {w.stages.find((s) => s.key === w.stage)?.label}. Still to meet: <span className="font-medium text-ink">{openCriterion.body}</span>
+                  </>
+                ) : (
+                  'No to-do marked next. Make one next below, or add one.'
+                )}
+              </p>
             )}
           </div>
 
