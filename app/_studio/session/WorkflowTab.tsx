@@ -180,6 +180,12 @@ function StartedWorkflow({
     const cs = accepted.filter((c) => c.stage === key);
     return { met: cs.filter((c) => c.metAt).length, total: cs.length };
   };
+  // Criteria ticked and to-dos done over both, which is what completes a stage.
+  const stageTally = (key: string) => {
+    const c = tally(key);
+    const ks = live.filter((k) => k.stage === key);
+    return { met: c.met + ks.filter((k) => k.status === 'done').length, total: c.total + ks.length };
+  };
 
   // The stage shown in the middle column: the current one unless another is picked.
   const [picked, setPicked] = useState<string | null>(null);
@@ -245,7 +251,7 @@ function StartedWorkflow({
       <p className="t-label mb-1">Stages</p>
       <ul className="space-y-1">
         {w.stages.map((s) => {
-          const t = tally(s.key);
+          const t = stageTally(s.key);
           const isCurrent = s.key === current;
           const past = s.position < pos;
           const share = t.total ? t.met / t.total : past ? 1 : 0;
@@ -502,7 +508,7 @@ function StartedWorkflow({
 
   return (
     <>
-      <StageBar w={w} tally={tally} />
+      <StageBar w={w} tally={stageTally} />
       <TemplateReview key={w.template?.version ?? 0} w={w} url={url} canEdit={canEdit} busy={busy} call={call} />
       <StructureReview key={`s${w.structure?.version ?? 0}`} w={w} url={url} canEdit={canEdit} busy={busy} call={call} />
       {review}
@@ -517,7 +523,7 @@ function StartedWorkflow({
   );
 }
 
-/** One segment per stage, filled by the share of its criteria met; the current one outlined (W-24). */
+/** One segment per stage, filled by the share of its criteria and to-dos done; the current one outlined (W-24). */
 function StageBar({ w, tally }: { w: Workflow; tally: (key: string) => { met: number; total: number } }) {
   const pos = stagePosition(w, w.stage);
   const cur = w.stages.find((s) => s.key === w.stage);
@@ -547,8 +553,8 @@ function StageBar({ w, tally }: { w: Workflow; tally: (key: string) => { met: nu
       </div>
       <p className="t-num mt-1 t-small text-muted">
         {w.finishedAt
-          ? `Finished · ${met} of ${total} criteria met`
-          : `Stage ${pos} of ${w.stages.length} · ${cur?.label ?? ''}${cur?.standard ? `: ${cur.standard}` : ''} · ${met} of ${total} criteria met`}
+          ? `Finished · ${met} of ${total} done`
+          : `Stage ${pos} of ${w.stages.length} · ${cur?.label ?? ''}${cur?.standard ? `: ${cur.standard}` : ''} · ${met} of ${total} done`}
       </p>
     </section>
   );

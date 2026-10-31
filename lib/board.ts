@@ -48,8 +48,14 @@ export async function getBoard(db: Scoped, userId: string): Promise<Board> {
     ? await db.tx([
         { text: 'select project_id, key, label, position from project_stages where project_id = any($1) order by project_id, position', params: [ids] },
         {
-          text: `select project_id, stage, count(*) filter (where met_at is not null) as met, count(*) as total
-                   from exit_criteria where project_id = any($1) and reviewed and rejected_at is null group by 1, 2`,
+          // Done of total in each stage: accepted criteria met, and to-dos done, over those plus the open ones.
+          text: `select project_id, stage, sum(met)::int as met, sum(total)::int as total from (
+                   select project_id, stage, count(*) filter (where met_at is not null) as met, count(*) as total
+                     from exit_criteria where project_id = any($1) and reviewed and rejected_at is null group by 1, 2
+                   union all
+                   select project_id, stage, count(*) filter (where status = 'done') as met, count(*) as total
+                     from cards where project_id = any($1) and not settled and status in ('accepted', 'in progress', 'done') group by 1, 2
+                 ) t group by 1, 2`,
           params: [ids],
         },
         {

@@ -418,15 +418,18 @@ function Stages({ project, w, busy, call }: { project: BoardProject; w: Workflow
   const key = tab ?? w.stage;
   const sel = w.stages.find((s) => s.key === key) ?? w.stages[0];
   const crit = (k: string) => w.criteria.filter((c) => c.stage === k && c.reviewed && !c.rejected);
-  const todos = w.cards.filter((c) => OPEN(c) && c.stage === sel.key);
+  // The stage's to-dos, done ones too, so that a done one can be reopened; settled decisions and proposals are not to-dos here.
+  const todosOf = (k: string) => w.cards.filter((c) => !c.settled && (c.status === 'accepted' || c.status === 'in progress' || c.status === 'done') && c.stage === k);
+  const todos = todosOf(sel.key);
   const can = project.canContribute;
   return (
     <section className={`${CARD} space-y-3`}>
       <div role="tablist" aria-label="Stages" className="grid grid-cols-[repeat(auto-fit,minmax(5.5rem,1fr))] gap-1">
         {w.stages.map((s) => {
           const cs = crit(s.key);
-          const met = cs.filter((c) => c.metAt).length;
-          const open = w.cards.filter((c) => OPEN(c) && c.stage === s.key).length;
+          const ks = todosOf(s.key);
+          const total = cs.length + ks.length;
+          const met = cs.filter((c) => c.metAt).length + ks.filter((c) => c.status === 'done').length;
           const on = s.key === sel.key;
           return (
             <button
@@ -439,11 +442,10 @@ function Stages({ project, w, busy, call }: { project: BoardProject; w: Workflow
             >
               <span className={`block truncate t-small font-medium ${s.key === w.stage ? 'text-rust' : ''}`}>{s.label}</span>
               <span className="block h-1 overflow-hidden rounded bg-led-off">
-                <span className={`block h-full ${cs.length && met === cs.length ? 'bg-meter-done' : 'bg-meter-now'}`} style={{ width: `${cs.length ? Math.round((met / cs.length) * 100) : 0}%` }} />
+                <span className={`block h-full ${total && met === total ? 'bg-meter-done' : 'bg-meter-now'}`} style={{ width: `${total ? Math.round((met / total) * 100) : 0}%` }} />
               </span>
               <span className="block t-num t-small text-muted">
-                {met}/{cs.length}
-                {open ? <span className="text-rust"> +{open}</span> : null}
+                {met}/{total}
               </span>
             </button>
           );
@@ -483,14 +485,24 @@ function Stages({ project, w, busy, call }: { project: BoardProject; w: Workflow
         <div>
           <p className="flex justify-between t-label">
             <span>To-dos for {sel.label}</span>
-            <span>{todos.length} open</span>
+            <span>{todos.filter((c) => c.status !== 'done').length} open</span>
           </p>
           <ul className="mt-1 space-y-0.5">
             {todos.map((c) => (
-              <li key={c.id} className="flex items-baseline gap-2">
-                <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ background: cardElementColor(w.elements, c.elementId) }} />
-                <span className="min-w-0 flex-1">{c.what}</span>
-                {c.isNext && <span className="t-label text-rust">Next</span>}
+              <li key={c.id} className="flex items-start gap-2 rounded px-1 py-1 hover:bg-ink/5">
+                <input
+                  type="checkbox"
+                  id={`bt-${c.id}`}
+                  checked={c.status === 'done'}
+                  disabled={!can || busy}
+                  onChange={(e) => call(`/api/cards/${c.id}`, 'PATCH', { status: e.target.checked ? 'done' : 'accepted' })}
+                  className="mt-1 accent-[var(--accent)]"
+                />
+                <span aria-hidden className="mt-2 h-2 w-2 shrink-0 rounded-full" style={{ background: cardElementColor(w.elements, c.elementId) }} />
+                <label htmlFor={`bt-${c.id}`} className="min-w-0 flex-1">
+                  <span className={c.status === 'done' ? 'text-muted line-through' : 'font-medium'}>{c.what}</span>
+                </label>
+                {c.isNext && c.status !== 'done' && <span className="t-label text-rust">Next</span>}
               </li>
             ))}
           </ul>

@@ -10,9 +10,11 @@ built is in `ARCHITECTURE.md`.
 
 ## Changelog
 
-- **0.36** (2026-10-29) — The stage follows the exit criteria (W-2 to W-4,
-  migration 034; issue #2): no Advance or Move back button. To-dos do not
-  decide the stage.
+- **0.36** (2026-10-31) — The stage follows what is done (W-2 to W-4,
+  migration 034; issue #2): a stage is complete when its criteria are ticked
+  and its to-dos are done; no Advance or Move back button; the Board's
+  stage tabs list the stage's to-dos with checkboxes. Applies from now on:
+  an existing project is recalculated at its next change.
 
 - **0.35** (2026-10-25) — Element colours are Live's (O-10, migration 031);
   the method on workflow templates (W-42, migration 032). People in examples
@@ -530,16 +532,22 @@ there may be lost in the move.
   kind of card (W-6) as well. Collection: select, sequence, master, artwork,
   release, to be confirmed. Installation and multimedia: to be defined.
 - **W-2** Each project is in exactly one stage at a time: the first, in
-  order, with an accepted exit criterion not yet met, or the last when every
-  one is met. The stage follows the criteria and is never set by hand.
+  order, with an accepted exit criterion not yet met or a to-do still open
+  (accepted or in progress), or the last when there is none. The stage
+  follows what is done and is never set by hand. Claude's proposals,
+  rejected items, settled decisions and the to-dos of stages not reached yet
+  do not count.
 - **W-3** Exit criteria are the conditions under which a stage is finished.
   Every stage's criteria are copied from the template when the workflow
   starts, so later stages show how far they have to go; criteria can be
-  added, changed and ticked in any stage. Ticking the last open criterion of
-  the current stage moves the project on, past any stage already complete.
-- **W-4** Unticking, or adding, a criterion in an earlier stage makes that
-  stage current again; its to-dos wait until the project is back. Every
-  automatic move is kept, with its cause (the criterion left open).
+  added, changed and ticked in any stage. Checking off the last open
+  criterion or to-do of the current stage moves the project on, past any
+  stage already complete.
+- **W-4** Unticking a criterion, reopening a to-do, or adding either to an
+  earlier stage makes that stage current again; the later stages' to-dos
+  wait until the project is back. Every automatic move is kept, with its
+  cause (the criterion or to-do left open). A project is finished in its last
+  stage with every criterion met and no open to-do.
 - **W-5** Elements: a tree of the parts of a work, copied to each project
   when its workflow starts and editable there; for music from the owner's
   track structure (W-25), for other kinds from a template in code. For
