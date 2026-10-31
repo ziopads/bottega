@@ -57,6 +57,11 @@ select workflow_start(tst.p('todos'));
 select tst.expect(tst.stage(tst.p('khione')) = 'seed', 'a started project is in its first stage');
 select tst.expect(tst.moves(tst.p('khione')) = 1, 'copying every stage''s criteria at once logs no move of its own');
 
+-- The first to-do in a fresh session takes the mark (the by-hand setting is not set yet) --------------
+insert into cards (project_id, stage, what, done_when) values (tst.p('old'), 'seed', 'First to-do of the session', 'Done');
+select tst.expect(tst.next(tst.p('old')) = 'First to-do of the session', 'the very first to-do added, with nothing set in the session, is marked next');
+delete from cards where what = 'First to-do of the session';
+
 -- Forward: ticking moves the project on, past stages already complete --------------------------------
 update exit_criteria set met_at = now() where project_id = tst.p('khione') and stage = 'seed';
 select tst.expect(tst.stage(tst.p('khione')) = 'palette', 'every Seed criterion met: the project is in Palette');
@@ -145,6 +150,21 @@ select tst.expect(tst.next(tst.p('todos')) = 'Tune the kick', 'a to-do parked fo
 update cards set status = 'done' where what = 'Tune the kick';
 select tst.expect(tst.stage(tst.p('todos')) = 'palette', 'the Seed to-do done: on to Palette');
 select tst.expect(tst.next(tst.p('todos')) = 'Layer the pad', 'moving on to Palette, the mark goes to its open to-do');
+
+-- A to-do added to a stage with none marked becomes the next ----------------------------------------
+select card_set_next(tst.p('todos'), null);
+select tst.expect(tst.next(tst.p('todos')) is null, 'the mark can be cleared by hand and stays cleared');
+update cards set status = 'done' where what = 'Layer the pad';
+insert into cards (project_id, stage, what, done_when) values (tst.p('todos'), 'palette', 'First new Palette to-do', 'Done');
+select tst.expect(tst.next(tst.p('todos')) = 'First new Palette to-do', 'a to-do added when none is marked takes the mark');
+insert into cards (project_id, stage, what, done_when) values (tst.p('todos'), 'palette', 'Second new Palette to-do', 'Done');
+select tst.expect(tst.next(tst.p('todos')) = 'First new Palette to-do', 'a second one does not take it');
+delete from cards where what in ('First new Palette to-do', 'Second new Palette to-do');
+insert into cards (project_id, stage, what, done_when) values (tst.p('todos'), 'palette', 'After deleting all', 'Done');
+select tst.expect(tst.next(tst.p('todos')) = 'After deleting all', 'after deleting every to-do, the next one added is marked');
+insert into cards (project_id, stage, what, done_when) values (tst.p('todos'), 'detail', 'Parked one', 'Done');
+select tst.expect(tst.next(tst.p('todos')) = 'After deleting all', 'a parked to-do for a later stage never takes the mark');
+delete from cards where what in ('After deleting all', 'Parked one');
 
 -- A contribute-level collaborator moves the stage through their own to-dos --------------------------------
 select set_config('app.user_id', 'C', false);

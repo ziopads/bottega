@@ -18,6 +18,10 @@
 --     with no accepted criteria and no to-dos is left where it is. Each move
 --     is written to stage_moves with its cause. When the stage changes, the
 --     next to-do mark moves to the new stage.
+--   - workflow_pin_next(): after any change, a project whose current stage has
+--     an open to-do but none marked next gets the mark on the first open one,
+--     so adding a to-do to a stage with none marked makes it the next, and
+--     there is always a next action. A mark set by hand is left alone.
 --   - It runs once per statement that changes exit_criteria or cards (not per
 --     row, so workflow_start's copy of every stage's criteria is seen whole),
 --     before workflow_check_finished() reads the stage.
@@ -45,7 +49,6 @@ declare
   open_what text;
   why text;
   who text;
-  cand bigint;
 begin
   select stage into cur from project_workflow where project_id = p_project;
   if cur is null then
@@ -125,12 +128,30 @@ begin
   insert into stage_moves (project_id, from_stage, to_stage, reason, moved_by)
   values (p_project, cur, target, why, who);
 
-  -- The next to-do belongs to the stage the project is in now: take the mark
-  -- off a to-do of another stage, and give it to the stage's first open one.
-  -- The two settings keep the card triggers from answering these updates.
+  -- The next to-do belongs to the stage the project is in now.
+  perform workflow_pin_next(p_project, true);
+end;
+$body$;
+
+-- Keeps a next to-do marked (db/029 hands the mark on only when the marked one
+-- leaves). With p_moved, the mark comes off a to-do outside the current stage
+-- first. Then, if no to-do holds the mark, the current stage's first open one
+-- takes it. The two settings keep the card triggers from answering these updates.
+create or replace function workflow_pin_next(p_project bigint, p_moved boolean) returns void
+language plpgsql security definer set search_path = public, pg_temp as $body$
+declare
+  cur text;
+  cand bigint;
+begin
+  select stage into cur from project_workflow where project_id = p_project;
+  if cur is null then
+    return;
+  end if;
   perform set_config('bottega.stage_sync', 'on', true);
   perform set_config('bottega.next_by_hand', 'on', true);
-  update cards set is_next = false where project_id = p_project and is_next and stage <> target;
+  if p_moved then
+    update cards set is_next = false where project_id = p_project and is_next and stage <> cur;
+  end if;
   if not exists (select 1 from cards where project_id = p_project and is_next) then
     cand := card_next_candidate(p_project, null);
     if cand is not null then
@@ -179,6 +200,8 @@ create or replace function workflow_after_change() returns trigger
 language plpgsql security definer set search_path = public, pg_temp as $body$
 declare
   r record;
+  -- Unset in a fresh transaction, which reads as null, not false.
+  by_hand boolean := coalesce(current_setting('bottega.next_by_hand', true) = 'on', false);
 begin
   if current_setting('bottega.stage_sync', true) = 'on' then
     return null;
@@ -186,6 +209,10 @@ begin
   for r in select distinct project_id from changed loop
     perform workflow_sync_stage(r.project_id);
     perform workflow_check_finished(r.project_id);
+    -- Not while the mark is being moved or cleared by hand (card_set_next).
+    if not by_hand then
+      perform workflow_pin_next(r.project_id, false);
+    end if;
   end loop;
   return null;
 end;
@@ -217,7 +244,7 @@ do $grants$
 declare
   f text;
 begin
-  foreach f in array array['workflow_sync_stage(bigint)'] loop
+  foreach f in array array['workflow_sync_stage(bigint)', 'workflow_pin_next(bigint, boolean)'] loop
     execute format('revoke execute on function %s from public', f);
   end loop;
 end;
