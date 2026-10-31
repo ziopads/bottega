@@ -7,11 +7,10 @@ import { api } from '@/app/_studio/controls';
 import { mixMarkers } from '@/app/_studio/Notes';
 import { openWorkPanel } from '@/app/_studio/WhereItStands';
 import Player from '@/app/_ui/audio/Player';
-import { BUTTON, BUTTON_PRIMARY, FIELD } from '@/app/_ui/styles';
+import { BUTTON, BUTTON_DANGER, BUTTON_PRIMARY, FIELD } from '@/app/_ui/styles';
 import type { SessionState } from '@/lib/als/store';
 import { keyLabel } from '@/lib/als/types';
 import type { BoardProject } from '@/lib/boardTypes';
-import { cardElementColor } from '@/lib/elementColors';
 import type { WorkSession } from '@/lib/sessionTypes';
 import type { StudioTrack } from '@/lib/studioTypes';
 import { formatDuration } from '@/lib/studioTypes';
@@ -23,9 +22,9 @@ import type { Workflow, WorkflowCard } from '@/lib/workflowTypes';
 //
 //   the track     name, BPM, key, genre, stars, started; the stage meter
 //   pick up here  last worked on, the next to-do, on deck, adding a to-do
-//   current mix   the player, to-dos pinned to moments on the waveform
 //   stages        one tab per stage: its criteria (tick them here, with the
-//                 marks read from the set) and its open to-dos
+//                 marks read from the set) and its to-dos (check them off here)
+//   current mix   the player, to-dos pinned to moments on the waveform
 //   from Live     the newest saved set: tempo, key, length, tracks, master
 //                 chain, and the arrangement by its locators
 //   sessions and learnings
@@ -129,8 +128,8 @@ export default function BoardDetail({
       {shown && (
         <>
           <PickUp project={project} d={shown} coldDays={coldDays} openedAt={openedAt} busy={working} call={call} />
-          <Mix project={project} d={shown} />
           <Stages project={project} w={shown.workflow} busy={working} call={call} />
+          <Mix project={project} d={shown} />
           <FromLive state={shown.state} />
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Sessions sessions={shown.sessions} />
@@ -246,7 +245,6 @@ function PickUp({ project, d, coldDays, openedAt, busy, call }: { project: Board
   // The stage follows the exit criteria, so with no to-do left in it an unmet criterion is what to pick up.
   const openCriterion = w.criteria.filter((c) => c.stage === w.stage && c.reviewed && !c.rejected && !c.metAt).sort((a, b) => a.position - b.position)[0] ?? null;
   const days = daysSince(project.touchedAt, openedAt);
-  const dot = (c: WorkflowCard) => cardElementColor(w.elements, c.elementId);
   const url = `/api/projects/${project.id}/workflow`;
 
   async function add(e: React.FormEvent) {
@@ -257,7 +255,7 @@ function PickUp({ project, d, coldDays, openedAt, busy, call }: { project: Board
   }
 
   return (
-    <section className={`${CARD} space-y-3 border-rust shadow-[inset_0_3px_0_var(--accent)]`}>
+    <section className={`${CARD} space-y-3 border-rust`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="t-section">Pick up here</h3>
         <span className={`t-small ${days === null ? 'text-muted' : days >= coldDays ? 'font-medium text-cold' : days >= 7 ? 'text-cooling' : 'text-fresh'}`}>Last worked on {ago(days)}</span>
@@ -272,21 +270,15 @@ function PickUp({ project, d, coldDays, openedAt, busy, call }: { project: Board
         </p>
       ) : (
         <>
-          <div>
-            <p className="t-small text-muted">Next · something to start within five minutes of opening the set</p>
+          <div className="pb-2">
+            <p className="mb-2 t-small text-muted">Next · something to start within five minutes of opening the set</p>
             {next ? (
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
                 <p className="t-lead min-w-0 flex-1 font-medium">
-                  <span aria-hidden className="mr-2 inline-block h-2 w-2 -translate-y-[2px] rounded-full" style={{ background: dot(next) }} />
                   {next.what}
                 </p>
                 {can && (
                   <span className="flex gap-1.5">
-                    {next.status === 'accepted' && (
-                      <button type="button" onClick={() => call(`/api/cards/${next.id}`, 'PATCH', { status: 'in progress' })} disabled={busy} className={BUTTON}>
-                        Start
-                      </button>
-                    )}
                     <button type="button" onClick={() => call(`/api/cards/${next.id}`, 'PATCH', { status: 'done' })} disabled={busy} className={BUTTON_PRIMARY} title="Mark it done; the next open to-do of the stage takes its place">
                       Done · pull next
                     </button>
@@ -322,7 +314,6 @@ function PickUp({ project, d, coldDays, openedAt, busy, call }: { project: Board
                     {can ? (
                       <input type="checkbox" checked={false} onChange={() => call(`/api/cards/${c.id}`, 'PATCH', { status: 'done' })} disabled={busy} aria-label={`Done: ${c.what}`} className="accent-[var(--accent)]" />
                     ) : null}
-                    <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ background: dot(c) }} />
                     <span className="min-w-0 flex-1">
                       {c.what}
                       {c.status === 'in progress' && <span className="t-small text-muted"> · in progress</span>}
@@ -342,7 +333,6 @@ function PickUp({ project, d, coldDays, openedAt, busy, call }: { project: Board
                 <ul className="mt-1 space-y-0.5">
                   {later.map((c) => (
                     <li key={c.id} className="flex items-baseline gap-2">
-                      <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ background: dot(c) }} />
                       <span className="min-w-0 flex-1">{c.what}</span>
                       <span className="t-label">{w.stages.find((s) => s.key === c.stage)?.label}</span>
                     </li>
@@ -356,13 +346,11 @@ function PickUp({ project, d, coldDays, openedAt, busy, call }: { project: Board
             <form onSubmit={add} className="flex flex-wrap gap-2">
               <input value={what} onChange={(e) => setWhat(e.target.value)} placeholder="Add a to-do, such as: the click at bar 48 on the riser" aria-label="New to-do" className={`${FIELD} min-w-0 flex-[1_1_16rem]`} />
               <select value={stageKey || w.stage} onChange={(e) => setStageKey(e.target.value)} aria-label="Stage" className={FIELD}>
-                {w.stages
-                  .filter((s) => s.position >= pos)
-                  .map((s) => (
-                    <option key={s.key} value={s.key}>
-                      {s.label}
-                    </option>
-                  ))}
+                {w.stages.map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {s.label}
+                  </option>
+                ))}
               </select>
               <button type="submit" disabled={busy || !what.trim()} className={BUTTON}>
                 Add
@@ -430,6 +418,7 @@ function Stages({ project, w, busy, call }: { project: BoardProject; w: Workflow
           const ks = todosOf(s.key);
           const total = cs.length + ks.length;
           const met = cs.filter((c) => c.metAt).length + ks.filter((c) => c.status === 'done').length;
+          const critMet = cs.filter((c) => c.metAt).length;
           const on = s.key === sel.key;
           return (
             <button
@@ -445,7 +434,8 @@ function Stages({ project, w, busy, call }: { project: BoardProject; w: Workflow
                 <span className={`block h-full ${total && met === total ? 'bg-meter-done' : 'bg-meter-now'}`} style={{ width: `${total ? Math.round((met / total) * 100) : 0}%` }} />
               </span>
               <span className="block t-num t-small text-muted">
-                {met}/{total}
+                {critMet}/{cs.length}
+                {ks.some((c) => c.status !== 'done') ? <span className="text-rust"> +{ks.filter((c) => c.status !== 'done').length}</span> : null}
               </span>
             </button>
           );
@@ -498,11 +488,15 @@ function Stages({ project, w, busy, call }: { project: BoardProject; w: Workflow
                   onChange={(e) => call(`/api/cards/${c.id}`, 'PATCH', { status: e.target.checked ? 'done' : 'accepted' })}
                   className="mt-1 accent-[var(--accent)]"
                 />
-                <span aria-hidden className="mt-2 h-2 w-2 shrink-0 rounded-full" style={{ background: cardElementColor(w.elements, c.elementId) }} />
                 <label htmlFor={`bt-${c.id}`} className="min-w-0 flex-1">
                   <span className={c.status === 'done' ? 'text-muted line-through' : 'font-medium'}>{c.what}</span>
                 </label>
                 {c.isNext && c.status !== 'done' && <span className="t-label text-rust">Next</span>}
+                {project.isOwner && (
+                  <button type="button" onClick={() => confirm('Delete this to-do?') && call(`/api/cards/${c.id}`, 'DELETE')} disabled={busy} className={`${BUTTON_DANGER} self-start`} aria-label={`Delete to-do: ${c.what}`} title="Delete this to-do">
+                    ×
+                  </button>
+                )}
               </li>
             ))}
           </ul>

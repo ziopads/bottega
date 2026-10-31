@@ -94,7 +94,7 @@ export default function StructureEditor({ initial }: { initial: Editor }) {
               {ed.templates.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
-                  {t.isDefault ? ' · Bottega default' : t.mine ? '' : ` · ${t.ownerName ?? 'shared'}’s, through an artist`}
+                  {t.isDefault ? (t.name !== 'Bottega default' ? ' · Bottega default' : '') : t.mine ? '' : ` · ${t.ownerName ?? 'shared'}’s, through an artist`}
                 </option>
               ))}
             </select>

@@ -398,7 +398,7 @@ function StartedWorkflow({
       {canContribute && (
         <CardForm
           elements={w.elements}
-          stages={w.stages.filter((s) => s.position >= pos)}
+          stages={w.stages}
           defaultStage={current}
           busy={busy}
           submitLabel="Add card"

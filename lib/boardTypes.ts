@@ -3,7 +3,6 @@
 
 export type BoardPlace = 'backlog' | 'rotation';
 
-/** met of total: criteria ticked and to-dos done, over the stage's criteria and to-dos. */
 export type BoardStage = { key: string; label: string; met: number; total: number };
 
 export type BoardProject = {
@@ -26,6 +25,8 @@ export type BoardProject = {
   ownerName: string | null;
   /** Whether the person may change its to-dos (contribute access or more). */
   canContribute: boolean;
+  /** Whether the person owns it, who alone may delete its to-dos. */
+  isOwner: boolean;
   place: BoardPlace;
   /** Set while the project is finished (W-23); it then sits under Finished. */
   finishedAt: string | null;
@@ -68,7 +69,7 @@ export function daysSince(iso: string | null, now = Date.now()): number | null {
   return Math.max(0, Math.floor((now - new Date(iso).getTime()) / 86_400_000));
 }
 
-/** How far along a project is, for sorting: whole stages done, then items done. */
+/** How far along a project is, for sorting: whole stages met, then criteria met. */
 export function progressOf(p: BoardProject): number {
   const stagesDone = p.stages.filter((s) => s.total > 0 && s.met === s.total).length;
   return stagesDone * 1000 + p.stages.reduce((n, s) => n + s.met, 0);

@@ -294,7 +294,7 @@ function Meter({ p, size }: { p: BoardProject; size: 'small' | 'large' }) {
   if (!p.stages.length) return <p className="t-small text-muted">Workflow not started.</p>;
   const cur = p.stages.findIndex((s) => s.key === p.stage);
   const columns = { gridTemplateColumns: `repeat(${p.stages.length}, minmax(0, 1fr))` };
-  const label = cur < 0 ? '' : `At ${p.stages[cur].label}, ${p.stages[cur].met} of ${p.stages[cur].total} done`;
+  const label = cur < 0 ? '' : `At ${p.stages[cur].label}, ${p.stages[cur].met} of ${p.stages[cur].total} criteria met`;
   return (
     <div>
       <div className={`grid ${size === 'large' ? 'gap-[3px]' : 'gap-0.5'}`} style={columns} role="img" aria-label={label}>
