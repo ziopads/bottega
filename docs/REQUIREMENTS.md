@@ -14,7 +14,9 @@ built is in `ARCHITECTURE.md`.
   migration 034; issue #2): a stage is complete when its criteria are ticked
   and its to-dos are done; no Advance or Move back button; the Board's
   stage tabs list the stage's to-dos with checkboxes. Applies from now on:
-  an existing project is recalculated at its next change.
+  an existing project is recalculated at its next change. The default music
+  template gains Polish and loses Release (W-1, migration 035); template
+  hint boxes grow with their text.
 
 - **0.35** (2026-10-25) — Element colours are Live's (O-10, migration 031);
   the method on workflow templates (W-42, migration 032). People in examples
@@ -526,9 +528,13 @@ there may be lost in the move.
 ## 7. Workflow (W)
 
 - **W-1** Stages come from a template per kind (W-13). Music, by default:
-  Seed, Palette, Structure, Detail, Mixdown, Master, Release (23 October;
-  until then sketch, arrange, mix, master, which moved to Seed, Structure,
-  Mixdown and Master). Palette is a stage of its own; sound design stays a
+  Seed, Palette, Structure, Detail, Polish, Mixdown, Master (from 31 October,
+  migration 035: Polish added after Detail, Release removed, so a default
+  music project is finished when Master is complete; from 23 October until
+  then Seed to Release, and before that sketch, arrange, mix, master, which
+  moved to Seed, Structure, Mixdown and Master). The default changes only
+  what new accounts, and accounts without a template of their own, start
+  from; a project already started keeps its stages. Palette is a stage of its own; sound design stays a
   kind of card (W-6) as well. Collection: select, sequence, master, artwork,
   release, to be confirmed. Installation and multimedia: to be defined.
 - **W-2** Each project is in exactly one stage at a time: the first, in
