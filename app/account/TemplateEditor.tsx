@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from 'react';
 
 import { api } from '@/app/_studio/controls';
 import { Section } from '@/app/_ui/layout';
@@ -131,7 +131,7 @@ export function TemplateEditor({ initial }: { initial: Editor }) {
               {ed.templates.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
-                  {t.isDefault ? ' · Bottega default' : t.mine ? '' : ` · ${t.ownerName ?? 'shared'}’s, through an artist`}
+                  {t.isDefault ? (t.name !== 'Bottega default' ? ' · Bottega default' : '') : t.mine ? '' : ` · ${t.ownerName ?? 'shared'}’s, through an artist`}
                 </option>
               ))}
             </select>
@@ -226,6 +226,35 @@ export function TemplateEditor({ initial }: { initial: Editor }) {
 
 /** The template's method (W-42, db/032): principles for the whole workflow,
  *  shown at the foot of the Workflow tab and the board. */
+/** A textarea that grows with its text, so a long hint or explanation shows in full instead of scrolling inside one line. */
+function Grow(props: ComponentProps<'textarea'>) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const fit = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight + (el.offsetHeight - el.clientHeight)}px`;
+  }, []);
+  useLayoutEffect(fit);
+  // The text wraps differently when the window changes width.
+  useEffect(() => {
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [fit]);
+  const { onInput, className, ...rest } = props;
+  return (
+    <textarea
+      {...rest}
+      ref={ref}
+      onInput={(e) => {
+        fit();
+        onInput?.(e);
+      }}
+      className={`${className ?? ''} resize-none overflow-hidden`}
+    />
+  );
+}
+
 function MethodEditor({ ed, readOnly, busy, post }: { ed: Editor; readOnly: boolean; busy: boolean; post: Post }) {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -255,7 +284,7 @@ function MethodEditor({ ed, readOnly, busy, post }: { ed: Editor; readOnly: bool
                 onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== p.title && void post({ op: 'principle', principleId: p.id, title: e.target.value })}
                 className={`${FIELD} w-full font-medium`}
               />
-              <textarea
+              <Grow
                 key={`b${p.id}:${p.body}`}
                 defaultValue={p.body}
                 disabled={readOnly}
@@ -346,12 +375,12 @@ function StageEditor({ s, ed, readOnly, busy, post }: { s: EditorStage; ed: Edit
                 onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== c.body && void post({ op: 'criterion', criterionId: c.id, body: e.target.value })}
                 className={`${FIELD} w-full font-medium`}
               />
-              <textarea
+              <Grow
                 key={c.hint}
                 defaultValue={c.hint}
                 disabled={readOnly}
                 aria-label="Hint"
-                rows={Math.max(1, Math.min(8, c.hint.split('\n').length))}
+                rows={1}
                 placeholder="Hint (optional)"
                 onBlur={(e) => e.target.value.replace(/\s+$/, '') !== c.hint && void post({ op: 'criterion', criterionId: c.id, hint: e.target.value })}
                 className={`${FIELD} block w-full whitespace-pre-wrap font-mono t-small`}
@@ -451,7 +480,7 @@ function LearningLine({ l, readOnly, busy, post }: { l: EditorLearning; readOnly
       {readOnly ? (
         <span className="whitespace-pre-line">{l.body}</span>
       ) : (
-        <textarea
+        <Grow
           key={l.body}
           defaultValue={l.body}
           rows={2}

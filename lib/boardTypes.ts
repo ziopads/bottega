@@ -25,6 +25,8 @@ export type BoardProject = {
   ownerName: string | null;
   /** Whether the person may change its to-dos (contribute access or more). */
   canContribute: boolean;
+  /** Whether the person owns it, who alone may delete its to-dos. */
+  isOwner: boolean;
   place: BoardPlace;
   /** Set while the project is finished (W-23); it then sits under Finished. */
   finishedAt: string | null;

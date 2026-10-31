@@ -91,7 +91,13 @@ export async function getSessionTool(db: Scoped, args: { id: number; notes?: num
           })),
           stages: w.stages.map((s) => {
             const cs = accepted.filter((c) => c.stage === s.key);
-            return { stage: s.label, standard: s.standard || null, criteria_met: `${cs.filter((c) => c.metAt).length} of ${cs.length}` };
+            const ks = w.cards.filter((c) => c.stage === s.key && !c.settled && (c.status === 'accepted' || c.status === 'in progress' || c.status === 'done'));
+            return {
+              stage: s.label,
+              standard: s.standard || null,
+              criteria_met: `${cs.filter((c) => c.metAt).length} of ${cs.length}`,
+              todos_done: `${ks.filter((c) => c.status === 'done').length} of ${ks.length}`,
+            };
           }),
           stage: stageLabel(w.stage),
           in_stage_since: w.enteredAt?.slice(0, 10) ?? null,

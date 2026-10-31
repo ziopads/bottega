@@ -424,10 +424,16 @@ Migrations 011 and 024. REQUIREMENTS W-1 to W-24.
 - `project_workflow` — the current stage, when entered, and (024) the
   template and version copied, `next_move`, `blocker`, `blocker_set_at`,
   `finished_at`. Written by functions only: `workflow_start`,
-  `workflow_move`, `workflow_set_next`, `work_log_add`, `template_apply`;
-  `workflow_check_finished()` keeps `finished_at` after every change to
-  criteria or the stage.
-- `stage_moves` — every move, with the reason a move back needs.
+  `workflow_set_next`, `work_log_add`, `template_apply`; from 034 the stage
+  follows what is done: `workflow_sync_stage()` runs once per statement that
+  changes `exit_criteria` or `cards` (the first stage with an unmet accepted
+  criterion or an open to-do, else the last; it also moves the next-to-do
+  mark to the new stage) and `workflow_check_finished()` then keeps
+  `finished_at`. Nothing is recalculated when 034 runs: a project is worked
+  out afresh at its next change. `workflow_move` (011, 024) remains but
+  nothing calls it.
+- `stage_moves` — every move, with its cause (034: "Stage complete", "Open
+  criterion: …" or "Open to-do: …").
 - `exit_criteria` — per project and stage; (024) `hint`, `check_key`,
   `template_uid`. `workflow_template_status()` and
   `workflow_template_criteria()` read the project's template for anyone who

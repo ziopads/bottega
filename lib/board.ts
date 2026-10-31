@@ -111,6 +111,7 @@ export async function getBoard(db: Scoped, userId: string): Promise<Board> {
       startedAt: String(p.createdAt),
       latest: p.latest ?? null,
       canContribute: p.level === 'owner' || p.level === 'edit' || p.level === 'contribute',
+      isOwner: p.level === 'owner',
       place: String(r.place) as BoardPlace,
       finishedAt: isoOrNull(r.finished_at),
       stage: r.stage === null || r.stage === undefined ? null : String(r.stage),

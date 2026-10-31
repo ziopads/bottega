@@ -33,9 +33,9 @@ import Method from '@/app/_ui/Method';
 //   template        what the project's template offers since it was taken
 //   review band     Claude's proposals, waiting for a person
 //   left column     the stages, each with its share met and parked cards
-//   middle column   the chosen stage: its standard and criteria with hints;
-//                   advance and move back from the current one
-//                   and its learnings from the template (W-33, db/028)
+//   middle column   the chosen stage: its standard and criteria with hints,
+//                   and its learnings from the template (W-33, db/028); the
+//                   current stage follows the criteria, there is no button for it
 //   right column    the current stage's cards by element, each movable to a
 //                   note or a learning (W-34); folded below, done
 //                   cards, cards waiting for later stages, settled decisions,
@@ -154,7 +154,7 @@ function StartedWorkflow({
   const current = w.stage as string;
   const pos = stagePosition(w, current);
   const stageLabel = (key: string) => w.stages.find((s) => s.key === key)?.label ?? key;
-  const next = w.stages.find((s) => s.position === pos + 1) ?? null;
+  const last = w.stages[w.stages.length - 1];
   const url = `/api/projects/${projectId}/workflow`;
 
   const elementName = useMemo(() => {
@@ -180,7 +180,12 @@ function StartedWorkflow({
     const cs = accepted.filter((c) => c.stage === key);
     return { met: cs.filter((c) => c.metAt).length, total: cs.length };
   };
-  const unmet = accepted.filter((c) => c.stage === current && !c.metAt).length;
+  // Criteria ticked and to-dos done over both, which is what completes a stage.
+  const stageTally = (key: string) => {
+    const c = tally(key);
+    const ks = live.filter((k) => k.stage === key);
+    return { met: c.met + ks.filter((k) => k.status === 'done').length, total: c.total + ks.length };
+  };
 
   // The stage shown in the middle column: the current one unless another is picked.
   const [picked, setPicked] = useState<string | null>(null);
@@ -246,7 +251,7 @@ function StartedWorkflow({
       <p className="t-label mb-1">Stages</p>
       <ul className="space-y-1">
         {w.stages.map((s) => {
-          const t = tally(s.key);
+          const t = stageTally(s.key);
           const isCurrent = s.key === current;
           const past = s.position < pos;
           const share = t.total ? t.met / t.total : past ? 1 : 0;
@@ -303,7 +308,7 @@ function StartedWorkflow({
       {sel.standard && <p className="mt-0.5 t-lead font-medium">{sel.standard}</p>}
       {sel.key === current && w.enteredAt && <p className="mt-0.5 t-small text-muted">Since {formatWhen(w.enteredAt)}</p>}
       {sel.position > pos && (
-        <p className="mt-0.5 t-small text-muted">A later stage. Its criteria can be ticked ahead; moving into it waits on {stageLabel(current)}.</p>
+        <p className="mt-0.5 t-small text-muted">A later stage. Its criteria can be ticked ahead; the project moves into it once {stageLabel(current)} is complete.</p>
       )}
       {selCriteria.length === 0 ? (
         <p className="t-body mt-2 text-muted">None yet. {canEdit ? 'Write what finishes this stage.' : ''}</p>
@@ -342,21 +347,7 @@ function StartedWorkflow({
         onCall={(body) => call(url, 'POST', { op: 'learning', ...body })}
         onAdd={(text) => call(url, 'POST', { op: 'learning', action: 'add', stage: sel.key, body: text })}
       />
-      {sel.key === current && canEdit && next && (
-        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-3">
-          <button
-            onClick={() => call(url, 'POST', { op: 'move', to: next.key })}
-            disabled={busy || unmet > 0}
-            className={BUTTON}
-            title={unmet > 0 ? `${unmet} exit ${unmet === 1 ? 'criterion is' : 'criteria are'} not met` : undefined}
-          >
-            Advance to {next.label} →
-          </button>
-          {unmet > 0 && <span className="t-small text-muted">{unmet} still to meet</span>}
-        </div>
-      )}
-      {sel.key === current && !next && w.finishedAt && <p className="t-body mt-4 font-medium">Finished {formatWhen(w.finishedAt)}.</p>}
-      {sel.key === current && canEdit && pos > 1 && <MoveBack w={w} busy={busy} onMove={(to, reason) => call(url, 'POST', { op: 'move', to, reason })} />}
+      {sel.key === current && sel.key === last?.key && w.finishedAt && <p className="t-body mt-4 font-medium">Finished {formatWhen(w.finishedAt)}.</p>}
       {sel.key !== current && (
         <button onClick={() => setPicked(null)} className={`mt-4 ${BUTTON}`}>
           Back to {stageLabel(current)}
@@ -407,7 +398,7 @@ function StartedWorkflow({
       {canContribute && (
         <CardForm
           elements={w.elements}
-          stages={w.stages.filter((s) => s.position >= pos)}
+          stages={w.stages}
           defaultStage={current}
           busy={busy}
           submitLabel="Add card"
@@ -517,7 +508,7 @@ function StartedWorkflow({
 
   return (
     <>
-      <StageBar w={w} tally={tally} />
+      <StageBar w={w} tally={stageTally} />
       <TemplateReview key={w.template?.version ?? 0} w={w} url={url} canEdit={canEdit} busy={busy} call={call} />
       <StructureReview key={`s${w.structure?.version ?? 0}`} w={w} url={url} canEdit={canEdit} busy={busy} call={call} />
       {review}
@@ -532,7 +523,7 @@ function StartedWorkflow({
   );
 }
 
-/** One segment per stage, filled by the share of its criteria met; the current one outlined (W-24). */
+/** One segment per stage, filled by the share of its criteria and to-dos done; the current one outlined (W-24). */
 function StageBar({ w, tally }: { w: Workflow; tally: (key: string) => { met: number; total: number } }) {
   const pos = stagePosition(w, w.stage);
   const cur = w.stages.find((s) => s.key === w.stage);
@@ -562,8 +553,8 @@ function StageBar({ w, tally }: { w: Workflow; tally: (key: string) => { met: nu
       </div>
       <p className="t-num mt-1 t-small text-muted">
         {w.finishedAt
-          ? `Finished · ${met} of ${total} criteria met`
-          : `Stage ${pos} of ${w.stages.length} · ${cur?.label ?? ''}${cur?.standard ? `: ${cur.standard}` : ''} · ${met} of ${total} criteria met`}
+          ? `Finished · ${met} of ${total} done`
+          : `Stage ${pos} of ${w.stages.length} · ${cur?.label ?? ''}${cur?.standard ? `: ${cur.standard}` : ''} · ${met} of ${total} done`}
       </p>
     </section>
   );
@@ -798,50 +789,6 @@ function AddLine({ placeholder, busy, onAdd }: { placeholder: string; busy: bool
       <button type="submit" disabled={busy || !text.trim()} className={BUTTON}>
         Add
       </button>
-    </form>
-  );
-}
-
-function MoveBack({ w, busy, onMove }: { w: Workflow; busy: boolean; onMove: (to: string, reason: string) => Promise<boolean> }) {
-  const pos = stagePosition(w, w.stage);
-  const earlier = w.stages.filter((s) => s.position < pos);
-  const [open, setOpen] = useState(false);
-  const [to, setTo] = useState(earlier[earlier.length - 1]?.key ?? '');
-  const [reason, setReason] = useState('');
-  if (!open) {
-    return (
-      <button onClick={() => setOpen(true)} className={`mt-3 ${BUTTON}`}>
-        Move back to an earlier stage…
-      </button>
-    );
-  }
-  return (
-    <form
-      onSubmit={async (e) => {
-        e.preventDefault();
-        if (await onMove(to, reason)) {
-          setOpen(false);
-          setReason('');
-        }
-      }}
-      className="mt-3 space-y-2"
-    >
-      <select value={to} onChange={(e) => setTo(e.target.value)} className={`${FIELD} w-full`} aria-label="Stage to move back to">
-        {earlier.map((s) => (
-          <option key={s.key} value={s.key}>
-            Back to {s.label}
-          </option>
-        ))}
-      </select>
-      <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Why (kept with the move)" className={`${FIELD} w-full`} />
-      <div className="flex gap-3">
-        <button type="submit" disabled={busy || !reason.trim()} className={BUTTON}>
-          Move back
-        </button>
-        <button type="button" onClick={() => setOpen(false)} className={BUTTON}>
-          Cancel
-        </button>
-      </div>
     </form>
   );
 }

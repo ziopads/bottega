@@ -70,6 +70,9 @@ export default function WhereItStands({ projectId, workflow: w, setWorkflow, ses
   const others = open.filter((c) => !c.isNext);
   const criteria = w.criteria.filter((c) => c.stage === w.stage && c.reviewed && !c.rejected);
   const unmet = criteria.filter((c) => !c.metAt);
+  const counted = w.cards.filter((c) => c.stage === w.stage && !c.settled && (c.status === 'accepted' || c.status === 'in progress' || c.status === 'done'));
+  const total = criteria.length + counted.length;
+  const done = criteria.length - unmet.length + counted.filter((c) => c.status === 'done').length;
   const proposals = w.cards.filter((c) => c.status === 'proposed').length + w.criteria.filter((c) => !c.reviewed).length;
   const last = sessions[0] ?? null;
   const dot = (elementId: number | null) => cardElementColor(w.elements, elementId);
@@ -118,7 +121,7 @@ export default function WhereItStands({ projectId, workflow: w, setWorkflow, ses
           </button>
           <span className="t-num">
             {' · '}
-            {criteria.length === 0 ? 'no criteria written' : `${criteria.length - unmet.length} of ${criteria.length} criteria met`}
+            {total === 0 ? 'nothing written yet' : `${done} of ${total} done`}
             {' · '}
           </span>
           <span className={days === null ? '' : days >= COLD_DAYS ? 'font-medium text-cold' : days >= 7 ? 'text-cooling' : 'text-fresh'}>{since}</span>
